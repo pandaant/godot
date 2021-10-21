@@ -376,7 +376,9 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  --doctool [<path>]                           Dump the engine API reference to the given <path> (defaults to current dir) in XML format, merging if existing files are found.\n");
 	OS::get_singleton()->print("  --no-docbase                                 Disallow dumping the base types (used with --doctool).\n");
 	OS::get_singleton()->print("  --build-solutions                            Build the scripting solutions (e.g. for C# projects). Implies --editor and requires a valid project to edit.\n");
+	OS::get_singleton()->print("  --dump-extension-api                         Generate JSON dump of the Godot API for GDExtension bindings named 'extension_api.json' in the current folder.\n");
 #ifdef DEBUG_METHODS_ENABLED
+	// TODO: Should be removed together with nativescript eventually.
 	OS::get_singleton()->print("  --gdnative-generate-json-api <path>          Generate JSON dump of the Godot API for GDNative bindings and save it on the file specified in <path>.\n");
 	OS::get_singleton()->print("  --gdnative-generate-json-builtin-api <path>  Generate JSON dump of the Godot API of the builtin Variant types and utility functions for GDNative bindings and save it on the file specified in <path>.\n");
 #endif
@@ -901,20 +903,24 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			auto_build_solutions = true;
 			editor = true;
 			cmdline_tool = true;
-
+#ifdef DEBUG_METHODS_ENABLED
 		} else if (I->get() == "--gdnative-generate-json-api" || I->get() == "--gdnative-generate-json-builtin-api") {
 			// Register as an editor instance to use low-end fallback if relevant.
 			editor = true;
 			cmdline_tool = true;
-
-			// We still pass it to the main arguments since the argument handling itself is not done in this function
+			// We still pass it to the main arguments since the argument handling itself is not done in this function,
+			// it's done in nativescript init code.
 			main_args.push_back(I->get());
+#endif
 		} else if (I->get() == "--dump-extension-api") {
 			// Register as an editor instance to use low-end fallback if relevant.
 			editor = true;
 			cmdline_tool = true;
 			dump_extension_api = true;
-			print_line("dump extension?");
+			print_line("Dumping Extension API");
+			// Hack. Not needed but otherwise we end up detecting that this should
+			// run the project instead of a cmdline tool.
+			// Needs full refactoring to fix properly.
 			main_args.push_back(I->get());
 		} else if (I->get() == "--export" || I->get() == "--export-debug" ||
 				   I->get() == "--export-pack") { // Export project
@@ -1341,8 +1347,9 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		display_driver_idx = 0;
 	}
 
-	if (audio_driver == "") { // specified in project.godot
-		audio_driver = GLOBAL_DEF_RST_NOVAL("audio/driver/driver", AudioDriverManager::get_driver(0)->get_name());
+	GLOBAL_DEF_RST_NOVAL("audio/driver/driver", AudioDriverManager::get_driver(0)->get_name());
+	if (audio_driver == "") { // Specified in project.godot.
+		audio_driver = GLOBAL_GET("audio/driver/driver");
 	}
 
 	for (int i = 0; i < AudioDriverManager::get_driver_count(); i++) {
@@ -2137,7 +2144,7 @@ bool Main::start() {
 		}
 #endif
 
-		bool embed_subwindows = GLOBAL_DEF("display/window/subwindows/embed_subwindows", false);
+		bool embed_subwindows = GLOBAL_DEF("display/window/subwindows/embed_subwindows", true);
 
 		if (OS::get_singleton()->is_single_window() || (!project_manager && !editor && embed_subwindows)) {
 			sml->get_root()->set_embed_subwindows_hint(true);
@@ -2488,17 +2495,17 @@ bool Main::iteration() {
 
 	iterating++;
 
-	uint64_t ticks = OS::get_singleton()->get_ticks_usec();
+	const uint64_t ticks = OS::get_singleton()->get_ticks_usec();
 	Engine::get_singleton()->_frame_ticks = ticks;
 	main_timer_sync.set_cpu_ticks_usec(ticks);
 	main_timer_sync.set_fixed_fps(fixed_fps);
 
-	uint64_t ticks_elapsed = ticks - last_ticks;
+	const uint64_t ticks_elapsed = ticks - last_ticks;
 
-	int physics_ticks_per_second = Engine::get_singleton()->get_physics_ticks_per_second();
-	float physics_step = 1.0 / physics_ticks_per_second;
+	const int physics_ticks_per_second = Engine::get_singleton()->get_physics_ticks_per_second();
+	const double physics_step = 1.0 / physics_ticks_per_second;
 
-	float time_scale = Engine::get_singleton()->get_time_scale();
+	const double time_scale = Engine::get_singleton()->get_time_scale();
 
 	MainFrameTime advance = main_timer_sync.advance(physics_step, physics_ticks_per_second);
 	double process_step = advance.process_step;
@@ -2521,6 +2528,9 @@ bool Main::iteration() {
 	}
 
 	bool exit = false;
+
+	// process all our active interfaces
+	XRServer::get_singleton()->_process();
 
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
 		if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {

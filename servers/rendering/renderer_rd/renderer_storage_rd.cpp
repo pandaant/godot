@@ -2672,9 +2672,11 @@ void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Vari
 			if (uniform_array_size > 0) {
 				if (textures.size() < uniform_array_size) {
 					const Map<StringName, RID>::Element *W = p_default_textures.find(uniform_name);
-					if (W) {
-						for (int j = textures.size(); j < uniform_array_size; j++) {
+					for (int j = textures.size(); j < uniform_array_size; j++) {
+						if (W) {
 							textures.push_back(W->get());
+						} else {
+							textures.push_back(RID());
 						}
 					}
 				}
@@ -3959,7 +3961,7 @@ void RendererStorageRD::_multimesh_make_local(MultiMesh *multimesh) const {
 				memcpy(w, r, buffer.size());
 			}
 		} else {
-			memset(w, 0, multimesh->instances * multimesh->stride_cache * sizeof(float));
+			memset(w, 0, (size_t)multimesh->instances * multimesh->stride_cache * sizeof(float));
 		}
 	}
 	uint32_t data_cache_dirty_region_count = (multimesh->instances - 1) / MULTIMESH_DIRTY_REGION_SIZE + 1;
@@ -4372,13 +4374,13 @@ void RendererStorageRD::_update_dirty_multimeshes() {
 
 				if (multimesh->data_cache_used_dirty_regions > 32 || multimesh->data_cache_used_dirty_regions > visible_region_count / 2) {
 					//if there too many dirty regions, or represent the majority of regions, just copy all, else transfer cost piles up too much
-					RD::get_singleton()->buffer_update(multimesh->buffer, 0, MIN(visible_region_count * region_size, multimesh->instances * multimesh->stride_cache * sizeof(float)), data);
+					RD::get_singleton()->buffer_update(multimesh->buffer, 0, MIN(visible_region_count * region_size, multimesh->instances * (uint32_t)multimesh->stride_cache * (uint32_t)sizeof(float)), data);
 				} else {
 					//not that many regions? update them all
 					for (uint32_t i = 0; i < visible_region_count; i++) {
 						if (multimesh->data_cache_dirty_regions[i]) {
-							uint64_t offset = i * region_size;
-							uint64_t size = multimesh->stride_cache * multimesh->instances * sizeof(float);
+							uint32_t offset = i * region_size;
+							uint32_t size = multimesh->stride_cache * (uint32_t)multimesh->instances * (uint32_t)sizeof(float);
 							RD::get_singleton()->buffer_update(multimesh->buffer, offset, MIN(region_size, size - offset), &data[i * region_size]);
 						}
 					}
@@ -9970,6 +9972,6 @@ RendererStorageRD::~RendererStorageRD() {
 
 	if (effects) {
 		memdelete(effects);
-		effects = NULL;
+		effects = nullptr;
 	}
 }
