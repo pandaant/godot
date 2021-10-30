@@ -313,7 +313,6 @@ bool Variant::can_convert(Variant::Type p_type_from, Variant::Type p_type_to) {
 		case BASIS: {
 			static const Type valid[] = {
 				QUATERNION,
-				VECTOR3,
 				NIL
 			};
 
@@ -620,7 +619,6 @@ bool Variant::can_convert_strict(Variant::Type p_type_from, Variant::Type p_type
 		case BASIS: {
 			static const Type valid[] = {
 				QUATERNION,
-				VECTOR3,
 				NIL
 			};
 
@@ -1889,8 +1887,6 @@ Variant::operator Basis() const {
 		return *_data._basis;
 	} else if (type == QUATERNION) {
 		return *reinterpret_cast<const Quaternion *>(_data._mem);
-	} else if (type == VECTOR3) {
-		return Basis(*reinterpret_cast<const Vector3 *>(_data._mem));
 	} else if (type == TRANSFORM3D) { // unexposed in Variant::can_convert?
 		return _data._transform3d->basis;
 	} else {
@@ -3122,7 +3118,7 @@ bool Variant::hash_compare(const Variant &p_variant) const {
 			const Rect2 *r = reinterpret_cast<const Rect2 *>(p_variant._data._mem);
 
 			return (hash_compare_vector2(l->position, r->position)) &&
-				   (hash_compare_vector2(l->size, r->size));
+					(hash_compare_vector2(l->size, r->size));
 		} break;
 		case RECT2I: {
 			const Rect2i *l = reinterpret_cast<const Rect2i *>(_data._mem);
@@ -3162,7 +3158,7 @@ bool Variant::hash_compare(const Variant &p_variant) const {
 			const Plane *r = reinterpret_cast<const Plane *>(p_variant._data._mem);
 
 			return (hash_compare_vector3(l->normal, r->normal)) &&
-				   (hash_compare_scalar(l->d, r->d));
+					(hash_compare_scalar(l->d, r->d));
 		} break;
 
 		case AABB: {

@@ -197,6 +197,8 @@ class DisplayServerX11 : public DisplayServer {
 
 	bool _refresh_device_info();
 
+	Rect2i _screen_get_rect(int p_screen) const;
+
 	MouseButton _get_mouse_button_state(MouseButton p_x11_button, int p_x11_type);
 	void _get_key_modifier_state(unsigned int p_x11_state, Ref<InputEventWithModifiers> state);
 	void _flush_mouse_motion();
@@ -268,6 +270,7 @@ class DisplayServerX11 : public DisplayServer {
 	static void _poll_events_thread(void *ud);
 	bool _wait_for_events() const;
 	void _poll_events();
+	void _check_pending_events(LocalVector<XEvent> &r_events);
 
 	static Bool _predicate_all_events(Display *display, XEvent *event, XPointer arg);
 	static Bool _predicate_clipboard_selection(Display *display, XEvent *event, XPointer arg);

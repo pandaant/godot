@@ -124,6 +124,7 @@ bool DisplayServerX11::has_feature(Feature p_feature) const {
 #ifdef DBUS_ENABLED
 		case FEATURE_KEEP_SCREEN_ON:
 #endif
+		case FEATURE_CLIPBOARD_PRIMARY:
 			return true;
 		default: {
 		}
@@ -615,7 +616,7 @@ String DisplayServerX11::clipboard_get_primary() const {
 Bool DisplayServerX11::_predicate_clipboard_save_targets(Display *display, XEvent *event, XPointer arg) {
 	if (event->xany.window == *(Window *)arg) {
 		return (event->type == SelectionRequest) ||
-			   (event->type == SelectionNotify);
+				(event->type == SelectionNotify);
 	} else {
 		return False;
 	}
@@ -682,35 +683,49 @@ int DisplayServerX11::get_screen_count() const {
 	return count;
 }
 
-Point2i DisplayServerX11::screen_get_position(int p_screen) const {
-	_THREAD_SAFE_METHOD_
+Rect2i DisplayServerX11::_screen_get_rect(int p_screen) const {
+	Rect2i rect(0, 0, 0, 0);
 
 	if (p_screen == SCREEN_OF_MAIN_WINDOW) {
 		p_screen = window_get_current_screen();
 	}
 
-	// Using Xinerama Extension
+	ERR_FAIL_COND_V(p_screen < 0, rect);
+
+	// Using Xinerama Extension.
 	int event_base, error_base;
-	const Bool ext_okay = XineramaQueryExtension(x11_display, &event_base, &error_base);
-	if (!ext_okay) {
-		return Point2i(0, 0);
+	if (XineramaQueryExtension(x11_display, &event_base, &error_base)) {
+		int count;
+		XineramaScreenInfo *xsi = XineramaQueryScreens(x11_display, &count);
+
+		// Check if screen is valid.
+		if (p_screen < count) {
+			rect.position.x = xsi[p_screen].x_org;
+			rect.position.y = xsi[p_screen].y_org;
+			rect.size.width = xsi[p_screen].width;
+			rect.size.height = xsi[p_screen].height;
+		} else {
+			ERR_PRINT("Invalid screen index: " + itos(p_screen) + "(count: " + itos(count) + ").");
+		}
+
+		if (xsi) {
+			XFree(xsi);
+		}
 	}
 
-	int count;
-	XineramaScreenInfo *xsi = XineramaQueryScreens(x11_display, &count);
+	return rect;
+}
 
-	// Check if screen is valid
-	ERR_FAIL_INDEX_V(p_screen, count, Point2i(0, 0));
+Point2i DisplayServerX11::screen_get_position(int p_screen) const {
+	_THREAD_SAFE_METHOD_
 
-	Point2i position = Point2i(xsi[p_screen].x_org, xsi[p_screen].y_org);
-
-	XFree(xsi);
-
-	return position;
+	return _screen_get_rect(p_screen).position;
 }
 
 Size2i DisplayServerX11::screen_get_size(int p_screen) const {
-	return screen_get_usable_rect(p_screen).size;
+	_THREAD_SAFE_METHOD_
+
+	return _screen_get_rect(p_screen).size;
 }
 
 Rect2i DisplayServerX11::screen_get_usable_rect(int p_screen) const {
@@ -1010,22 +1025,31 @@ void DisplayServerX11::window_set_drop_files_callback(const Callable &p_callable
 int DisplayServerX11::window_get_current_screen(WindowID p_window) const {
 	_THREAD_SAFE_METHOD_
 
-	ERR_FAIL_COND_V(!windows.has(p_window), -1);
+	int count = get_screen_count();
+	if (count < 2) {
+		// Early exit with single monitor.
+		return 0;
+	}
+
+	ERR_FAIL_COND_V(!windows.has(p_window), 0);
 	const WindowData &wd = windows[p_window];
 
-	int x, y;
-	Window child;
-	XTranslateCoordinates(x11_display, wd.x11_window, DefaultRootWindow(x11_display), 0, 0, &x, &y, &child);
+	const Rect2i window_rect(wd.position, wd.size);
 
-	int count = get_screen_count();
+	// Find which monitor has the largest overlap with the given window.
+	int screen_index = 0;
+	int max_area = 0;
 	for (int i = 0; i < count; i++) {
-		Point2i pos = screen_get_position(i);
-		Size2i size = screen_get_size(i);
-		if ((x >= pos.x && x < pos.x + size.width) && (y >= pos.y && y < pos.y + size.height)) {
-			return i;
+		Rect2i screen_rect = _screen_get_rect(i);
+		Rect2i intersection = screen_rect.intersection(window_rect);
+		int area = intersection.get_area();
+		if (area > max_area) {
+			max_area = area;
+			screen_index = i;
 		}
 	}
-	return 0;
+
+	return screen_index;
 }
 
 void DisplayServerX11::window_set_current_screen(int p_screen, WindowID p_window) {
@@ -2484,11 +2508,11 @@ Atom DisplayServerX11::_process_selection_request_target(Atom p_target, Window p
 				0);
 		return p_property;
 	} else if (p_target == XInternAtom(x11_display, "UTF8_STRING", 0) ||
-			   p_target == XInternAtom(x11_display, "COMPOUND_TEXT", 0) ||
-			   p_target == XInternAtom(x11_display, "TEXT", 0) ||
-			   p_target == XA_STRING ||
-			   p_target == XInternAtom(x11_display, "text/plain;charset=utf-8", 0) ||
-			   p_target == XInternAtom(x11_display, "text/plain", 0)) {
+			p_target == XInternAtom(x11_display, "COMPOUND_TEXT", 0) ||
+			p_target == XInternAtom(x11_display, "TEXT", 0) ||
+			p_target == XA_STRING ||
+			p_target == XInternAtom(x11_display, "text/plain;charset=utf-8", 0) ||
+			p_target == XInternAtom(x11_display, "text/plain", 0)) {
 		// Directly using internal clipboard because we know our window
 		// is the owner during a selection request.
 		CharString clip;
@@ -2724,27 +2748,34 @@ void DisplayServerX11::_poll_events() {
 		{
 			MutexLock mutex_lock(events_mutex);
 
-			// Non-blocking wait for next event and remove it from the queue.
-			XEvent ev;
-			while (XCheckIfEvent(x11_display, &ev, _predicate_all_events, nullptr)) {
-				// Check if the input manager wants to process the event.
-				if (XFilterEvent(&ev, None)) {
-					// Event has been filtered by the Input Manager,
-					// it has to be ignored and a new one will be received.
-					continue;
-				}
-
-				// Handle selection request events directly in the event thread, because
-				// communication through the x server takes several events sent back and forth
-				// and we don't want to block other programs while processing only one each frame.
-				if (ev.type == SelectionRequest) {
-					_handle_selection_request_event(&(ev.xselectionrequest));
-					continue;
-				}
-
-				polled_events.push_back(ev);
-			}
+			_check_pending_events(polled_events);
 		}
+	}
+}
+
+void DisplayServerX11::_check_pending_events(LocalVector<XEvent> &r_events) {
+	// Flush to make sure to gather all pending events.
+	XFlush(x11_display);
+
+	// Non-blocking wait for next event and remove it from the queue.
+	XEvent ev;
+	while (XCheckIfEvent(x11_display, &ev, _predicate_all_events, nullptr)) {
+		// Check if the input manager wants to process the event.
+		if (XFilterEvent(&ev, None)) {
+			// Event has been filtered by the Input Manager,
+			// it has to be ignored and a new one will be received.
+			continue;
+		}
+
+		// Handle selection request events directly in the event thread, because
+		// communication through the x server takes several events sent back and forth
+		// and we don't want to block other programs while processing only one each frame.
+		if (ev.type == SelectionRequest) {
+			_handle_selection_request_event(&(ev.xselectionrequest));
+			continue;
+		}
+
+		r_events.push_back(ev);
 	}
 }
 
@@ -2797,6 +2828,9 @@ void DisplayServerX11::process_events() {
 		MutexLock mutex_lock(events_mutex);
 		events = polled_events;
 		polled_events.clear();
+
+		// Check for more pending events to avoid an extra frame delay.
+		_check_pending_events(events);
 	}
 
 	for (uint32_t event_index = 0; event_index < events.size(); ++event_index) {
@@ -2856,7 +2890,7 @@ void DisplayServerX11::process_events() {
 								if (pen_pressure_range != Vector2()) {
 									xi.pressure_supported = true;
 									xi.pressure = (*values - pen_pressure_range[0]) /
-												  (pen_pressure_range[1] - pen_pressure_range[0]);
+											(pen_pressure_range[1] - pen_pressure_range[0]);
 								}
 							}
 
@@ -2915,10 +2949,7 @@ void DisplayServerX11::process_events() {
 						xi.last_relative_time = raw_event->time;
 					} break;
 #ifdef TOUCH_ENABLED
-					case XI_TouchBegin: // Fall-through
-							// Disabled hand-in-hand with the grabbing
-							//XIAllowTouchEvents(x11_display, event_data->deviceid, event_data->detail, x11_window, XIAcceptTouch);
-
+					case XI_TouchBegin:
 					case XI_TouchEnd: {
 						bool is_begin = event_data->evtype == XI_TouchBegin;
 
@@ -3745,18 +3776,18 @@ DisplayServerX11::WindowID DisplayServerX11::_create_window(WindowMode p_mode, V
 			XSetWindowAttributes new_attr;
 
 			new_attr.event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
-								  ButtonReleaseMask | EnterWindowMask |
-								  LeaveWindowMask | PointerMotionMask |
-								  Button1MotionMask |
-								  Button2MotionMask | Button3MotionMask |
-								  Button4MotionMask | Button5MotionMask |
-								  ButtonMotionMask | KeymapStateMask |
-								  ExposureMask | VisibilityChangeMask |
-								  StructureNotifyMask |
-								  SubstructureNotifyMask | SubstructureRedirectMask |
-								  FocusChangeMask | PropertyChangeMask |
-								  ColormapChangeMask | OwnerGrabButtonMask |
-								  im_event_mask;
+					ButtonReleaseMask | EnterWindowMask |
+					LeaveWindowMask | PointerMotionMask |
+					Button1MotionMask |
+					Button2MotionMask | Button3MotionMask |
+					Button4MotionMask | Button5MotionMask |
+					ButtonMotionMask | KeymapStateMask |
+					ExposureMask | VisibilityChangeMask |
+					StructureNotifyMask |
+					SubstructureNotifyMask | SubstructureRedirectMask |
+					FocusChangeMask | PropertyChangeMask |
+					ColormapChangeMask | OwnerGrabButtonMask |
+					im_event_mask;
 
 			XChangeWindowAttributes(x11_display, wd.x11_window, CWEventMask, &new_attr);
 
@@ -4126,7 +4157,6 @@ DisplayServerX11::DisplayServerX11(const String &p_rendering_driver, WindowMode 
 	}
 	show_window(main_window);
 
-//create RenderingDevice if used
 #if defined(VULKAN_ENABLED)
 	if (rendering_driver == "vulkan") {
 		//temporary
@@ -4136,13 +4166,6 @@ DisplayServerX11::DisplayServerX11(const String &p_rendering_driver, WindowMode 
 		RendererCompositorRD::make_current();
 	}
 #endif
-
-	/*
-	rendering_server = memnew(RenderingServerDefault);
-	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
-		rendering_server = memnew(RenderingServerWrapMT(rendering_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
-	}
-	*/
 
 	{
 		//set all event master mask
@@ -4155,15 +4178,6 @@ DisplayServerX11::DisplayServerX11(const String &p_rendering_driver, WindowMode 
 		XISetMask(all_master_event_mask.mask, XI_RawMotion);
 		XISelectEvents(x11_display, DefaultRootWindow(x11_display), &all_master_event_mask, 1);
 	}
-
-	// Disabled by now since grabbing also blocks mouse events
-	// (they are received as extended events instead of standard events)
-	/*XIClearMask(xi.touch_event_mask.mask, XI_TouchOwnership);
-
-	// Grab touch devices to avoid OS gesture interference
-	for (int i = 0; i < xi.touch_devices.size(); ++i) {
-		XIGrabDevice(x11_display, xi.touch_devices[i], x11_window, CurrentTime, None, XIGrabModeAsync, XIGrabModeAsync, False, &xi.touch_event_mask);
-	}*/
 
 	cursor_size = XcursorGetDefaultSize(x11_display);
 	cursor_theme = XcursorGetTheme(x11_display);
