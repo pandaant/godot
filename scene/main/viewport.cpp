@@ -638,7 +638,13 @@ void Viewport::_process_picking() {
 
 				Vector2 point = canvas_transform.affine_inverse().xform(pos);
 
-				int rc = ss2d->intersect_point_on_canvas(point, canvas_layer_id, res, 64, Set<RID>(), 0xFFFFFFFF, true, true, true);
+				PhysicsDirectSpaceState2D::PointParameters point_params;
+				point_params.position = point;
+				point_params.canvas_instance_id = canvas_layer_id;
+				point_params.collide_with_areas = true;
+				point_params.pick_point = true;
+
+				int rc = ss2d->intersect_point(point_params, res, 64);
 				for (int i = 0; i < rc; i++) {
 					if (res[i].collider_id.is_valid() && res[i].collider) {
 						CollisionObject2D *co = Object::cast_to<CollisionObject2D>(res[i].collider);
@@ -715,10 +721,17 @@ void Viewport::_process_picking() {
 			if (camera_3d) {
 				Vector3 from = camera_3d->project_ray_origin(pos);
 				Vector3 dir = camera_3d->project_ray_normal(pos);
+				real_t far = camera_3d->far;
 
 				PhysicsDirectSpaceState3D *space = PhysicsServer3D::get_singleton()->space_get_direct_state(find_world_3d()->get_space());
 				if (space) {
-					bool col = space->intersect_ray(from, from + dir * 10000, result, Set<RID>(), 0xFFFFFFFF, true, true, true);
+					PhysicsDirectSpaceState3D::RayParameters ray_params;
+					ray_params.from = from;
+					ray_params.to = from + dir * far;
+					ray_params.collide_with_areas = true;
+					ray_params.pick_ray = true;
+
+					bool col = space->intersect_ray(ray_params, result);
 					ObjectID new_collider;
 					if (col) {
 						CollisionObject3D *co = Object::cast_to<CollisionObject3D>(result.collider);
