@@ -2245,12 +2245,14 @@ void Node3DEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 			_menu_option(VIEW_RIGHT);
 		}
 		if (ED_IS_SHORTCUT("spatial_editor/orbit_view_down", p_event)) {
-			cursor.x_rot -= Math_PI / 12.0;
+			// Clamp rotation to roughly -90..90 degrees so the user can't look upside-down and end up disoriented.
+			cursor.x_rot = CLAMP(cursor.x_rot - Math_PI / 12.0, -1.57, 1.57);
 			view_type = VIEW_TYPE_USER;
 			_update_name();
 		}
 		if (ED_IS_SHORTCUT("spatial_editor/orbit_view_up", p_event)) {
-			cursor.x_rot += Math_PI / 12.0;
+			// Clamp rotation to roughly -90..90 degrees so the user can't look upside-down and end up disoriented.
+			cursor.x_rot = CLAMP(cursor.x_rot + Math_PI / 12.0, -1.57, 1.57);
 			view_type = VIEW_TYPE_USER;
 			_update_name();
 		}
@@ -2885,13 +2887,13 @@ void Node3DEditorViewport::_notification(int p_what) {
 
 			// Color labels depending on performance level ("good" = green, "OK" = yellow, "bad" = red).
 			// Middle point is at 15 ms.
-			cpu_time_label->set_text(vformat(TTR("CPU Time: %s ms"), rtos(cpu_time).pad_decimals(1)));
+			cpu_time_label->set_text(vformat(TTR("CPU Time: %s ms"), rtos(cpu_time).pad_decimals(2)));
 			cpu_time_label->add_theme_color_override(
 					"font_color",
 					frame_time_gradient->get_color_at_offset(
 							Math::range_lerp(cpu_time, 0, 30, 0, 1)));
 
-			gpu_time_label->set_text(vformat(TTR("GPU Time: %s ms"), rtos(gpu_time).pad_decimals(1)));
+			gpu_time_label->set_text(vformat(TTR("GPU Time: %s ms"), rtos(gpu_time).pad_decimals(2)));
 			// Middle point is at 15 ms.
 			gpu_time_label->add_theme_color_override(
 					"font_color",
@@ -6650,7 +6652,7 @@ void Node3DEditor::_add_sun_to_scene(bool p_already_added_environment) {
 	Node *new_sun = preview_sun->duplicate();
 
 	undo_redo->create_action(TTR("Add Preview Sun to Scene"));
-	undo_redo->add_do_method(base, "add_child", new_sun);
+	undo_redo->add_do_method(base, "add_child", new_sun, true);
 	// Move to the beginning of the scene tree since more "global" nodes
 	// generally look better when placed at the top.
 	undo_redo->add_do_method(base, "move_child", new_sun, 0);
@@ -6680,7 +6682,7 @@ void Node3DEditor::_add_environment_to_scene(bool p_already_added_sun) {
 	new_env->set_environment(preview_environment->get_environment()->duplicate(true));
 
 	undo_redo->create_action(TTR("Add Preview Environment to Scene"));
-	undo_redo->add_do_method(base, "add_child", new_env);
+	undo_redo->add_do_method(base, "add_child", new_env, true);
 	// Move to the beginning of the scene tree since more "global" nodes
 	// generally look better when placed at the top.
 	undo_redo->add_do_method(base, "move_child", new_env, 0);
@@ -7146,7 +7148,7 @@ void Node3DEditor::_update_preview_environment() {
 
 	} else {
 		if (!preview_sun->get_parent()) {
-			add_child(preview_sun);
+			add_child(preview_sun, true);
 			sun_state->hide();
 			sun_vb->show();
 		}
