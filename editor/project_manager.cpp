@@ -2374,6 +2374,10 @@ ProjectManager::ProjectManager() {
 		EditorSettings::create();
 	}
 
+	// Turn off some servers we aren't going to be using in the Project Manager.
+	PhysicsServer::get_singleton()->set_active(false);
+	Physics2DServer::get_singleton()->set_active(false);
+
 	EditorSettings::get_singleton()->set_optimize_save(false); //just write settings as they came
 
 	{
@@ -2554,6 +2558,7 @@ ProjectManager::ProjectManager() {
 
 	Button *rename = memnew(Button);
 	rename->set_text(TTR("Rename"));
+	// The F2 shortcut isn't overridden with Enter on macOS as Enter is already used to edit a project.
 	rename->set_shortcut(ED_SHORTCUT("project_manager/rename_project", TTR("Rename Project"), KEY_F2));
 	tree_vb->add_child(rename);
 	rename->connect("pressed", this, "_rename_project");

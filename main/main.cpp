@@ -176,8 +176,11 @@ static String get_full_version_string() {
 // FIXME: Could maybe be moved to PhysicsServerManager and Physics2DServerManager directly
 // to have less code in main.cpp.
 void initialize_physics() {
-	// This must be defined BEFORE the 3d physics server is created
+	// This must be defined BEFORE the 3d physics server is created,
+	// otherwise it won't always show up in the project settings page.
 	GLOBAL_DEF("physics/3d/godot_physics/use_bvh", true);
+	GLOBAL_DEF("physics/3d/godot_physics/bvh_collision_margin", 0.1);
+	ProjectSettings::get_singleton()->set_custom_property_info("physics/3d/godot_physics/bvh_collision_margin", PropertyInfo(Variant::REAL, "physics/3d/godot_physics/bvh_collision_margin", PROPERTY_HINT_RANGE, "0.0,2.0,0.01"));
 
 	/// 3D Physics Server
 	physics_server = PhysicsServerManager::new_server(ProjectSettings::get_singleton()->get(PhysicsServerManager::setting_property_name));
@@ -1361,20 +1364,28 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	VisualServer::get_singleton()->set_default_clear_color(clear);
 
 	if (show_logo) { //boot logo!
-		String boot_logo_path = GLOBAL_DEF("application/boot_splash/image", String());
-		bool boot_logo_scale = GLOBAL_DEF("application/boot_splash/fullsize", true);
-		bool boot_logo_filter = GLOBAL_DEF("application/boot_splash/use_filter", true);
+		const bool boot_logo_image = GLOBAL_DEF("application/boot_splash/show_image", true);
+		const String boot_logo_path = String(GLOBAL_DEF("application/boot_splash/image", String())).strip_edges();
+		const bool boot_logo_scale = GLOBAL_DEF("application/boot_splash/fullsize", true);
+		const bool boot_logo_filter = GLOBAL_DEF("application/boot_splash/use_filter", true);
 		ProjectSettings::get_singleton()->set_custom_property_info("application/boot_splash/image", PropertyInfo(Variant::STRING, "application/boot_splash/image", PROPERTY_HINT_FILE, "*.png"));
 
 		Ref<Image> boot_logo;
 
-		boot_logo_path = boot_logo_path.strip_edges();
-
-		if (boot_logo_path != String()) {
+		if (boot_logo_image) {
+			if (boot_logo_path != String()) {
+				boot_logo.instance();
+				Error load_err = ImageLoader::load_image(boot_logo_path, boot_logo);
+				if (load_err)
+					ERR_PRINT("Non-existing or invalid boot splash at '" + boot_logo_path + "'. Loading default splash.");
+			}
+		} else {
+			// Create a 1×1 transparent image. This will effectively hide the splash image.
 			boot_logo.instance();
-			Error load_err = ImageLoader::load_image(boot_logo_path, boot_logo);
-			if (load_err)
-				ERR_PRINT("Non-existing or invalid boot splash at '" + boot_logo_path + "'. Loading default splash.");
+			boot_logo->create(1, 1, false, Image::FORMAT_RGBA8);
+			boot_logo->lock();
+			boot_logo->set_pixel(0, 0, Color(0, 0, 0, 0));
+			boot_logo->unlock();
 		}
 
 #if defined(TOOLS_ENABLED) && !defined(NO_EDITOR_SPLASH)
@@ -1613,6 +1624,19 @@ bool Main::start() {
 			DirAccessRef da = DirAccess::open(doc_tool_path);
 			ERR_FAIL_COND_V_MSG(!da, false, "Argument supplied to --doctool must be a valid directory path.");
 		}
+
+#ifndef MODULE_MONO_ENABLED
+		// Hack to define Mono-specific project settings even on non-Mono builds,
+		// so that we don't lose their descriptions and default values in DocData.
+		// Default values should be synced with mono_gd/gd_mono.cpp.
+		GLOBAL_DEF("mono/debugger_agent/port", 23685);
+		GLOBAL_DEF("mono/debugger_agent/wait_for_debugger", false);
+		GLOBAL_DEF("mono/debugger_agent/wait_timeout", 3000);
+		GLOBAL_DEF("mono/profiler/args", "log:calls,alloc,sample,output=output.mlpd");
+		GLOBAL_DEF("mono/profiler/enabled", false);
+		GLOBAL_DEF("mono/runtime/unhandled_exception_policy", 0);
+#endif
+
 		DocData doc;
 		doc.generate(doc_base);
 
