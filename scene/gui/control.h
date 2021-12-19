@@ -279,7 +279,7 @@ protected:
 
 	//virtual void _window_gui_input(InputEvent p_event);
 
-	virtual Array structured_text_parser(StructuredTextParser p_theme_type, const Array &p_args, const String p_text) const;
+	virtual Array structured_text_parser(StructuredTextParser p_theme_type, const Array &p_args, const String &p_text) const;
 
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -357,6 +357,7 @@ public:
 	virtual void drop_data(const Point2 &p_point, const Variant &p_data);
 	void set_drag_preview(Control *p_control);
 	void force_drag(const Variant &p_data, Control *p_control);
+	bool is_drag_successful() const;
 
 	void set_custom_minimum_size(const Size2 &p_custom);
 	Size2 get_custom_minimum_size() const;
@@ -400,6 +401,7 @@ public:
 
 	void set_size(const Size2 &p_size, bool p_keep_offsets = false);
 	Size2 get_size() const;
+	void reset_size();
 
 	Rect2 get_rect() const;
 	Rect2 get_global_rect() const;
@@ -439,7 +441,7 @@ public:
 	void set_stretch_ratio(real_t p_ratio);
 	real_t get_stretch_ratio() const;
 
-	void minimum_size_changed();
+	void update_minimum_size();
 
 	/* FOCUS */
 

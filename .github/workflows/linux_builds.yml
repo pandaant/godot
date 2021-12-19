@@ -29,15 +29,15 @@ jobs:
             build-mono: true
             artifact: true
 
-          - name: Editor and sanitizers (target=debug, tools=yes, tests=yes, use_asan=yes, use_ubsan=yes)
-            cache-name: linux-editor-sanitizers
+          - name: Editor with doubles and sanitizers (target=debug, tools=yes, float=64, tests=yes, use_asan=yes, use_ubsan=yes)
+            cache-name: linux-editor-double-sanitizers
             target: debug
             tools: true
             tests: true
-            sconsflags: use_asan=yes use_ubsan=yes
+            sconsflags: float=64 use_asan=yes use_ubsan=yes
             proj-test: true
             godot-cpp-test: true
-            bin: "./bin/godot.linuxbsd.tools.64s"
+            bin: "./bin/godot.linuxbsd.double.tools.64.san"
             build-mono: false
             # Skip 2GiB artifact speeding up action.
             artifact: false
@@ -49,6 +49,14 @@ jobs:
             tests: false
             sconsflags: module_mono_enabled=yes mono_glue=no debug_symbols=no
             build-mono: false
+            artifact: true
+
+          - name: Minimal Template (target=release, tools=no, everything disabled)
+            cache-name: linux-template-minimal
+            target: release
+            tools: false
+            tests: false
+            sconsflags: modules_enabled_by_default=no disable_3d=yes disable_advanced_gui=yes deprecated=no minizip=no
             artifact: true
 
     steps:

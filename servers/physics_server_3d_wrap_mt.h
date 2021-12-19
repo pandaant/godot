@@ -137,9 +137,6 @@ public:
 	FUNC2(area_set_space, RID, RID);
 	FUNC1RC(RID, area_get_space, RID);
 
-	FUNC2(area_set_space_override_mode, RID, AreaSpaceOverrideMode);
-	FUNC1RC(AreaSpaceOverrideMode, area_get_space_override_mode, RID);
-
 	FUNC4(area_add_shape, RID, RID, const Transform3D &, bool);
 	FUNC3(area_set_shape, RID, int, RID);
 	FUNC3(area_set_shape_transform, RID, int, const Transform3D &);
@@ -216,18 +213,24 @@ public:
 	FUNC3(body_set_state, RID, BodyState, const Variant &);
 	FUNC2RC(Variant, body_get_state, RID, BodyState);
 
-	FUNC2(body_set_applied_force, RID, const Vector3 &);
-	FUNC1RC(Vector3, body_get_applied_force, RID);
-
-	FUNC2(body_set_applied_torque, RID, const Vector3 &);
-	FUNC1RC(Vector3, body_get_applied_torque, RID);
-
-	FUNC2(body_add_central_force, RID, const Vector3 &);
-	FUNC3(body_add_force, RID, const Vector3 &, const Vector3 &);
-	FUNC2(body_add_torque, RID, const Vector3 &);
 	FUNC2(body_apply_torque_impulse, RID, const Vector3 &);
 	FUNC2(body_apply_central_impulse, RID, const Vector3 &);
 	FUNC3(body_apply_impulse, RID, const Vector3 &, const Vector3 &);
+
+	FUNC2(body_apply_central_force, RID, const Vector3 &);
+	FUNC3(body_apply_force, RID, const Vector3 &, const Vector3 &);
+	FUNC2(body_apply_torque, RID, const Vector3 &);
+
+	FUNC2(body_add_constant_central_force, RID, const Vector3 &);
+	FUNC3(body_add_constant_force, RID, const Vector3 &, const Vector3 &);
+	FUNC2(body_add_constant_torque, RID, const Vector3 &);
+
+	FUNC2(body_set_constant_force, RID, const Vector3 &);
+	FUNC1RC(Vector3, body_get_constant_force, RID);
+
+	FUNC2(body_set_constant_torque, RID, const Vector3 &);
+	FUNC1RC(Vector3, body_get_constant_torque, RID);
+
 	FUNC2(body_set_axis_velocity, RID, const Vector3 &);
 
 	FUNC3(body_set_axis_lock, RID, BodyAxis, bool);
@@ -373,7 +376,6 @@ public:
 
 	FUNC1(free, RID);
 	FUNC1(set_active, bool);
-	FUNC1(set_collision_iterations, int);
 
 	virtual void init() override;
 	virtual void step(real_t p_step) override;

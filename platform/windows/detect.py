@@ -206,6 +206,8 @@ def configure_msvc(env, manual_msvc_config):
 
     elif env["target"] == "debug":
         env.AppendUnique(CCFLAGS=["/Zi", "/FS", "/Od", "/EHsc"])
+        # Allow big objects. Only needed for debug, see MinGW branch for rationale.
+        env.AppendUnique(CCFLAGS=["/bigobj"])
         env.Append(LINKFLAGS=["/DEBUG"])
 
     if env["debug_symbols"]:
@@ -226,9 +228,9 @@ def configure_msvc(env, manual_msvc_config):
         env.AppendUnique(CCFLAGS=["/MD"])
 
     env.AppendUnique(CCFLAGS=["/Gd", "/GR", "/nologo"])
-    # Force to use Unicode encoding
-    env.AppendUnique(CCFLAGS=["/utf-8"])
+    env.AppendUnique(CCFLAGS=["/utf-8"])  # Force to use Unicode encoding.
     env.AppendUnique(CXXFLAGS=["/TP"])  # assume all sources are C++
+
     if manual_msvc_config:  # should be automatic if SCons found it
         if os.getenv("WindowsSdkDir") is not None:
             env.Prepend(CPPPATH=[os.getenv("WindowsSdkDir") + "/Include"])
@@ -306,7 +308,7 @@ def configure_msvc(env, manual_msvc_config):
 
     # Sanitizers
     if env["use_asan"]:
-        env.extra_suffix += ".s"
+        env.extra_suffix += ".san"
         env.Append(LINKFLAGS=["/INFERASANLIBS"])
         env.Append(CCFLAGS=["/fsanitize=address"])
 
@@ -358,6 +360,10 @@ def configure_mingw(env):
 
     elif env["target"] == "debug":
         env.Append(CCFLAGS=["-g3"])
+        # Allow big objects. It's supposed not to have drawbacks but seems to break
+        # GCC LTO, so enabling for debug builds only (which are not built with LTO
+        # and are the only ones with too big objects).
+        env.Append(CCFLAGS=["-Wa,-mbig-obj"])
 
     if env["windows_subsystem"] == "gui":
         env.Append(LINKFLAGS=["-Wl,--subsystem,windows"])

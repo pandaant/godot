@@ -71,7 +71,7 @@ String TextEditor::get_name() {
 		name = TTR("[unsaved]");
 	} else if (text_file->is_built_in()) {
 		const String &text_file_name = text_file->get_name();
-		if (text_file_name != "") {
+		if (!text_file_name.is_empty()) {
 			// If the built-in text_file has a custom resource name defined,
 			// display the built-in text_file name as follows: `ResourceName (scene_file.tscn)`
 			name = vformat("%s (%s)", text_file_name, name.get_slice("::", 0));
@@ -425,7 +425,7 @@ void TextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 	Ref<InputEventMouseButton> mb = ev;
 
 	if (mb.is_valid()) {
-		if (mb->get_button_index() == MOUSE_BUTTON_RIGHT) {
+		if (mb->get_button_index() == MouseButton::RIGHT) {
 			CodeEdit *tx = code_editor->get_text_editor();
 
 			Point2i pos = tx->get_line_column_at_pos(mb->get_global_position() - tx->get_global_position());
@@ -507,8 +507,8 @@ void TextEditor::_make_context_menu(bool p_selection, bool p_can_fold, bool p_is
 	context_menu->set_item_disabled(context_menu->get_item_index(EDIT_UNDO), !tx->has_undo());
 	context_menu->set_item_disabled(context_menu->get_item_index(EDIT_REDO), !tx->has_redo());
 
-	context_menu->set_position(get_global_transform().xform(p_position));
-	context_menu->set_size(Vector2(1, 1));
+	context_menu->set_position(get_screen_position() + p_position);
+	context_menu->reset_size();
 	context_menu->popup();
 }
 

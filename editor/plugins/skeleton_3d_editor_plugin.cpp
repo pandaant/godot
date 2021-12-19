@@ -681,7 +681,7 @@ void Skeleton3DEditor::create_editors() {
 	key_insert_button->set_focus_mode(FOCUS_NONE);
 	key_insert_button->connect("pressed", callable_mp(this, &Skeleton3DEditor::insert_keys), varray(false));
 	key_insert_button->set_tooltip(TTR("Insert key of bone poses already exist track."));
-	key_insert_button->set_shortcut(ED_SHORTCUT("skeleton_3d_editor/insert_key_to_existing_tracks", TTR("Insert Key (Existing Tracks)"), KEY_INSERT));
+	key_insert_button->set_shortcut(ED_SHORTCUT("skeleton_3d_editor/insert_key_to_existing_tracks", TTR("Insert Key (Existing Tracks)"), Key::INSERT));
 	animation_hb->add_child(key_insert_button);
 
 	key_insert_all_button = memnew(Button);
@@ -689,7 +689,7 @@ void Skeleton3DEditor::create_editors() {
 	key_insert_all_button->set_focus_mode(FOCUS_NONE);
 	key_insert_all_button->connect("pressed", callable_mp(this, &Skeleton3DEditor::insert_keys), varray(true));
 	key_insert_all_button->set_tooltip(TTR("Insert key of all bone poses."));
-	key_insert_all_button->set_shortcut(ED_SHORTCUT("skeleton_3d_editor/insert_key_of_all_bones", TTR("Insert Key (All Bones)"), KEY_MASK_CMD + KEY_INSERT));
+	key_insert_all_button->set_shortcut(ED_SHORTCUT("skeleton_3d_editor/insert_key_of_all_bones", TTR("Insert Key (All Bones)"), KeyModifierMask::CMD + Key::INSERT));
 	animation_hb->add_child(key_insert_all_button);
 
 	// Bone tree.
@@ -964,6 +964,7 @@ void Skeleton3DEditor::select_bone(int p_idx) {
 
 Skeleton3DEditor::~Skeleton3DEditor() {
 	if (skeleton) {
+		select_bone(-1);
 #ifdef TOOLS_ENABLED
 		skeleton->disconnect("show_rest_only_changed", callable_mp(this, &Skeleton3DEditor::_update_gizmo_visible));
 		skeleton->disconnect("bone_enabled_changed", callable_mp(this, &Skeleton3DEditor::_bone_enabled_changed));
@@ -973,6 +974,7 @@ Skeleton3DEditor::~Skeleton3DEditor() {
 #endif
 		handles_mesh_instance->get_parent()->remove_child(handles_mesh_instance);
 	}
+	edit_mode_toggled(false);
 
 	handles_mesh_instance->queue_delete();
 
@@ -1028,7 +1030,7 @@ EditorPlugin::AfterGUIInput Skeleton3DEditorPlugin::forward_spatial_gui_input(Ca
 	Node3DEditor *ne = Node3DEditor::get_singleton();
 	if (se->is_edit_mode()) {
 		const Ref<InputEventMouseButton> mb = p_event;
-		if (mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+		if (mb.is_valid() && mb->get_button_index() == MouseButton::LEFT) {
 			if (ne->get_tool_mode() != Node3DEditor::TOOL_MODE_SELECT) {
 				if (!ne->is_gizmo_visible()) {
 					return EditorPlugin::AFTER_GUI_INPUT_STOP;

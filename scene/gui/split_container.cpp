@@ -201,7 +201,7 @@ void SplitContainer::_notification(int p_what) {
 			}
 		} break;
 		case NOTIFICATION_THEME_CHANGED: {
-			minimum_size_changed();
+			update_minimum_size();
 		} break;
 	}
 }
@@ -216,7 +216,7 @@ void SplitContainer::gui_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventMouseButton> mb = p_event;
 
 	if (mb.is_valid()) {
-		if (mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+		if (mb->get_button_index() == MouseButton::LEFT) {
 			if (mb->is_pressed()) {
 				int sep = get_theme_constant(SNAME("separation"));
 

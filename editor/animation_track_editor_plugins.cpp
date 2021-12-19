@@ -699,7 +699,7 @@ void AnimationTrackEditSubAnim::draw_key(int p_index, float p_pixels_sec, int p_
 
 		int limit = to_x - from_x - 4;
 		if (limit > 0) {
-			draw_string(font, Point2(from_x + 2, int(get_size().height - font->get_height(font_size)) / 2 + font->get_ascent(font_size)), anim, HALIGN_LEFT, -1, font_size, color);
+			draw_string(font, Point2(from_x + 2, int(get_size().height - font->get_height(font_size)) / 2 + font->get_ascent(font_size)), anim, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color);
 		}
 
 		if (p_selected) {
@@ -1098,7 +1098,7 @@ void AnimationTrackEditTypeAudio::gui_input(const Ref<InputEvent> &p_event) {
 	}
 
 	Ref<InputEventMouseButton> mb = p_event;
-	if (mb.is_valid() && mb->is_pressed() && mb->get_button_index() == MOUSE_BUTTON_LEFT && get_default_cursor_shape() == CURSOR_HSIZE) {
+	if (mb.is_valid() && mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT && get_default_cursor_shape() == CURSOR_HSIZE) {
 		len_resizing = true;
 		len_resizing_start = mb->is_shift_pressed();
 		len_resizing_from_px = mb->get_position().x;
@@ -1108,7 +1108,7 @@ void AnimationTrackEditTypeAudio::gui_input(const Ref<InputEvent> &p_event) {
 		return;
 	}
 
-	if (len_resizing && mb.is_valid() && !mb->is_pressed() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+	if (len_resizing && mb.is_valid() && !mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT) {
 		float ofs_local = -len_resizing_rel / get_timeline()->get_zoom_scale();
 		if (len_resizing_start) {
 			float prev_ofs = get_animation()->audio_track_get_key_start_offset(get_track(), len_resizing_index);
@@ -1272,7 +1272,7 @@ void AnimationTrackEditTypeAnimation::draw_key(int p_index, float p_pixels_sec, 
 
 		int limit = to_x - from_x - 4;
 		if (limit > 0) {
-			draw_string(font, Point2(from_x + 2, int(get_size().height - font->get_height(font_size)) / 2 + font->get_ascent(font_size)), anim, HALIGN_LEFT, -1, font_size, color);
+			draw_string(font, Point2(from_x + 2, int(get_size().height - font->get_height(font_size)) / 2 + font->get_ascent(font_size)), anim, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color);
 		}
 
 		if (p_selected) {

@@ -55,7 +55,7 @@ String ResourceImporterCSVTranslation::get_resource_type() const {
 	return "Translation";
 }
 
-bool ResourceImporterCSVTranslation::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
+bool ResourceImporterCSVTranslation::get_option_visibility(const String &p_path, const String &p_option, const Map<StringName, Variant> &p_options) const {
 	return true;
 }
 
@@ -67,7 +67,7 @@ String ResourceImporterCSVTranslation::get_preset_name(int p_idx) const {
 	return "";
 }
 
-void ResourceImporterCSVTranslation::get_import_options(List<ImportOption> *r_options, int p_preset) const {
+void ResourceImporterCSVTranslation::get_import_options(const String &p_path, List<ImportOption> *r_options, int p_preset) const {
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "compress"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "delimiter", PROPERTY_HINT_ENUM, "Comma,Semicolon,Tab"), 0));
 }
@@ -113,7 +113,7 @@ Error ResourceImporterCSVTranslation::import(const String &p_source_file, const 
 
 	while (line.size() == locales.size() + 1) {
 		String key = line[0];
-		if (key != "") {
+		if (!key.is_empty()) {
 			for (int i = 1; i < line.size(); i++) {
 				translations.write[i - 1]->add_message(key, line[i].c_unescape());
 			}

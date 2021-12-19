@@ -111,7 +111,7 @@ public:
 void ConnectDialog::ok_pressed() {
 	String method_name = dst_method->get_text();
 
-	if (method_name == "") {
+	if (method_name.is_empty()) {
 		error->set_text(TTR("Method in target node must be specified."));
 		error->popup_centered();
 		return;
@@ -234,13 +234,13 @@ void ConnectDialog::_add_bind() {
  */
 void ConnectDialog::_remove_bind() {
 	String st = bind_editor->get_selected_path();
-	if (st == "") {
+	if (st.is_empty()) {
 		return;
 	}
 	int idx = st.get_slice("/", 1).to_int() - 1;
 
 	ERR_FAIL_INDEX(idx, cdbinds->params.size());
-	cdbinds->params.remove(idx);
+	cdbinds->params.remove_at(idx);
 	cdbinds->notify_changed();
 }
 
@@ -378,7 +378,7 @@ void ConnectDialog::_advanced_pressed() {
 		error_label->hide();
 	} else {
 		set_min_size(Size2(600, 500) * EDSCALE);
-		set_size(Size2());
+		reset_size();
 		connect_to_label->set_text(TTR("Connect to Script:"));
 		tree->set_connect_to_script_mode(true);
 
@@ -723,7 +723,7 @@ void ConnectionsDock::_open_connection_dialog(TreeItem &item) {
 				c = '_';
 			} else {
 				// Remove any other characters.
-				midname.remove(i);
+				midname.remove_at(i);
 				i--;
 				continue;
 			}
@@ -838,13 +838,15 @@ void ConnectionsDock::_rmb_pressed(Vector2 position) {
 		return;
 	}
 
-	Vector2 global_position = tree->get_global_position() + position;
+	Vector2 screen_position = tree->get_screen_position() + position;
 
 	if (_is_item_signal(*item)) {
-		signal_menu->set_position(global_position);
+		signal_menu->set_position(screen_position);
+		signal_menu->reset_size();
 		signal_menu->popup();
 	} else {
-		slot_menu->set_position(global_position);
+		slot_menu->set_position(screen_position);
+		slot_menu->reset_size();
 		slot_menu->popup();
 	}
 }
@@ -967,7 +969,7 @@ void ConnectionsDock::update_tree() {
 					} else if (pi.type != Variant::NIL) {
 						tname = Variant::get_type_name(pi.type);
 					}
-					signaldesc += (pi.name == "" ? String("arg " + itos(i)) : pi.name) + ": " + tname;
+					signaldesc += (pi.name.is_empty() ? String("arg " + itos(i)) : pi.name) + ": " + tname;
 					argnames.push_back(pi.name + ":" + tname);
 				}
 			}
@@ -999,7 +1001,7 @@ void ConnectionsDock::update_tree() {
 				if (!found) {
 					DocTools *dd = EditorHelp::get_doc_data();
 					Map<String, DocData::ClassDoc>::Element *F = dd->class_list.find(base);
-					while (F && descr == String()) {
+					while (F && descr.is_empty()) {
 						for (int i = 0; i < F->get().signals.size(); i++) {
 							if (F->get().signals[i].name == signal_name.operator String()) {
 								descr = DTR(F->get().signals[i].description);

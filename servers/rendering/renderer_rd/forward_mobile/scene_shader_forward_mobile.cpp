@@ -47,7 +47,7 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 	uniforms.clear();
 	uses_screen_texture = false;
 
-	if (code == String()) {
+	if (code.is_empty()) {
 		return; //just invalid, but no error
 	}
 
@@ -325,11 +325,20 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 	valid = true;
 }
 
-void SceneShaderForwardMobile::ShaderData::set_default_texture_param(const StringName &p_name, RID p_texture) {
+void SceneShaderForwardMobile::ShaderData::set_default_texture_param(const StringName &p_name, RID p_texture, int p_index) {
 	if (!p_texture.is_valid()) {
-		default_texture_params.erase(p_name);
+		if (default_texture_params.has(p_name) && default_texture_params[p_name].has(p_index)) {
+			default_texture_params[p_name].erase(p_index);
+
+			if (default_texture_params[p_name].is_empty()) {
+				default_texture_params.erase(p_name);
+			}
+		}
 	} else {
-		default_texture_params[p_name] = p_texture;
+		if (!default_texture_params.has(p_name)) {
+			default_texture_params[p_name] = Map<int, RID>();
+		}
+		default_texture_params[p_name][p_index] = p_texture;
 	}
 }
 
@@ -564,6 +573,7 @@ void SceneShaderForwardMobile::init(RendererStorageRD *p_storage, const String p
 		actions.renames["CUSTOM1"] = "custom1_attrib";
 		actions.renames["CUSTOM2"] = "custom2_attrib";
 		actions.renames["CUSTOM3"] = "custom3_attrib";
+		actions.renames["OUTPUT_IS_SRGB"] = "SHADER_IS_SRGB";
 
 		actions.renames["VIEW_INDEX"] = "ViewIndex";
 		actions.renames["VIEW_MONO_LEFT"] = "0";
@@ -627,6 +637,7 @@ void SceneShaderForwardMobile::init(RendererStorageRD *p_storage, const String p
 		actions.render_mode_defines["cull_front"] = "#define DO_SIDE_CHECK\n";
 		actions.render_mode_defines["cull_disabled"] = "#define DO_SIDE_CHECK\n";
 		actions.render_mode_defines["particle_trails"] = "#define USE_PARTICLE_TRAILS\n";
+		actions.render_mode_defines["depth_draw_opaque"] = "#define USE_OPAQUE_PREPASS\n";
 
 		bool force_lambert = GLOBAL_GET("rendering/shading/overrides/force_lambert_over_burley");
 		if (!force_lambert) {

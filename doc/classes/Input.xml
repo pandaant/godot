@@ -7,7 +7,7 @@
 		A singleton that deals with inputs. This includes key presses, mouse buttons and movement, joypads, and input actions. Actions and their events can be set in the [b]Input Map[/b] tab in the [b]Project &gt; Project Settings[/b], or with the [InputMap] class.
 	</description>
 	<tutorials>
-		<link title="Inputs documentation index">https://docs.godotengine.org/en/latest/tutorials/inputs/index.html</link>
+		<link title="Inputs documentation index">$DOCS_URL/tutorials/inputs/index.html</link>
 		<link title="2D Dodge The Creeps Demo">https://godotengine.org/asset-library/asset/515</link>
 		<link title="3D Voxel Demo">https://godotengine.org/asset-library/asset/676</link>
 	</tutorials>
@@ -155,7 +155,7 @@
 			</description>
 		</method>
 		<method name="get_mouse_button_mask" qualifiers="const">
-			<return type="int" />
+			<return type="int" enum="MouseButton" />
 			<description>
 				Returns mouse buttons as a bitmask. If multiple mouse buttons are pressed at the same time, the bits are added together.
 			</description>
@@ -236,15 +236,11 @@
 				Returns [code]true[/code] if you are pressing the mouse button specified with [enum MouseButton].
 			</description>
 		</method>
-		<method name="joy_connection_changed">
-			<return type="void" />
-			<argument index="0" name="device" type="int" />
-			<argument index="1" name="connected" type="bool" />
-			<argument index="2" name="name" type="String" />
-			<argument index="3" name="guid" type="String" />
+		<method name="is_physical_key_pressed" qualifiers="const">
+			<return type="bool" />
+			<argument index="0" name="keycode" type="int" enum="Key" />
 			<description>
-				Notifies the [Input] singleton that a connection has changed, to update the state for the [code]device[/code] index.
-				This is used internally and should not have to be called from user scripts. See [signal joy_connection_changed] for the signal emitted when this is triggered internally.
+				Returns [code]true[/code] if you are pressing the key in the physical location on the 101/102-key US QWERTY keyboard. You can pass a [enum Key] constant.
 			</description>
 		</method>
 		<method name="parse_input_event">

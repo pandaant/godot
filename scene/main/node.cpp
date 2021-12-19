@@ -114,7 +114,7 @@ void Node::_notification(int p_notification) {
 				get_multiplayer()->scene_enter_exit_notify(data.scene_file_path, this, false);
 			}
 		} break;
-		case NOTIFICATION_PATH_CHANGED: {
+		case NOTIFICATION_PATH_RENAMED: {
 			if (data.path_cache) {
 				memdelete(data.path_cache);
 				data.path_cache = nullptr;
@@ -332,7 +332,7 @@ void Node::_move_child(Node *p_child, int p_pos, bool p_ignore_end) {
 	int motion_from = MIN(p_pos, p_child->data.pos);
 	int motion_to = MAX(p_pos, p_child->data.pos);
 
-	data.children.remove(p_child->data.pos);
+	data.children.remove_at(p_child->data.pos);
 	data.children.insert(p_pos, p_child);
 
 	if (data.tree) {
@@ -892,14 +892,14 @@ void Node::_set_name_nocheck(const StringName &p_name) {
 void Node::set_name(const String &p_name) {
 	String name = p_name.validate_node_name();
 
-	ERR_FAIL_COND(name == "");
+	ERR_FAIL_COND(name.is_empty());
 	data.name = name;
 
 	if (data.parent) {
 		data.parent->_validate_child_name(this);
 	}
 
-	propagate_notification(NOTIFICATION_PATH_CHANGED);
+	propagate_notification(NOTIFICATION_PATH_RENAMED);
 
 	if (is_inside_tree()) {
 		emit_signal(SNAME("renamed"));
@@ -1208,7 +1208,7 @@ void Node::remove_child(Node *p_child) {
 	remove_child_notify(p_child);
 	p_child->notification(NOTIFICATION_UNPARENTED);
 
-	data.children.remove(idx);
+	data.children.remove_at(idx);
 
 	//update pointer and size
 	child_count = data.children.size();
@@ -1990,7 +1990,7 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 		nip->set_instance_path(ip->get_instance_path());
 		node = nip;
 
-	} else if ((p_flags & DUPLICATE_USE_INSTANCING) && get_scene_file_path() != String()) {
+	} else if ((p_flags & DUPLICATE_USE_INSTANCING) && !get_scene_file_path().is_empty()) {
 		Ref<PackedScene> res = ResourceLoader::load(get_scene_file_path());
 		ERR_FAIL_COND_V(res.is_null(), nullptr);
 		PackedScene::GenEditState ges = PackedScene::GEN_EDIT_STATE_DISABLED;
@@ -2014,7 +2014,7 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 		ERR_FAIL_COND_V(!node, nullptr);
 	}
 
-	if (get_scene_file_path() != "") { //an instance
+	if (!get_scene_file_path().is_empty()) { //an instance
 		node->set_scene_file_path(get_scene_file_path());
 		node->data.editable_instance = data.editable_instance;
 	}
@@ -2046,7 +2046,7 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 
 				node_tree.push_back(descendant);
 
-				if (descendant->get_scene_file_path() != "" && instance_roots.has(descendant->get_owner())) {
+				if (!descendant->get_scene_file_path().is_empty() && instance_roots.has(descendant->get_owner())) {
 					instance_roots.push_back(descendant);
 				}
 			}
@@ -2829,7 +2829,7 @@ void Node::_bind_methods() {
 	BIND_CONSTANT(NOTIFICATION_INSTANCED);
 	BIND_CONSTANT(NOTIFICATION_DRAG_BEGIN);
 	BIND_CONSTANT(NOTIFICATION_DRAG_END);
-	BIND_CONSTANT(NOTIFICATION_PATH_CHANGED);
+	BIND_CONSTANT(NOTIFICATION_PATH_RENAMED);
 	BIND_CONSTANT(NOTIFICATION_INTERNAL_PROCESS);
 	BIND_CONSTANT(NOTIFICATION_INTERNAL_PHYSICS_PROCESS);
 	BIND_CONSTANT(NOTIFICATION_POST_ENTER_TREE);
@@ -2889,7 +2889,7 @@ void Node::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "process_priority"), "set_process_priority", "get_process_priority");
 
 	ADD_GROUP("Editor Description", "editor_");
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "editor_description", PROPERTY_HINT_MULTILINE_TEXT, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_INTERNAL), "set_editor_description", "get_editor_description");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "editor_description", PROPERTY_HINT_MULTILINE_TEXT), "set_editor_description", "get_editor_description");
 
 	GDVIRTUAL_BIND(_process, "delta");
 	GDVIRTUAL_BIND(_physics_process, "delta");

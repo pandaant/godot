@@ -11,10 +11,8 @@ from collections import OrderedDict
 # Uncomment to do type checks. I have it commented out so it works below Python 3.5
 # from typing import List, Dict, TextIO, Tuple, Iterable, Optional, DefaultDict, Any, Union
 
-# http(s)://docs.godotengine.org/<langcode>/<tag>/path/to/page.html(#fragment-tag)
-GODOT_DOCS_PATTERN = re.compile(
-    r"^http(?:s)?://docs\.godotengine\.org/(?:[a-zA-Z0-9.\-_]*)/(?:[a-zA-Z0-9.\-_]*)/(.*)\.html(#.*)?$"
-)
+# $DOCS_URL/path/to/page.html(#fragment-tag)
+GODOT_DOCS_PATTERN = re.compile(r"^\$DOCS_URL/(.*)\.html(#.*)?$")
 
 
 def print_error(error, state):  # type: (str, State) -> None
@@ -42,15 +40,15 @@ class TypeName:
 
 class PropertyDef:
     def __init__(
-        self, name, type_name, setter, getter, text, default_value, overridden
-    ):  # type: (str, TypeName, Optional[str], Optional[str], Optional[str], Optional[str], Optional[bool]) -> None
+        self, name, type_name, setter, getter, text, default_value, overrides
+    ):  # type: (str, TypeName, Optional[str], Optional[str], Optional[str], Optional[str], Optional[str]) -> None
         self.name = name
         self.type_name = type_name
         self.setter = setter
         self.getter = getter
         self.text = text
         self.default_value = default_value
-        self.overridden = overridden
+        self.overrides = overrides
 
 
 class ParameterDef:
@@ -164,10 +162,10 @@ class State:
                 default_value = property.get("default") or None
                 if default_value is not None:
                     default_value = "``{}``".format(default_value)
-                overridden = property.get("override") or False
+                overrides = property.get("overrides") or None
 
                 property_def = PropertyDef(
-                    property_name, type_name, setter, getter, property.text, default_value, overridden
+                    property_name, type_name, setter, getter, property.text, default_value, overrides
                 )
                 class_def.properties[property_name] = property_def
 
@@ -330,7 +328,7 @@ class State:
                     theme_item.text,
                     default_value,
                 )
-                class_def.theme_items[theme_item_id] = theme_item_def
+                class_def.theme_items[theme_item_name] = theme_item_def
 
         tutorials = class_root.find("tutorials")
         if tutorials is not None:
@@ -522,8 +520,9 @@ def make_rst_class(class_def, state, dry_run, output_dir):  # type: (ClassDef, S
         for property_def in class_def.properties.values():
             type_rst = property_def.type_name.to_rst(state)
             default = property_def.default_value
-            if default is not None and property_def.overridden:
-                ml.append((type_rst, property_def.name, default + " *(parent override)*"))
+            if default is not None and property_def.overrides:
+                ref = ":ref:`{1}<class_{1}_property_{0}>`".format(property_def.name, property_def.overrides)
+                ml.append((type_rst, property_def.name, default + " (overrides " + ref + ")"))
             else:
                 ref = ":ref:`{0}<class_{1}_property_{0}>`".format(property_def.name, class_name)
                 ml.append((type_rst, ref, default))
@@ -626,12 +625,12 @@ def make_rst_class(class_def, state, dry_run, output_dir):  # type: (ClassDef, S
             f.write("\n\n")
 
     # Property descriptions
-    if any(not p.overridden for p in class_def.properties.values()) > 0:
+    if any(not p.overrides for p in class_def.properties.values()) > 0:
         f.write(make_heading("Property Descriptions", "-"))
         index = 0
 
         for property_def in class_def.properties.values():
-            if property_def.overridden:
+            if property_def.overrides:
                 continue
 
             if index != 0:
@@ -857,16 +856,11 @@ def rstize_text(text, state):  # type: (str, State) -> str
 
     # Handle [tags]
     inside_code = False
-    inside_url = False
-    url_has_name = False
-    url_link = ""
     pos = 0
     tag_depth = 0
     previous_pos = 0
     while True:
         pos = text.find("[", pos)
-        if inside_url and (pos > previous_pos):
-            url_has_name = True
         if pos == -1:
             break
 
@@ -912,6 +906,7 @@ def rstize_text(text, state):  # type: (str, State) -> str
                 or cmd.startswith("member")
                 or cmd.startswith("signal")
                 or cmd.startswith("constant")
+                or cmd.startswith("theme_item")
             ):
                 param = tag_text[space_pos + 1 :]
 
@@ -947,6 +942,13 @@ def rstize_text(text, state):  # type: (str, State) -> str
                         if method_param not in class_def.properties:
                             print_error("Unresolved member '{}', file: {}".format(param, state.current_class), state)
                         ref_type = "_property"
+
+                    elif cmd.startswith("theme_item"):
+                        if method_param not in class_def.theme_items:
+                            print_error(
+                                "Unresolved theme item '{}', file: {}".format(param, state.current_class), state
+                            )
+                        ref_type = "_theme_{}".format(class_def.theme_items[method_param].data_name)
 
                     elif cmd.startswith("signal"):
                         if method_param not in class_def.signals:
@@ -995,17 +997,23 @@ def rstize_text(text, state):  # type: (str, State) -> str
             elif cmd.find("image=") == 0:
                 tag_text = ""  # '![](' + cmd[6:] + ')'
             elif cmd.find("url=") == 0:
-                url_link = cmd[4:]
-                tag_text = "`"
-                tag_depth += 1
-                inside_url = True
-                url_has_name = False
-            elif cmd == "/url":
-                tag_text = ("" if url_has_name else url_link) + " <" + url_link + ">`__"
-                tag_depth -= 1
-                escape_post = True
-                inside_url = False
-                url_has_name = False
+                # URLs are handled in full here as we need to extract the optional link
+                # title to use `make_link`.
+                link_url = cmd[4:]
+                endurl_pos = text.find("[/url]", endq_pos + 1)
+                if endurl_pos == -1:
+                    print_error(
+                        "Tag depth mismatch for [url]: no closing [/url], file: {}".format(state.current_class), state
+                    )
+                    break
+                link_title = text[endq_pos + 1 : endurl_pos]
+                tag_text = make_link(link_url, link_title)
+
+                pre_text = text[:pos]
+                text = pre_text + tag_text + text[endurl_pos + 6 :]
+                pos = len(pre_text) + len(tag_text)
+                previous_pos = pos
+                continue
             elif cmd == "center":
                 tag_depth += 1
                 tag_text = ""
@@ -1252,21 +1260,22 @@ def make_link(url, title):  # type: (str, str) -> str
         if match.lastindex == 2:
             # Doc reference with fragment identifier: emit direct link to section with reference to page, for example:
             # `#calling-javascript-from-script in Exporting For Web`
-            return "`" + groups[1] + " <../" + groups[0] + ".html" + groups[1] + ">`_ in :doc:`../" + groups[0] + "`"
-            # Commented out alternative: Instead just emit:
-            # `Subsection in Exporting For Web`
-            # return "`Subsection <../" + groups[0] + ".html" + groups[1] + ">`__ in :doc:`../" + groups[0] + "`"
+            # Or use the title if provided.
+            if title != "":
+                return "`" + title + " <../" + groups[0] + ".html" + groups[1] + ">`__"
+            return "`" + groups[1] + " <../" + groups[0] + ".html" + groups[1] + ">`__ in :doc:`../" + groups[0] + "`"
         elif match.lastindex == 1:
             # Doc reference, for example:
             # `Math`
+            if title != "":
+                return ":doc:`" + title + " <../" + groups[0] + ">`"
             return ":doc:`../" + groups[0] + "`"
     else:
         # External link, for example:
         # `http://enet.bespin.org/usergroup0.html`
         if title != "":
             return "`" + title + " <" + url + ">`__"
-        else:
-            return "`" + url + " <" + url + ">`__"
+        return "`" + url + " <" + url + ">`__"
 
 
 def sanitize_operator_name(dirty_name, state):  # type: (str, State) -> str

@@ -788,11 +788,7 @@ bool CSharpLanguage::is_assembly_reloading_needed() {
 
 	GDMonoAssembly *proj_assembly = gdmono->get_project_assembly();
 
-	String appname = ProjectSettings::get_singleton()->get("application/config/name");
-	String appname_safe = OS::get_singleton()->get_safe_dir_name(appname);
-	if (appname_safe.is_empty()) {
-		appname_safe = "UnnamedProject";
-	}
+	String appname_safe = ProjectSettings::get_singleton()->get_safe_project_name();
 
 	appname_safe += ".dll";
 
@@ -1355,7 +1351,7 @@ void CSharpLanguage::_editor_init_callback() {
 
 	// Enable it as a plugin
 	EditorNode::add_editor_plugin(godotsharp_editor);
-	ED_SHORTCUT("mono/build_solution", TTR("Build Solution"), KEY_MASK_ALT | KEY_B);
+	ED_SHORTCUT("mono/build_solution", TTR("Build Solution"), KeyModifierMask::ALT | Key::B);
 	godotsharp_editor->enable_plugin();
 
 	get_singleton()->godotsharp_editor = godotsharp_editor;

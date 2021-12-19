@@ -94,12 +94,23 @@ void PhysicsDirectBodyState3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_velocity_at_local_position", "local_position"), &PhysicsDirectBodyState3D::get_velocity_at_local_position);
 
-	ClassDB::bind_method(D_METHOD("add_central_force", "force"), &PhysicsDirectBodyState3D::add_central_force, Vector3());
-	ClassDB::bind_method(D_METHOD("add_force", "force", "position"), &PhysicsDirectBodyState3D::add_force, Vector3());
-	ClassDB::bind_method(D_METHOD("add_torque", "torque"), &PhysicsDirectBodyState3D::add_torque);
 	ClassDB::bind_method(D_METHOD("apply_central_impulse", "impulse"), &PhysicsDirectBodyState3D::apply_central_impulse, Vector3());
 	ClassDB::bind_method(D_METHOD("apply_impulse", "impulse", "position"), &PhysicsDirectBodyState3D::apply_impulse, Vector3());
 	ClassDB::bind_method(D_METHOD("apply_torque_impulse", "impulse"), &PhysicsDirectBodyState3D::apply_torque_impulse);
+
+	ClassDB::bind_method(D_METHOD("apply_central_force", "force"), &PhysicsDirectBodyState3D::apply_central_force, Vector3());
+	ClassDB::bind_method(D_METHOD("apply_force", "force", "position"), &PhysicsDirectBodyState3D::apply_force, Vector3());
+	ClassDB::bind_method(D_METHOD("apply_torque", "torque"), &PhysicsDirectBodyState3D::apply_torque);
+
+	ClassDB::bind_method(D_METHOD("add_constant_central_force", "force"), &PhysicsDirectBodyState3D::add_constant_central_force, Vector3());
+	ClassDB::bind_method(D_METHOD("add_constant_force", "force", "position"), &PhysicsDirectBodyState3D::add_constant_force, Vector3());
+	ClassDB::bind_method(D_METHOD("add_constant_torque", "torque"), &PhysicsDirectBodyState3D::add_constant_torque);
+
+	ClassDB::bind_method(D_METHOD("set_constant_force", "force"), &PhysicsDirectBodyState3D::set_constant_force);
+	ClassDB::bind_method(D_METHOD("get_constant_force"), &PhysicsDirectBodyState3D::get_constant_force);
+
+	ClassDB::bind_method(D_METHOD("set_constant_torque", "torque"), &PhysicsDirectBodyState3D::set_constant_torque);
+	ClassDB::bind_method(D_METHOD("get_constant_torque"), &PhysicsDirectBodyState3D::get_constant_torque);
 
 	ClassDB::bind_method(D_METHOD("set_sleep_state", "enabled"), &PhysicsDirectBodyState3D::set_sleep_state);
 	ClassDB::bind_method(D_METHOD("is_sleeping"), &PhysicsDirectBodyState3D::is_sleeping);
@@ -175,12 +186,20 @@ void PhysicsRayQueryParameters3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_collide_with_areas", "enable"), &PhysicsRayQueryParameters3D::set_collide_with_areas);
 	ClassDB::bind_method(D_METHOD("is_collide_with_areas_enabled"), &PhysicsRayQueryParameters3D::is_collide_with_areas_enabled);
 
+	ClassDB::bind_method(D_METHOD("set_hit_from_inside", "enable"), &PhysicsRayQueryParameters3D::set_hit_from_inside);
+	ClassDB::bind_method(D_METHOD("is_hit_from_inside_enabled"), &PhysicsRayQueryParameters3D::is_hit_from_inside_enabled);
+
+	ClassDB::bind_method(D_METHOD("set_hit_back_faces", "enable"), &PhysicsRayQueryParameters3D::set_hit_back_faces);
+	ClassDB::bind_method(D_METHOD("is_hit_back_faces_enabled"), &PhysicsRayQueryParameters3D::is_hit_back_faces_enabled);
+
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "from"), "set_from", "get_from");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "to"), "set_to", "get_to");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "collision_mask", PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_collision_mask", "get_collision_mask");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "exclude", PROPERTY_HINT_ARRAY_TYPE, "RID"), "set_exclude", "get_exclude");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "collide_with_bodies"), "set_collide_with_bodies", "is_collide_with_bodies_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "collide_with_areas"), "set_collide_with_areas", "is_collide_with_areas_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hit_from_inside"), "set_hit_from_inside", "is_hit_from_inside_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hit_back_faces"), "set_hit_back_faces", "is_hit_back_faces_enabled");
 }
 
 ///////////////////////////////////////////////////////
@@ -653,9 +672,6 @@ void PhysicsServer3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("area_set_space", "area", "space"), &PhysicsServer3D::area_set_space);
 	ClassDB::bind_method(D_METHOD("area_get_space", "area"), &PhysicsServer3D::area_get_space);
 
-	ClassDB::bind_method(D_METHOD("area_set_space_override_mode", "area", "mode"), &PhysicsServer3D::area_set_space_override_mode);
-	ClassDB::bind_method(D_METHOD("area_get_space_override_mode", "area"), &PhysicsServer3D::area_get_space_override_mode);
-
 	ClassDB::bind_method(D_METHOD("area_add_shape", "area", "shape", "transform", "disabled"), &PhysicsServer3D::area_add_shape, DEFVAL(Transform3D()), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("area_set_shape", "area", "shape_idx", "shape"), &PhysicsServer3D::area_set_shape);
 	ClassDB::bind_method(D_METHOD("area_set_shape_transform", "area", "shape_idx", "transform"), &PhysicsServer3D::area_set_shape_transform);
@@ -726,13 +742,24 @@ void PhysicsServer3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("body_set_state", "body", "state", "value"), &PhysicsServer3D::body_set_state);
 	ClassDB::bind_method(D_METHOD("body_get_state", "body", "state"), &PhysicsServer3D::body_get_state);
 
-	ClassDB::bind_method(D_METHOD("body_add_central_force", "body", "force"), &PhysicsServer3D::body_add_central_force);
-	ClassDB::bind_method(D_METHOD("body_add_force", "body", "force", "position"), &PhysicsServer3D::body_add_force, Vector3());
-	ClassDB::bind_method(D_METHOD("body_add_torque", "body", "torque"), &PhysicsServer3D::body_add_torque);
-
 	ClassDB::bind_method(D_METHOD("body_apply_central_impulse", "body", "impulse"), &PhysicsServer3D::body_apply_central_impulse);
 	ClassDB::bind_method(D_METHOD("body_apply_impulse", "body", "impulse", "position"), &PhysicsServer3D::body_apply_impulse, Vector3());
 	ClassDB::bind_method(D_METHOD("body_apply_torque_impulse", "body", "impulse"), &PhysicsServer3D::body_apply_torque_impulse);
+
+	ClassDB::bind_method(D_METHOD("body_apply_central_force", "body", "force"), &PhysicsServer3D::body_apply_central_force);
+	ClassDB::bind_method(D_METHOD("body_apply_force", "body", "force", "position"), &PhysicsServer3D::body_apply_force, Vector3());
+	ClassDB::bind_method(D_METHOD("body_apply_torque", "body", "torque"), &PhysicsServer3D::body_apply_torque);
+
+	ClassDB::bind_method(D_METHOD("body_add_constant_central_force", "body", "force"), &PhysicsServer3D::body_add_constant_central_force);
+	ClassDB::bind_method(D_METHOD("body_add_constant_force", "body", "force", "position"), &PhysicsServer3D::body_add_constant_force, Vector3());
+	ClassDB::bind_method(D_METHOD("body_add_constant_torque", "body", "torque"), &PhysicsServer3D::body_add_constant_torque);
+
+	ClassDB::bind_method(D_METHOD("body_set_constant_force", "body", "force"), &PhysicsServer3D::body_set_constant_force);
+	ClassDB::bind_method(D_METHOD("body_get_constant_force", "body"), &PhysicsServer3D::body_get_constant_force);
+
+	ClassDB::bind_method(D_METHOD("body_set_constant_torque", "body", "torque"), &PhysicsServer3D::body_set_constant_torque);
+	ClassDB::bind_method(D_METHOD("body_get_constant_torque", "body"), &PhysicsServer3D::body_get_constant_torque);
+
 	ClassDB::bind_method(D_METHOD("body_set_axis_velocity", "body", "axis_velocity"), &PhysicsServer3D::body_set_axis_velocity);
 
 	ClassDB::bind_method(D_METHOD("body_set_axis_lock", "body", "axis", "lock"), &PhysicsServer3D::body_set_axis_lock);
@@ -885,8 +912,6 @@ void PhysicsServer3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &PhysicsServer3D::set_active);
 
-	ClassDB::bind_method(D_METHOD("set_collision_iterations", "iterations"), &PhysicsServer3D::set_collision_iterations);
-
 	ClassDB::bind_method(D_METHOD("get_process_info", "process_info"), &PhysicsServer3D::get_process_info);
 
 	BIND_ENUM_CONSTANT(SHAPE_WORLD_BOUNDARY);
@@ -901,12 +926,15 @@ void PhysicsServer3D::_bind_methods() {
 	BIND_ENUM_CONSTANT(SHAPE_SOFT_BODY);
 	BIND_ENUM_CONSTANT(SHAPE_CUSTOM);
 
+	BIND_ENUM_CONSTANT(AREA_PARAM_GRAVITY_OVERRIDE_MODE);
 	BIND_ENUM_CONSTANT(AREA_PARAM_GRAVITY);
 	BIND_ENUM_CONSTANT(AREA_PARAM_GRAVITY_VECTOR);
 	BIND_ENUM_CONSTANT(AREA_PARAM_GRAVITY_IS_POINT);
 	BIND_ENUM_CONSTANT(AREA_PARAM_GRAVITY_DISTANCE_SCALE);
 	BIND_ENUM_CONSTANT(AREA_PARAM_GRAVITY_POINT_ATTENUATION);
+	BIND_ENUM_CONSTANT(AREA_PARAM_LINEAR_DAMP_OVERRIDE_MODE);
 	BIND_ENUM_CONSTANT(AREA_PARAM_LINEAR_DAMP);
+	BIND_ENUM_CONSTANT(AREA_PARAM_ANGULAR_DAMP_OVERRIDE_MODE);
 	BIND_ENUM_CONSTANT(AREA_PARAM_ANGULAR_DAMP);
 	BIND_ENUM_CONSTANT(AREA_PARAM_PRIORITY);
 	BIND_ENUM_CONSTANT(AREA_PARAM_WIND_FORCE_MAGNITUDE);
@@ -955,12 +983,12 @@ void PhysicsServer3D::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(SPACE_PARAM_CONTACT_RECYCLE_RADIUS);
 	BIND_ENUM_CONSTANT(SPACE_PARAM_CONTACT_MAX_SEPARATION);
-	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_MAX_ALLOWED_PENETRATION);
+	BIND_ENUM_CONSTANT(SPACE_PARAM_CONTACT_MAX_ALLOWED_PENETRATION);
+	BIND_ENUM_CONSTANT(SPACE_PARAM_CONTACT_DEFAULT_BIAS);
 	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_LINEAR_VELOCITY_SLEEP_THRESHOLD);
 	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_ANGULAR_VELOCITY_SLEEP_THRESHOLD);
 	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_TIME_TO_SLEEP);
-	BIND_ENUM_CONSTANT(SPACE_PARAM_BODY_ANGULAR_VELOCITY_DAMP_RATIO);
-	BIND_ENUM_CONSTANT(SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS);
+	BIND_ENUM_CONSTANT(SPACE_PARAM_SOLVER_ITERATIONS);
 
 	BIND_ENUM_CONSTANT(BODY_AXIS_LINEAR_X);
 	BIND_ENUM_CONSTANT(BODY_AXIS_LINEAR_Y);

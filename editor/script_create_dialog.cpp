@@ -101,7 +101,7 @@ void ScriptCreateDialog::config(const String &p_base_name, const String &p_base_
 	parent_name->set_text(p_base_name);
 	parent_name->deselect();
 
-	if (p_base_path != "") {
+	if (!p_base_path.is_empty()) {
 		initial_bp = p_base_path.get_basename();
 		file_path->set_text(initial_bp + "." + ScriptServer::get_language(language_menu->get_selected())->get_extension());
 		current_language = language_menu->get_selected();
@@ -163,10 +163,10 @@ bool ScriptCreateDialog::_validate_class(const String &p_string) {
 String ScriptCreateDialog::_validate_path(const String &p_path, bool p_file_must_exist) {
 	String p = p_path.strip_edges();
 
-	if (p == "") {
+	if (p.is_empty()) {
 		return TTR("Path is empty.");
 	}
-	if (p.get_file().get_basename() == "") {
+	if (p.get_file().get_basename().is_empty()) {
 		return TTR("Filename is empty.");
 	}
 
@@ -227,7 +227,7 @@ String ScriptCreateDialog::_validate_path(const String &p_path, bool p_file_must
 
 	/* Let ScriptLanguage do custom validation */
 	String path_error = ScriptServer::get_language(language_menu->get_selected())->validate_path(p);
-	if (path_error != "") {
+	if (!path_error.is_empty()) {
 		return path_error;
 	}
 
@@ -295,7 +295,7 @@ void ScriptCreateDialog::_create_new() {
 	String cname_param = _get_class_name();
 
 	Ref<Script> scr;
-	if (script_template != "") {
+	if (!script_template.is_empty()) {
 		scr = ResourceLoader::load(script_template);
 		if (scr.is_null()) {
 			alert->set_text(vformat(TTR("Error loading template '%s'"), script_template));
@@ -315,7 +315,9 @@ void ScriptCreateDialog::_create_new() {
 		}
 	}
 
-	if (!is_built_in) {
+	if (is_built_in) {
+		scr->set_name(internal_name->get_text());
+	} else {
 		String lpath = ProjectSettings::get_singleton()->localize_path(file_path->get_text());
 		scr->set_path(lpath);
 		Error err = ResourceSaver::save(lpath, scr, ResourceSaver::FLAG_CHANGE_PATH);
@@ -356,7 +358,7 @@ void ScriptCreateDialog::_lang_changed(int l) {
 	String selected_ext = "." + language->get_extension();
 	String path = file_path->get_text();
 	String extension = "";
-	if (path != "") {
+	if (!path.is_empty()) {
 		if (path.find(".") != -1) {
 			extension = path.get_extension();
 		}
@@ -580,7 +582,7 @@ void ScriptCreateDialog::_path_changed(const String &p_path) {
 	is_new_script_created = true;
 
 	String path_error = _validate_path(p_path, false);
-	if (path_error != "") {
+	if (!path_error.is_empty()) {
 		_msg_path_valid(false, path_error);
 		_update_dialog();
 		return;
@@ -685,6 +687,11 @@ void ScriptCreateDialog::_update_dialog() {
 	// Is Script created or loaded from existing file?
 
 	builtin_warning_label->set_visible(is_built_in);
+
+	path_controls[0]->set_visible(!is_built_in);
+	path_controls[1]->set_visible(!is_built_in);
+	name_controls[0]->set_visible(is_built_in);
+	name_controls[1]->set_visible(is_built_in);
 
 	// Check if the script name is the same as the parent class.
 	// This warning isn't relevant if the script is built-in.
@@ -868,9 +875,24 @@ ScriptCreateDialog::ScriptCreateDialog() {
 	path_button = memnew(Button);
 	path_button->connect("pressed", callable_mp(this, &ScriptCreateDialog::_browse_path), varray(false, true));
 	hb->add_child(path_button);
-	gc->add_child(memnew(Label(TTR("Path:"))));
+	Label *label = memnew(Label(TTR("Path:")));
+	gc->add_child(label);
 	gc->add_child(hb);
 	re_check_path = false;
+	path_controls[0] = label;
+	path_controls[1] = hb;
+
+	/* Name */
+
+	internal_name = memnew(LineEdit);
+	internal_name->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	label = memnew(Label(TTR("Name:")));
+	gc->add_child(label);
+	gc->add_child(internal_name);
+	name_controls[0] = label;
+	name_controls[1] = internal_name;
+	label->hide();
+	internal_name->hide();
 
 	/* Dialog Setup */
 
@@ -885,8 +907,8 @@ ScriptCreateDialog::ScriptCreateDialog() {
 	get_ok_button()->set_text(TTR("Create"));
 	alert = memnew(AcceptDialog);
 	alert->get_label()->set_autowrap_mode(Label::AUTOWRAP_WORD_SMART);
-	alert->get_label()->set_align(Label::ALIGN_CENTER);
-	alert->get_label()->set_valign(Label::VALIGN_CENTER);
+	alert->get_label()->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+	alert->get_label()->set_vertical_alignment(VERTICAL_ALIGNMENT_CENTER);
 	alert->get_label()->set_custom_minimum_size(Size2(325, 60) * EDSCALE);
 	add_child(alert);
 

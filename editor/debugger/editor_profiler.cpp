@@ -355,7 +355,7 @@ void EditorProfiler::_update_frame() {
 			item->set_metadata(0, it.signature);
 			item->set_metadata(1, it.script);
 			item->set_metadata(2, it.line);
-			item->set_text_align(2, TreeItem::ALIGN_RIGHT);
+			item->set_text_alignment(2, HORIZONTAL_ALIGNMENT_RIGHT);
 			item->set_tooltip(0, it.name + "\n" + it.script + ":" + itos(it.line));
 
 			float time = dtime == DISPLAY_SELF_TIME ? it.self : it.total;
@@ -438,7 +438,7 @@ void EditorProfiler::_graph_tex_input(const Ref<InputEvent> &p_ev) {
 	Ref<InputEventMouseMotion> mm = p_ev;
 
 	if (
-			(mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_LEFT && mb->is_pressed()) ||
+			(mb.is_valid() && mb->get_button_index() == MouseButton::LEFT && mb->is_pressed()) ||
 			(mm.is_valid())) {
 		int x = me->get_position().x - 1;
 		x = x * frame_metrics.size() / graph->get_size().width;
@@ -453,7 +453,7 @@ void EditorProfiler::_graph_tex_input(const Ref<InputEvent> &p_ev) {
 			x = frame_metrics.size() - 1;
 		}
 
-		if (mb.is_valid() || mm->get_button_mask() & MOUSE_BUTTON_MASK_LEFT) {
+		if (mb.is_valid() || (mm->get_button_mask() & MouseButton::MASK_LEFT) != MouseButton::NONE) {
 			updating_frame = true;
 
 			if (x < total_metrics)

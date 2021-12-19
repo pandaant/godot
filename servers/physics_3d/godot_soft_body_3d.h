@@ -101,8 +101,6 @@ class GodotSoftBody3D : public GodotCollisionObject3D {
 	real_t drag_coefficient = 0.0; // [0,1]
 	LocalVector<int> pinned_vertices;
 
-	Vector3 gravity;
-
 	SelfList<GodotSoftBody3D> active_list;
 
 	Set<GodotConstraint3D *> constraints;
@@ -113,7 +111,6 @@ class GodotSoftBody3D : public GodotCollisionObject3D {
 
 	uint64_t island_step = 0;
 
-	_FORCE_INLINE_ void _compute_area_gravity(const GodotArea3D *p_area);
 	_FORCE_INLINE_ Vector3 _compute_area_windforce(const GodotArea3D *p_area, const Face *p_face);
 
 public:
@@ -151,7 +148,7 @@ public:
 		if (index > -1) {
 			areas.write[index].refCount -= 1;
 			if (areas[index].refCount < 1) {
-				areas.remove(index);
+				areas.remove_at(index);
 			}
 		}
 	}
@@ -232,7 +229,7 @@ private:
 
 	void add_velocity(const Vector3 &p_velocity);
 
-	void apply_forces(bool p_has_wind_forces);
+	void apply_forces(const LocalVector<GodotArea3D *> &p_wind_areas);
 
 	bool create_from_trimesh(const Vector<int> &p_indices, const Vector<Vector3> &p_vertices);
 	void generate_bending_constraints(int p_distance);
@@ -257,18 +254,18 @@ class GodotSoftBodyShape3D : public GodotShape3D {
 public:
 	GodotSoftBody3D *get_soft_body() const { return soft_body; }
 
-	virtual PhysicsServer3D::ShapeType get_type() const { return PhysicsServer3D::SHAPE_SOFT_BODY; }
-	virtual void project_range(const Vector3 &p_normal, const Transform3D &p_transform, real_t &r_min, real_t &r_max) const { r_min = r_max = 0.0; }
-	virtual Vector3 get_support(const Vector3 &p_normal) const { return Vector3(); }
-	virtual void get_supports(const Vector3 &p_normal, int p_max, Vector3 *r_supports, int &r_amount, FeatureType &r_type) const { r_amount = 0; }
+	virtual PhysicsServer3D::ShapeType get_type() const override { return PhysicsServer3D::SHAPE_SOFT_BODY; }
+	virtual void project_range(const Vector3 &p_normal, const Transform3D &p_transform, real_t &r_min, real_t &r_max) const override { r_min = r_max = 0.0; }
+	virtual Vector3 get_support(const Vector3 &p_normal) const override { return Vector3(); }
+	virtual void get_supports(const Vector3 &p_normal, int p_max, Vector3 *r_supports, int &r_amount, FeatureType &r_type) const override { r_amount = 0; }
 
-	virtual bool intersect_segment(const Vector3 &p_begin, const Vector3 &p_end, Vector3 &r_result, Vector3 &r_normal) const;
-	virtual bool intersect_point(const Vector3 &p_point) const;
-	virtual Vector3 get_closest_point_to(const Vector3 &p_point) const;
-	virtual Vector3 get_moment_of_inertia(real_t p_mass) const { return Vector3(); }
+	virtual bool intersect_segment(const Vector3 &p_begin, const Vector3 &p_end, Vector3 &r_result, Vector3 &r_normal, bool p_hit_back_faces) const override;
+	virtual bool intersect_point(const Vector3 &p_point) const override;
+	virtual Vector3 get_closest_point_to(const Vector3 &p_point) const override;
+	virtual Vector3 get_moment_of_inertia(real_t p_mass) const override { return Vector3(); }
 
-	virtual void set_data(const Variant &p_data) {}
-	virtual Variant get_data() const { return Variant(); }
+	virtual void set_data(const Variant &p_data) override {}
+	virtual Variant get_data() const override { return Variant(); }
 
 	void update_bounds();
 

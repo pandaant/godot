@@ -79,7 +79,7 @@ void EditorQuickOpen::_build_search_cache(EditorFileSystemDirectory *p_efsd) {
 
 void EditorQuickOpen::_update_search() {
 	const String search_text = search_box->get_text();
-	const bool empty_search = search_text == "";
+	const bool empty_search = search_text.is_empty();
 
 	// Filter possible candidates.
 	Vector<Entry> entries;
@@ -167,10 +167,10 @@ void EditorQuickOpen::_sbox_input(const Ref<InputEvent> &p_ie) {
 	Ref<InputEventKey> k = p_ie;
 	if (k.is_valid()) {
 		switch (k->get_keycode()) {
-			case KEY_UP:
-			case KEY_DOWN:
-			case KEY_PAGEUP:
-			case KEY_PAGEDOWN: {
+			case Key::UP:
+			case Key::DOWN:
+			case Key::PAGEUP:
+			case Key::PAGEDOWN: {
 				search_options->gui_input(k);
 				search_box->accept_event();
 

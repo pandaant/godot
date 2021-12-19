@@ -170,12 +170,12 @@ void CodeEdit::_notification(int p_what) {
 						if (code_completion_options[l].default_value.get_type() == Variant::COLOR) {
 							draw_rect(Rect2(Point2(code_completion_rect.position.x, icon_area.position.y), icon_area_size), (Color)code_completion_options[l].default_value);
 						}
-						tl->set_align(HALIGN_RIGHT);
+						tl->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_RIGHT);
 					} else {
 						if (code_completion_options[l].default_value.get_type() == Variant::COLOR) {
 							draw_rect(Rect2(Point2(code_completion_rect.position.x + code_completion_rect.size.width - icon_area_size.x, icon_area.position.y), icon_area_size), (Color)code_completion_options[l].default_value);
 						}
-						tl->set_align(HALIGN_LEFT);
+						tl->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_LEFT);
 					}
 					tl->draw(ci, title_pos, code_completion_options[l].font_color);
 				}
@@ -189,7 +189,7 @@ void CodeEdit::_notification(int p_what) {
 			}
 
 			/* Code hint */
-			if (caret_visible && code_hint != "" && (!code_completion_active || (code_completion_below != code_hint_draw_below))) {
+			if (caret_visible && !code_hint.is_empty() && (!code_completion_active || (code_completion_below != code_hint_draw_below))) {
 				const int font_height = font->get_height(font_size);
 				Ref<StyleBox> sb = get_theme_stylebox(SNAME("panel"), SNAME("TooltipPanel"));
 				Color font_color = get_theme_color(SNAME("font_color"), SNAME("TooltipLabel"));
@@ -229,7 +229,7 @@ void CodeEdit::_notification(int p_what) {
 
 					Point2 round_ofs = hint_ofs + sb->get_offset() + Vector2(0, font->get_ascent(font_size) + font_height * i + yofs);
 					round_ofs = round_ofs.round();
-					draw_string(font, round_ofs, line.replace(String::chr(0xFFFF), ""), HALIGN_LEFT, -1, font_size, font_color);
+					draw_string(font, round_ofs, line.replace(String::chr(0xFFFF), ""), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, font_color);
 					if (end > 0) {
 						// Draw an underline for the currently edited function parameter.
 						const Vector2 b = hint_ofs + sb->get_offset() + Vector2(begin, font_height + font_height * i + yofs);
@@ -263,19 +263,19 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 
 			switch (mb->get_button_index()) {
-				case MOUSE_BUTTON_WHEEL_UP: {
+				case MouseButton::WHEEL_UP: {
 					if (code_completion_current_selected > 0) {
 						code_completion_current_selected--;
 						update();
 					}
 				} break;
-				case MOUSE_BUTTON_WHEEL_DOWN: {
+				case MouseButton::WHEEL_DOWN: {
 					if (code_completion_current_selected < code_completion_options.size() - 1) {
 						code_completion_current_selected++;
 						update();
 					}
 				} break;
-				case MOUSE_BUTTON_LEFT: {
+				case MouseButton::LEFT: {
 					code_completion_current_selected = CLAMP(code_completion_line_ofs + (mb->get_position().y - code_completion_rect.position.y) / get_line_height(), 0, code_completion_options.size() - 1);
 					if (mb->is_double_click()) {
 						confirm_code_completion();
@@ -296,11 +296,11 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				mpos.x = get_size().x - mpos.x;
 			}
 
-			Point2i pos = get_line_column_at_pos(mpos);
+			Point2i pos = get_line_column_at_pos(mpos, false);
 			int line = pos.y;
 			int col = pos.x;
 
-			if (mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+			if (line != -1 && mb->get_button_index() == MouseButton::LEFT) {
 				if (is_line_folded(line)) {
 					int wrap_index = get_line_wrap_index_at_column(line, col);
 					if (wrap_index == get_line_wrap_count(line)) {
@@ -314,18 +314,20 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 			}
 		} else {
-			if (mb->get_button_index() == MOUSE_BUTTON_LEFT) {
-				if (mb->is_command_pressed() && symbol_lookup_word != String()) {
+			if (mb->get_button_index() == MouseButton::LEFT) {
+				if (mb->is_command_pressed() && !symbol_lookup_word.is_empty()) {
 					Vector2i mpos = mb->get_position();
 					if (is_layout_rtl()) {
 						mpos.x = get_size().x - mpos.x;
 					}
 
-					Point2i pos = get_line_column_at_pos(mpos);
+					Point2i pos = get_line_column_at_pos(mpos, false);
 					int line = pos.y;
 					int col = pos.x;
 
-					emit_signal(SNAME("symbol_lookup"), symbol_lookup_word, line, col);
+					if (line != -1) {
+						emit_signal(SNAME("symbol_lookup"), symbol_lookup_word, line, col);
+					}
 					return;
 				}
 			}
@@ -340,7 +342,7 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 
 		if (symbol_lookup_on_click_enabled) {
-			if (mm->is_command_pressed() && mm->get_button_mask() == 0 && !is_dragging_cursor()) {
+			if (mm->is_command_pressed() && mm->get_button_mask() == MouseButton::NONE && !is_dragging_cursor()) {
 				symbol_lookup_new_word = get_word_at_pos(mpos);
 				if (symbol_lookup_new_word != symbol_lookup_word) {
 					emit_signal(SNAME("symbol_validate"), symbol_lookup_new_word);
@@ -360,9 +362,9 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 	/* Ctrl + Hover symbols */
 #ifdef OSX_ENABLED
-	if (k->get_keycode() == KEY_META) {
+	if (k->get_keycode() == Key::META) {
 #else
-	if (k->get_keycode() == KEY_CTRL) {
+	if (k->get_keycode() == Key::CTRL) {
 #endif
 		if (symbol_lookup_on_click_enabled) {
 			if (k->is_pressed() && !is_dragging_cursor()) {
@@ -378,7 +380,7 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	}
 
 	/* If a modifier has been pressed, and nothing else, return. */
-	if (!k->is_pressed() || k->get_keycode() == KEY_CTRL || k->get_keycode() == KEY_ALT || k->get_keycode() == KEY_SHIFT || k->get_keycode() == KEY_META) {
+	if (!k->is_pressed() || k->get_keycode() == Key::CTRL || k->get_keycode() == Key::ALT || k->get_keycode() == Key::SHIFT || k->get_keycode() == Key::META) {
 		return;
 	}
 
@@ -528,7 +530,7 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 /* General overrides */
 Control::CursorShape CodeEdit::get_cursor_shape(const Point2 &p_pos) const {
-	if (symbol_lookup_word != String()) {
+	if (!symbol_lookup_word.is_empty()) {
 		return CURSOR_POINTING_HAND;
 	}
 
@@ -536,11 +538,11 @@ Control::CursorShape CodeEdit::get_cursor_shape(const Point2 &p_pos) const {
 		return CURSOR_ARROW;
 	}
 
-	Point2i pos = get_line_column_at_pos(p_pos);
+	Point2i pos = get_line_column_at_pos(p_pos, false);
 	int line = pos.y;
 	int col = pos.x;
 
-	if (is_line_folded(line)) {
+	if (line != -1 && is_line_folded(line)) {
 		int wrap_index = get_line_wrap_index_at_column(line, col);
 		if (wrap_index == get_line_wrap_count(line)) {
 			int eol_icon_width = folded_eol_icon->get_width();
@@ -1417,40 +1419,23 @@ void CodeEdit::fold_line(int p_line) {
 		/* End line is the same therefore we have a block of single line delimiters. */
 		if (end_line == p_line) {
 			for (int i = p_line + 1; i <= line_count; i++) {
-				if (i == line_count) {
-					end_line = line_count;
-					break;
-				}
-
 				if ((in_string != -1 && is_in_string(i) == -1) || (in_comment != -1 && is_in_comment(i) == -1)) {
-					end_line = i - 1;
 					break;
 				}
+				end_line = i;
 			}
 		}
 	} else {
 		int start_indent = get_indent_level(p_line);
 		for (int i = p_line + 1; i <= line_count; i++) {
-			if (get_line(p_line).strip_edges().size() == 0 || is_in_string(i) != -1 || is_in_comment(i) != -1) {
+			if (get_line(i).strip_edges().size() == 0) {
+				continue;
+			}
+			if (get_indent_level(i) > start_indent) {
 				end_line = i;
 				continue;
 			}
-
-			if (i == line_count) {
-				/* Do not fold empty last line of script if any */
-				end_line = i;
-				if (get_line(i).strip_edges().size() == 0) {
-					end_line--;
-				}
-				break;
-			}
-
-			if ((get_indent_level(i) <= start_indent && get_line(i).strip_edges().size() != 0)) {
-				/* Keep an empty line unfolded if any */
-				end_line = i - 1;
-				if (get_line(i - 1).strip_edges().size() == 0 && i - 2 > p_line) {
-					end_line = i - 2;
-				}
+			if (is_in_string(i) == -1 && is_in_comment(i) == -1) {
 				break;
 			}
 		}
@@ -2016,9 +2001,13 @@ bool CodeEdit::is_symbol_lookup_on_click_enabled() const {
 String CodeEdit::get_text_for_symbol_lookup() {
 	Point2i mp = get_local_mouse_pos();
 
-	Point2i pos = get_line_column_at_pos(mp);
+	Point2i pos = get_line_column_at_pos(mp, false);
 	int line = pos.y;
 	int col = pos.x;
+
+	if (line == -1) {
+		return String();
+	}
 
 	StringBuilder lookup_text;
 	const int text_size = get_line_count();
@@ -2389,7 +2378,7 @@ void CodeEdit::_update_delimiter_cache(int p_from_line, int p_to_line) {
 	if (start_line != end_line) {
 		if (p_to_line < p_from_line) {
 			for (int i = end_line; i > start_line; i--) {
-				delimiter_cache.remove(i);
+				delimiter_cache.remove_at(i);
 			}
 		} else {
 			for (int i = start_line; i < end_line; i++) {
@@ -2608,7 +2597,7 @@ void CodeEdit::_add_delimiter(const String &p_start_key, const String &p_end_key
 	delimiter.type = p_type;
 	delimiter.start_key = p_start_key;
 	delimiter.end_key = p_end_key;
-	delimiter.line_only = p_line_only || p_end_key == "";
+	delimiter.line_only = p_line_only || p_end_key.is_empty();
 	delimiters.insert(at, delimiter);
 	if (!setting_delimiters) {
 		delimiter_cache.clear();
@@ -2626,7 +2615,7 @@ void CodeEdit::_remove_delimiter(const String &p_start_key, DelimiterType p_type
 			break;
 		}
 
-		delimiters.remove(i);
+		delimiters.remove_at(i);
 		if (!setting_delimiters) {
 			delimiter_cache.clear();
 			_update_delimiter_cache();
@@ -2658,7 +2647,7 @@ void CodeEdit::_set_delimiters(const TypedArray<String> &p_delimiters, Delimiter
 		const String start_key = key.get_slice(" ", 0);
 		const String end_key = key.get_slice_count(" ") > 1 ? key.get_slice(" ", 1) : String();
 
-		_add_delimiter(start_key, end_key, end_key == "", p_type);
+		_add_delimiter(start_key, end_key, end_key.is_empty(), p_type);
 	}
 	setting_delimiters = false;
 	_update_delimiter_cache();
@@ -2667,7 +2656,7 @@ void CodeEdit::_set_delimiters(const TypedArray<String> &p_delimiters, Delimiter
 void CodeEdit::_clear_delimiters(DelimiterType p_type) {
 	for (int i = delimiters.size() - 1; i >= 0; i--) {
 		if (delimiters[i].type == p_type) {
-			delimiters.remove(i);
+			delimiters.remove_at(i);
 		}
 	}
 	delimiter_cache.clear();

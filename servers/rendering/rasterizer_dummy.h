@@ -195,7 +195,7 @@ public:
 	void set_debug_draw_mode(RS::ViewportDebugDraw p_debug_draw) override {}
 
 	RID render_buffers_create() override { return RID(); }
-	void render_buffers_configure(RID p_render_buffers, RID p_render_target, int p_width, int p_height, RS::ViewportMSAA p_msaa, RS::ViewportScreenSpaceAA p_screen_space_aa, bool p_use_debanding, uint32_t p_view_count) override {}
+	void render_buffers_configure(RID p_render_buffers, RID p_render_target, int p_internal_width, int p_internal_height, int p_width, int p_height, float p_fsr_sharpness, float p_fsr_mipmap_bias, RS::ViewportMSAA p_msaa, RS::ViewportScreenSpaceAA p_screen_space_aa, bool p_use_debanding, uint32_t p_view_count) override {}
 	void gi_set_use_half_resolution(bool p_enable) override {}
 
 	void screen_space_roughness_limiter_set_active(bool p_enable, float p_amount, float p_curve) override {}
@@ -293,8 +293,8 @@ public:
 	String shader_get_code(RID p_shader) const override { return ""; }
 	void shader_get_param_list(RID p_shader, List<PropertyInfo> *p_param_list) const override {}
 
-	void shader_set_default_texture_param(RID p_shader, const StringName &p_name, RID p_texture) override {}
-	RID shader_get_default_texture_param(RID p_shader, const StringName &p_name) const override { return RID(); }
+	void shader_set_default_texture_param(RID p_shader, const StringName &p_name, RID p_texture, int p_index) override {}
+	RID shader_get_default_texture_param(RID p_shader, const StringName &p_name, int p_index) const override { return RID(); }
 	Variant shader_get_param_default(RID p_material, const StringName &p_param) const override { return Variant(); }
 
 	RS::ShaderNativeSourceCode shader_get_native_source_code(RID p_shader) const override { return RS::ShaderNativeSourceCode(); };

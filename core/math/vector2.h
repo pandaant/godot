@@ -70,12 +70,12 @@ struct Vector2 {
 		x = y = p_value;
 	}
 
-	_FORCE_INLINE_ int min_axis() const {
-		return x < y ? 0 : 1;
+	_FORCE_INLINE_ Vector2::Axis min_axis_index() const {
+		return x < y ? Vector2::AXIS_X : Vector2::AXIS_Y;
 	}
 
-	_FORCE_INLINE_ int max_axis() const {
-		return x < y ? 1 : 0;
+	_FORCE_INLINE_ Vector2::Axis max_axis_index() const {
+		return x < y ? Vector2::AXIS_Y : Vector2::AXIS_X;
 	}
 
 	void normalize();
@@ -301,12 +301,12 @@ struct Vector2i {
 		return p_idx ? y : x;
 	}
 
-	_FORCE_INLINE_ int min_axis() const {
-		return x < y ? 0 : 1;
+	_FORCE_INLINE_ Vector2i::Axis min_axis_index() const {
+		return x < y ? Vector2i::AXIS_X : Vector2i::AXIS_Y;
 	}
 
-	_FORCE_INLINE_ int max_axis() const {
-		return x < y ? 1 : 0;
+	_FORCE_INLINE_ Vector2i::Axis max_axis_index() const {
+		return x < y ? Vector2i::AXIS_Y : Vector2i::AXIS_X;
 	}
 
 	Vector2i min(const Vector2i &p_vector2i) const {
@@ -345,7 +345,7 @@ struct Vector2i {
 	bool operator!=(const Vector2i &p_vec2) const;
 
 	real_t aspect() const { return width / (real_t)height; }
-	Vector2i sign() const { return Vector2i(SGN(x), SGN(y)); }
+	Vector2i sign() const { return Vector2i(SIGN(x), SIGN(y)); }
 	Vector2i abs() const { return Vector2i(ABS(x), ABS(y)); }
 	Vector2i clamp(const Vector2i &p_min, const Vector2i &p_max) const;
 

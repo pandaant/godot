@@ -124,14 +124,14 @@ void GodotStep2D::_check_suspend(LocalVector<GodotBody2D *> &p_body_island) cons
 	}
 }
 
-void GodotStep2D::step(GodotSpace2D *p_space, real_t p_delta, int p_iterations) {
+void GodotStep2D::step(GodotSpace2D *p_space, real_t p_delta) {
 	p_space->lock(); // can't access space during this
 
 	p_space->setup(); //update inertias, etc
 
 	p_space->set_last_step(p_delta);
 
-	iterations = p_iterations;
+	iterations = p_space->get_solver_iterations();
 	delta = p_delta;
 
 	const SelfList<GodotBody2D>::List *body_list = &p_space->get_active_body_list();
@@ -151,6 +151,9 @@ void GodotStep2D::step(GodotSpace2D *p_space, real_t p_delta, int p_iterations) 
 	}
 
 	p_space->set_active_objects(active_count);
+
+	// Update the broadphase to register collision pairs.
+	p_space->update();
 
 	{ //profile
 		profile_endtime = OS::get_singleton()->get_ticks_usec();
@@ -286,7 +289,6 @@ void GodotStep2D::step(GodotSpace2D *p_space, real_t p_delta, int p_iterations) 
 
 	all_constraints.clear();
 
-	p_space->update();
 	p_space->unlock();
 	_step++;
 }

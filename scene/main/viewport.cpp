@@ -55,6 +55,7 @@
 #include "scene/resources/world_2d.h"
 #include "scene/scene_string_names.h"
 #include "servers/audio_server.h"
+#include "servers/rendering/rendering_server_globals.h"
 
 void ViewportTexture::setup_local_to_scene() {
 	Node *local_scene = get_local_scene();
@@ -290,7 +291,7 @@ void Viewport::_sub_window_grab_focus(Window *p_window) {
 	if (p_window->get_flag(Window::FLAG_NO_FOCUS)) {
 		// Can only move to foreground, but no focus granted.
 		SubWindow sw = gui.sub_windows[index];
-		gui.sub_windows.remove(index);
+		gui.sub_windows.remove_at(index);
 		gui.sub_windows.push_back(sw);
 		index = gui.sub_windows.size() - 1;
 		_sub_window_update_order();
@@ -318,7 +319,7 @@ void Viewport::_sub_window_grab_focus(Window *p_window) {
 
 	{ // Move to foreground.
 		SubWindow sw = gui.sub_windows[index];
-		gui.sub_windows.remove(index);
+		gui.sub_windows.remove_at(index);
 		gui.sub_windows.push_back(sw);
 		index = gui.sub_windows.size() - 1;
 		_sub_window_update_order();
@@ -335,7 +336,7 @@ void Viewport::_sub_window_remove(Window *p_window) {
 	for (int i = 0; i < gui.sub_windows.size(); i++) {
 		if (gui.sub_windows[i].window == p_window) {
 			RS::get_singleton()->free(gui.sub_windows[i].canvas_item);
-			gui.sub_windows.remove(i);
+			gui.sub_windows.remove_at(i);
 			break;
 		}
 	}
@@ -395,14 +396,15 @@ void Viewport::_notification(int p_what) {
 #ifndef _3D_DISABLED
 				PhysicsServer3D::get_singleton()->space_set_debug_contacts(find_world_3d()->get_space(), get_tree()->get_collision_debug_contact_count());
 				contact_3d_debug_multimesh = RenderingServer::get_singleton()->multimesh_create();
-				RenderingServer::get_singleton()->multimesh_allocate_data(contact_3d_debug_multimesh, get_tree()->get_collision_debug_contact_count(), RS::MULTIMESH_TRANSFORM_3D, true);
+				RenderingServer::get_singleton()->multimesh_allocate_data(contact_3d_debug_multimesh, get_tree()->get_collision_debug_contact_count(), RS::MULTIMESH_TRANSFORM_3D, false);
 				RenderingServer::get_singleton()->multimesh_set_visible_instances(contact_3d_debug_multimesh, 0);
 				RenderingServer::get_singleton()->multimesh_set_mesh(contact_3d_debug_multimesh, get_tree()->get_debug_contact_mesh()->get_rid());
 				contact_3d_debug_instance = RenderingServer::get_singleton()->instance_create();
 				RenderingServer::get_singleton()->instance_set_base(contact_3d_debug_instance, contact_3d_debug_multimesh);
 				RenderingServer::get_singleton()->instance_set_scenario(contact_3d_debug_instance, find_world_3d()->get_scenario());
-				//RenderingServer::get_singleton()->instance_geometry_set_flag(contact_3d_debug_instance, RS::INSTANCE_FLAG_VISIBLE_IN_ALL_ROOMS, true);
+				RenderingServer::get_singleton()->instance_geometry_set_flag(contact_3d_debug_instance, RS::INSTANCE_FLAG_DRAW_NEXT_FRAME_IF_VISIBLE, true);
 #endif // _3D_DISABLED
+				set_physics_process_internal(true);
 			}
 
 		} break;
@@ -460,6 +462,10 @@ void Viewport::_notification(int p_what) {
 			RenderingServer::get_singleton()->viewport_set_parent_viewport(viewport, RID());
 		} break;
 		case NOTIFICATION_INTERNAL_PHYSICS_PROCESS: {
+			if (!get_tree()) {
+				return;
+			}
+
 			if (get_tree()->is_debugging_collisions_hint() && contact_2d_debug.is_valid()) {
 				RenderingServer::get_singleton()->canvas_item_clear(contact_2d_debug);
 				RenderingServer::get_singleton()->canvas_item_set_draw_index(contact_2d_debug, 0xFFFFF); //very high index
@@ -584,9 +590,9 @@ void Viewport::_process_picking() {
 			physics_last_mouse_state.meta = mb->is_meta_pressed();
 
 			if (mb->is_pressed()) {
-				physics_last_mouse_state.mouse_mask |= (MouseButton)(1 << (mb->get_button_index() - 1));
+				physics_last_mouse_state.mouse_mask |= mouse_button_to_mask(mb->get_button_index());
 			} else {
-				physics_last_mouse_state.mouse_mask &= (MouseButton) ~(1 << (mb->get_button_index() - 1));
+				physics_last_mouse_state.mouse_mask &= ~mouse_button_to_mask(mb->get_button_index());
 
 				// If touch mouse raised, assume we don't know last mouse pos until new events come
 				if (mb->get_device() == InputEvent::DEVICE_ID_TOUCH_MOUSE) {
@@ -696,7 +702,7 @@ void Viewport::_process_picking() {
 			if (co && camera_3d) {
 				_collision_object_3d_input_event(co, camera_3d, ev, Vector3(), Vector3(), 0);
 				captured = true;
-				if (mb.is_valid() && mb->get_button_index() == 1 && !mb->is_pressed()) {
+				if (mb.is_valid() && mb->get_button_index() == MouseButton::LEFT && !mb->is_pressed()) {
 					physics_object_capture = ObjectID();
 				}
 
@@ -712,7 +718,7 @@ void Viewport::_process_picking() {
 				if (ObjectDB::get_instance(last_id) && last_object) {
 					// Good, exists.
 					_collision_object_3d_input_event(last_object, camera_3d, ev, result.position, result.normal, result.shape);
-					if (last_object->get_capture_input_on_drag() && mb.is_valid() && mb->get_button_index() == 1 && mb->is_pressed()) {
+					if (last_object->get_capture_input_on_drag() && mb.is_valid() && mb->get_button_index() == MouseButton::LEFT && mb->is_pressed()) {
 						physics_object_capture = last_id;
 					}
 				}
@@ -740,7 +746,7 @@ void Viewport::_process_picking() {
 							last_object = co;
 							last_id = result.collider_id;
 							new_collider = last_id;
-							if (co->get_capture_input_on_drag() && mb.is_valid() && mb->get_button_index() == 1 && mb->is_pressed()) {
+							if (co->get_capture_input_on_drag() && mb.is_valid() && mb->get_button_index() == MouseButton::LEFT && mb->is_pressed()) {
 								physics_object_capture = last_id;
 							}
 						}
@@ -1259,10 +1265,10 @@ void Viewport::_gui_call_input(Control *p_control, const Ref<InputEvent> &p_inpu
 	Ref<InputEventMouseButton> mb = p_input;
 
 	bool cant_stop_me_now = (mb.is_valid() &&
-			(mb->get_button_index() == MOUSE_BUTTON_WHEEL_DOWN ||
-					mb->get_button_index() == MOUSE_BUTTON_WHEEL_UP ||
-					mb->get_button_index() == MOUSE_BUTTON_WHEEL_LEFT ||
-					mb->get_button_index() == MOUSE_BUTTON_WHEEL_RIGHT));
+			(mb->get_button_index() == MouseButton::WHEEL_DOWN ||
+					mb->get_button_index() == MouseButton::WHEEL_UP ||
+					mb->get_button_index() == MouseButton::WHEEL_LEFT ||
+					mb->get_button_index() == MouseButton::WHEEL_RIGHT));
 	Ref<InputEventPanGesture> pn = p_input;
 	cant_stop_me_now = pn.is_valid() || cant_stop_me_now;
 
@@ -1445,21 +1451,21 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 		gui.last_mouse_pos = mpos;
 		if (mb->is_pressed()) {
 			Size2 pos = mpos;
-			if (gui.mouse_focus_mask) {
+			if (gui.mouse_focus_mask != MouseButton::NONE) {
 				// Do not steal mouse focus and stuff while a focus mask exists.
-				gui.mouse_focus_mask |= 1 << (mb->get_button_index() - 1); // Add the button to the mask.
+				gui.mouse_focus_mask |= mouse_button_to_mask(mb->get_button_index());
 			} else {
 				gui.mouse_focus = gui_find_control(pos);
 				gui.last_mouse_focus = gui.mouse_focus;
 
 				if (!gui.mouse_focus) {
-					gui.mouse_focus_mask = 0;
+					gui.mouse_focus_mask = MouseButton::NONE;
 					return;
 				}
 
-				gui.mouse_focus_mask = 1 << (mb->get_button_index() - 1);
+				gui.mouse_focus_mask = mouse_button_to_mask(mb->get_button_index());
 
-				if (mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+				if (mb->get_button_index() == MouseButton::LEFT) {
 					gui.drag_accum = Vector2();
 					gui.drag_attempted = false;
 				}
@@ -1482,7 +1488,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			}
 #endif
 
-			if (mb->get_button_index() == MOUSE_BUTTON_LEFT) { // Assign focus.
+			if (mb->get_button_index() == MouseButton::LEFT) { // Assign focus.
 				CanvasItem *ci = gui.mouse_focus;
 				while (ci) {
 					Control *control = Object::cast_to<Control>(ci);
@@ -1513,10 +1519,11 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 
 			set_input_as_handled();
 
-			if (gui.drag_data.get_type() != Variant::NIL && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+			if (gui.drag_data.get_type() != Variant::NIL && mb->get_button_index() == MouseButton::LEFT) {
 				// Alternate drop use (when using force_drag(), as proposed by #5342).
+				gui.drag_successful = false;
 				if (gui.mouse_focus) {
-					_gui_drop(gui.mouse_focus, pos, false);
+					gui.drag_successful = _gui_drop(gui.mouse_focus, pos, false);
 				}
 
 				gui.drag_data = Variant();
@@ -1533,9 +1540,10 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 
 			_gui_cancel_tooltip();
 		} else {
-			if (gui.drag_data.get_type() != Variant::NIL && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+			if (gui.drag_data.get_type() != Variant::NIL && mb->get_button_index() == MouseButton::LEFT) {
+				gui.drag_successful = false;
 				if (gui.drag_mouse_over) {
-					_gui_drop(gui.drag_mouse_over, gui.drag_mouse_over_pos, false);
+					gui.drag_successful = _gui_drop(gui.drag_mouse_over, gui.drag_mouse_over_pos, false);
 				}
 
 				Control *drag_preview = _gui_get_drag_preview();
@@ -1551,7 +1559,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				// Change mouse accordingly.
 			}
 
-			gui.mouse_focus_mask &= ~(1 << (mb->get_button_index() - 1)); // Remove from mask.
+			gui.mouse_focus_mask &= ~mouse_button_to_mask(mb->get_button_index()); // Remove from mask.
 
 			if (!gui.mouse_focus) {
 				// Release event is only sent if a mouse focus (previously pressed button) exists.
@@ -1570,7 +1578,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			// Disable mouse focus if needed before calling input,
 			// this makes popups on mouse press event work better,
 			// as the release will never be received otherwise.
-			if (gui.mouse_focus_mask == 0) {
+			if (gui.mouse_focus_mask == MouseButton::NONE) {
 				gui.mouse_focus = nullptr;
 				gui.forced_mouse_focus = false;
 			}
@@ -1590,7 +1598,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				over = gui_find_control(mpos);
 			}
 
-			if (gui.mouse_focus_mask == 0 && over != gui.mouse_over) {
+			if (gui.mouse_focus_mask == MouseButton::NONE && over != gui.mouse_over) {
 				if (gui.mouse_over) {
 					_gui_call_notification(gui.mouse_over, Control::NOTIFICATION_MOUSE_EXIT);
 				}
@@ -1618,7 +1626,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 		Control *over = nullptr;
 
 		// Drag & drop.
-		if (!gui.drag_attempted && gui.mouse_focus && mm->get_button_mask() & MOUSE_BUTTON_MASK_LEFT) {
+		if (!gui.drag_attempted && gui.mouse_focus && (mm->get_button_mask() & MouseButton::MASK_LEFT) != MouseButton::NONE) {
 			gui.drag_accum += mm->get_relative();
 			float len = gui.drag_accum.length();
 			if (len > 10) {
@@ -1632,7 +1640,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 							if (gui.drag_data.get_type() != Variant::NIL) {
 								gui.mouse_focus = nullptr;
 								gui.forced_mouse_focus = false;
-								gui.mouse_focus_mask = 0;
+								gui.mouse_focus_mask = MouseButton::NONE;
 								break;
 							} else {
 								Control *drag_preview = _gui_get_drag_preview();
@@ -1701,15 +1709,13 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			mm->set_speed(speed);
 			mm->set_relative(rel);
 
-			if (mm->get_button_mask() == 0) {
+			if (mm->get_button_mask() == MouseButton::NONE) {
 				// Nothing pressed.
-
-				bool can_tooltip = true;
 
 				bool is_tooltip_shown = false;
 
 				if (gui.tooltip_popup) {
-					if (can_tooltip && gui.tooltip_control) {
+					if (gui.tooltip_control) {
 						String tooltip = _gui_get_tooltip(over, gui.tooltip_control->get_global_transform().xform_inv(mpos));
 
 						if (tooltip.length() == 0) {
@@ -1734,7 +1740,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 					}
 				}
 
-				if (can_tooltip && !is_tooltip_shown) {
+				if (!is_tooltip_shown && over->can_process()) {
 					if (gui.tooltip_timer.is_valid()) {
 						gui.tooltip_timer->release_connections();
 						gui.tooltip_timer = Ref<SceneTreeTimer>();
@@ -1754,7 +1760,7 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 				Control *c = over;
 				Vector2 cpos = pos;
 				while (c) {
-					if (gui.mouse_focus_mask != 0 || c->has_point(cpos)) {
+					if (gui.mouse_focus_mask != MouseButton::NONE || c->has_point(cpos)) {
 						cursor_shape = c->get_cursor_shape(cpos);
 					} else {
 						cursor_shape = Control::CURSOR_ARROW;
@@ -1867,14 +1873,12 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 					Transform2D localizer = gui.drag_mouse_over->get_global_transform_with_canvas().affine_inverse();
 					gui.drag_mouse_over_pos = localizer.xform(viewport_pos);
 
-					if (mm->get_button_mask() & MOUSE_BUTTON_MASK_LEFT) {
-						bool can_drop = _gui_drop(gui.drag_mouse_over, gui.drag_mouse_over_pos, true);
+					bool can_drop = _gui_drop(gui.drag_mouse_over, gui.drag_mouse_over_pos, true);
 
-						if (!can_drop) {
-							ds_cursor_shape = DisplayServer::CURSOR_FORBIDDEN;
-						} else {
-							ds_cursor_shape = DisplayServer::CURSOR_CAN_DROP;
-						}
+					if (!can_drop) {
+						ds_cursor_shape = DisplayServer::CURSOR_FORBIDDEN;
+					} else {
+						ds_cursor_shape = DisplayServer::CURSOR_CAN_DROP;
 					}
 				}
 
@@ -2042,6 +2046,7 @@ void Viewport::_gui_force_drag(Control *p_base, const Variant &p_data, Control *
 	if (p_control) {
 		_gui_set_drag_preview(p_base, p_control);
 	}
+	_propagate_viewport_notification(this, NOTIFICATION_DRAG_BEGIN);
 }
 
 void Viewport::_gui_set_drag_preview(Control *p_base, Control *p_control) {
@@ -2108,7 +2113,7 @@ void Viewport::_gui_remove_control(Control *p_control) {
 	if (gui.mouse_focus == p_control) {
 		gui.mouse_focus = nullptr;
 		gui.forced_mouse_focus = false;
-		gui.mouse_focus_mask = 0;
+		gui.mouse_focus_mask = MouseButton::NONE;
 	}
 	if (gui.last_mouse_focus == p_control) {
 		gui.last_mouse_focus = nullptr;
@@ -2178,13 +2183,13 @@ void Viewport::_gui_accept_event() {
 
 void Viewport::_drop_mouse_focus() {
 	Control *c = gui.mouse_focus;
-	int mask = gui.mouse_focus_mask;
+	MouseButton mask = gui.mouse_focus_mask;
 	gui.mouse_focus = nullptr;
 	gui.forced_mouse_focus = false;
-	gui.mouse_focus_mask = 0;
+	gui.mouse_focus_mask = MouseButton::NONE;
 
 	for (int i = 0; i < 3; i++) {
-		if (mask & (1 << i)) {
+		if ((int)mask & (1 << i)) {
 			Ref<InputEventMouseButton> mb;
 			mb.instantiate();
 			mb->set_position(c->get_local_mouse_position());
@@ -2293,11 +2298,11 @@ void Viewport::_post_gui_grab_click_focus() {
 			return;
 		}
 
-		int mask = gui.mouse_focus_mask;
+		MouseButton mask = gui.mouse_focus_mask;
 		Point2 click = gui.mouse_focus->get_global_transform_with_canvas().affine_inverse().xform(gui.last_mouse_pos);
 
 		for (int i = 0; i < 3; i++) {
-			if (mask & (1 << i)) {
+			if ((int)mask & (1 << i)) {
 				Ref<InputEventMouseButton> mb;
 				mb.instantiate();
 
@@ -2315,7 +2320,7 @@ void Viewport::_post_gui_grab_click_focus() {
 		click = gui.mouse_focus->get_global_transform_with_canvas().affine_inverse().xform(gui.last_mouse_pos);
 
 		for (int i = 0; i < 3; i++) {
-			if (mask & (1 << i)) {
+			if ((int)mask & (1 << i)) {
 				Ref<InputEventMouseButton> mb;
 				mb.instantiate();
 
@@ -2412,7 +2417,7 @@ bool Viewport::_sub_windows_forward_input(const Ref<InputEvent> &p_event) {
 		ERR_FAIL_COND_V(gui.subwindow_focused == nullptr, false);
 
 		Ref<InputEventMouseButton> mb = p_event;
-		if (mb.is_valid() && !mb->is_pressed() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+		if (mb.is_valid() && !mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT) {
 			if (gui.subwindow_drag == SUB_WINDOW_DRAG_CLOSE) {
 				if (gui.subwindow_drag_close_rect.has_point(mb->get_position())) {
 					// Close window.
@@ -2537,7 +2542,7 @@ bool Viewport::_sub_windows_forward_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventMouseButton> mb = p_event;
 	// If the event is a mouse button, we need to check whether another window was clicked.
 
-	if (mb.is_valid() && mb->is_pressed() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+	if (mb.is_valid() && mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT) {
 		bool click_on_window = false;
 		for (int i = gui.sub_windows.size() - 1; i >= 0; i--) {
 			SubWindow &sw = gui.sub_windows.write[i];
@@ -2895,6 +2900,10 @@ bool Viewport::gui_is_dragging() const {
 	return gui.dragging;
 }
 
+bool Viewport::gui_is_drag_successful() const {
+	return gui.drag_successful;
+}
+
 void Viewport::set_input_as_handled() {
 	_drop_physics_mouseover();
 
@@ -3041,7 +3050,7 @@ void Viewport::pass_mouse_focus_to(Viewport *p_viewport, Control *p_control) {
 
 		gui.mouse_focus = nullptr;
 		gui.forced_mouse_focus = false;
-		gui.mouse_focus_mask = 0;
+		gui.mouse_focus_mask = MouseButton::NONE;
 	}
 }
 
@@ -3467,17 +3476,60 @@ bool Viewport::is_using_xr() {
 	return use_xr;
 }
 
-void Viewport::set_scale_3d(float p_scale_3d) {
+void Viewport::set_scaling_3d_mode(Scaling3DMode p_scaling_3d_mode) {
+	if (scaling_3d_mode == p_scaling_3d_mode) {
+		return;
+	}
+
+	scaling_3d_mode = p_scaling_3d_mode;
+	RS::get_singleton()->viewport_set_scaling_3d_mode(viewport, (RS::ViewportScaling3DMode)(int)p_scaling_3d_mode);
+}
+
+Viewport::Scaling3DMode Viewport::get_scaling_3d_mode() const {
+	return scaling_3d_mode;
+}
+
+void Viewport::set_scaling_3d_scale(float p_scaling_3d_scale) {
 	// Clamp to reasonable values that are actually useful.
 	// Values above 2.0 don't serve a practical purpose since the viewport
 	// isn't displayed with mipmaps.
-	scale_3d = CLAMP(p_scale_3d, 0.1, 2.0);
+	scaling_3d_scale = CLAMP(p_scaling_3d_scale, 0.1, 2.0);
 
-	RS::get_singleton()->viewport_set_scale_3d(viewport, scale_3d);
+	RS::get_singleton()->viewport_set_scaling_3d_scale(viewport, scaling_3d_scale);
 }
 
-float Viewport::get_scale_3d() const {
-	return scale_3d;
+float Viewport::get_scaling_3d_scale() const {
+	return scaling_3d_scale;
+}
+
+void Viewport::set_fsr_sharpness(float p_fsr_sharpness) {
+	if (fsr_sharpness == p_fsr_sharpness) {
+		return;
+	}
+
+	if (p_fsr_sharpness < 0.0f) {
+		p_fsr_sharpness = 0.0f;
+	}
+
+	fsr_sharpness = p_fsr_sharpness;
+	RS::get_singleton()->viewport_set_fsr_sharpness(viewport, p_fsr_sharpness);
+}
+
+float Viewport::get_fsr_sharpness() const {
+	return fsr_sharpness;
+}
+
+void Viewport::set_fsr_mipmap_bias(float p_fsr_mipmap_bias) {
+	if (fsr_mipmap_bias == p_fsr_mipmap_bias) {
+		return;
+	}
+
+	fsr_mipmap_bias = p_fsr_mipmap_bias;
+	RS::get_singleton()->viewport_set_fsr_mipmap_bias(viewport, p_fsr_mipmap_bias);
+}
+
+float Viewport::get_fsr_mipmap_bias() const {
+	return fsr_mipmap_bias;
 }
 
 #endif // _3D_DISABLED
@@ -3534,6 +3586,7 @@ void Viewport::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("gui_get_drag_data"), &Viewport::gui_get_drag_data);
 	ClassDB::bind_method(D_METHOD("gui_is_dragging"), &Viewport::gui_is_dragging);
+	ClassDB::bind_method(D_METHOD("gui_is_drag_successful"), &Viewport::gui_is_drag_successful);
 
 	ClassDB::bind_method(D_METHOD("set_disable_input", "disable"), &Viewport::set_disable_input);
 	ClassDB::bind_method(D_METHOD("is_input_disabled"), &Viewport::is_input_disabled);
@@ -3604,12 +3657,20 @@ void Viewport::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_use_xr", "use"), &Viewport::set_use_xr);
 	ClassDB::bind_method(D_METHOD("is_using_xr"), &Viewport::is_using_xr);
 
-	ClassDB::bind_method(D_METHOD("set_scale_3d", "scale"), &Viewport::set_scale_3d);
-	ClassDB::bind_method(D_METHOD("get_scale_3d"), &Viewport::get_scale_3d);
+	ClassDB::bind_method(D_METHOD("set_scaling_3d_mode", "scaling_3d_mode"), &Viewport::set_scaling_3d_mode);
+	ClassDB::bind_method(D_METHOD("get_scaling_3d_mode"), &Viewport::get_scaling_3d_mode);
+
+	ClassDB::bind_method(D_METHOD("set_scaling_3d_scale", "scale"), &Viewport::set_scaling_3d_scale);
+	ClassDB::bind_method(D_METHOD("get_scaling_3d_scale"), &Viewport::get_scaling_3d_scale);
+
+	ClassDB::bind_method(D_METHOD("set_fsr_sharpness", "fsr_sharpness"), &Viewport::set_fsr_sharpness);
+	ClassDB::bind_method(D_METHOD("get_fsr_sharpness"), &Viewport::get_fsr_sharpness);
+
+	ClassDB::bind_method(D_METHOD("set_fsr_mipmap_bias", "fsr_mipmap_bias"), &Viewport::set_fsr_mipmap_bias);
+	ClassDB::bind_method(D_METHOD("get_fsr_mipmap_bias"), &Viewport::get_fsr_mipmap_bias);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "disable_3d"), "set_disable_3d", "is_3d_disabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_xr"), "set_use_xr", "is_using_xr");
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "scale_3d", PROPERTY_HINT_RANGE, "0.25,2.0,0.01"), "set_scale_3d", "get_scale_3d");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "audio_listener_enable_3d"), "set_as_audio_listener_3d", "is_audio_listener_3d");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "own_world_3d"), "set_use_own_world_3d", "is_using_own_world_3d");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world_3d", PROPERTY_HINT_RESOURCE_TYPE, "World3D"), "set_world_3d", "get_world_3d");
@@ -3626,6 +3687,13 @@ void Viewport::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_occlusion_culling"), "set_use_occlusion_culling", "is_using_occlusion_culling");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "lod_threshold", PROPERTY_HINT_RANGE, "0,1024,0.1"), "set_lod_threshold", "get_lod_threshold");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "debug_draw", PROPERTY_HINT_ENUM, "Disabled,Unshaded,Overdraw,Wireframe"), "set_debug_draw", "get_debug_draw");
+#ifndef _3D_DISABLED
+	ADD_GROUP("Scaling 3D", "");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "scaling_3d_mode", PROPERTY_HINT_ENUM, "Disabled (Slowest),Bilinear (Fastest),FSR (Fast)"), "set_scaling_3d_mode", "get_scaling_3d_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "scaling_3d_scale", PROPERTY_HINT_RANGE, "0.25,2.0,0.01"), "set_scaling_3d_scale", "get_scaling_3d_scale");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fsr_mipmap_bias", PROPERTY_HINT_RANGE, "-2,2,0.1"), "set_fsr_mipmap_bias", "get_fsr_mipmap_bias");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fsr_sharpness", PROPERTY_HINT_RANGE, "0,2,0.1"), "set_fsr_sharpness", "get_fsr_sharpness");
+#endif
 	ADD_GROUP("Canvas Items", "canvas_item_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "canvas_item_default_texture_filter", PROPERTY_HINT_ENUM, "Nearest,Linear,Linear Mipmap,Nearest Mipmap"), "set_default_canvas_item_texture_filter", "get_default_canvas_item_texture_filter");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "canvas_item_default_texture_repeat", PROPERTY_HINT_ENUM, "Disabled,Enabled,Mirror"), "set_default_canvas_item_texture_repeat", "get_default_canvas_item_texture_repeat");
@@ -3661,6 +3729,10 @@ void Viewport::_bind_methods() {
 	BIND_ENUM_CONSTANT(SHADOW_ATLAS_QUADRANT_SUBDIV_256);
 	BIND_ENUM_CONSTANT(SHADOW_ATLAS_QUADRANT_SUBDIV_1024);
 	BIND_ENUM_CONSTANT(SHADOW_ATLAS_QUADRANT_SUBDIV_MAX);
+
+	BIND_ENUM_CONSTANT(SCALING_3D_MODE_BILINEAR);
+	BIND_ENUM_CONSTANT(SCALING_3D_MODE_FSR);
+	BIND_ENUM_CONSTANT(SCALING_3D_MODE_MAX);
 
 	BIND_ENUM_CONSTANT(MSAA_DISABLED);
 	BIND_ENUM_CONSTANT(MSAA_2X);
@@ -3765,7 +3837,16 @@ Viewport::Viewport() {
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/timers/tooltip_delay_sec", PropertyInfo(Variant::FLOAT, "gui/timers/tooltip_delay_sec", PROPERTY_HINT_RANGE, "0,5,0.01,or_greater")); // No negative numbers
 
 #ifndef _3D_DISABLED
-	set_scale_3d(GLOBAL_GET("rendering/3d/viewport/scale"));
+	Viewport::Scaling3DMode scaling_3d_mode = (Viewport::Scaling3DMode)(int)GLOBAL_GET("rendering/scaling_3d/mode");
+	set_scaling_3d_mode(scaling_3d_mode);
+
+	set_scaling_3d_scale(GLOBAL_GET("rendering/scaling_3d/scale"));
+
+	float fsr_sharpness = GLOBAL_GET("rendering/scaling_3d/fsr_sharpness");
+	set_fsr_sharpness(fsr_sharpness);
+
+	float fsr_mipmap_bias = GLOBAL_GET("rendering/scaling_3d/fsr_mipmap_bias");
+	set_fsr_mipmap_bias(fsr_mipmap_bias);
 #endif // _3D_DISABLED
 
 	set_sdf_oversize(sdf_oversize); // Set to server.

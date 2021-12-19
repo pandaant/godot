@@ -183,7 +183,9 @@ private:
 	GraphEditMinimap *minimap;
 	void _top_layer_input(const Ref<InputEvent> &p_ev);
 
-	bool is_in_hot_zone(const Vector2 &pos, const Vector2 &p_mouse_pos, const Vector2i &p_port_size, bool p_left);
+	bool is_in_input_hotzone(GraphNode *p_graph_node, int p_slot_index, const Vector2 &p_mouse_pos, const Vector2i &p_port_size);
+	bool is_in_output_hotzone(GraphNode *p_graph_node, int p_slot_index, const Vector2 &p_mouse_pos, const Vector2i &p_port_size);
+	bool is_in_port_hotzone(const Vector2 &pos, const Vector2 &p_mouse_pos, const Vector2i &p_port_size, bool p_left);
 
 	void _top_layer_draw();
 	void _connections_layer_draw();
@@ -216,6 +218,11 @@ private:
 	Set<ConnType> valid_connection_types;
 	Set<int> valid_left_disconnect_types;
 	Set<int> valid_right_disconnect_types;
+
+	HashMap<StringName, Vector<GraphNode *>> comment_enclosed_nodes;
+	void _update_comment_enclosed_nodes_list(GraphNode *p_node, HashMap<StringName, Vector<GraphNode *>> &p_comment_enclosed_nodes);
+	void _set_drag_comment_enclosed_nodes(GraphNode *p_node, HashMap<StringName, Vector<GraphNode *>> &p_comment_enclosed_nodes, bool p_drag);
+	void _set_position_of_comment_enclosed_nodes(GraphNode *p_node, HashMap<StringName, Vector<GraphNode *>> &p_comment_enclosed_nodes, Vector2 p_pos);
 
 	HBoxContainer *zoom_hb;
 

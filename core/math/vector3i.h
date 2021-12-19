@@ -62,8 +62,8 @@ struct Vector3i {
 	void set_axis(const int p_axis, const int32_t p_value);
 	int32_t get_axis(const int p_axis) const;
 
-	int min_axis() const;
-	int max_axis() const;
+	Vector3i::Axis min_axis_index() const;
+	Vector3i::Axis max_axis_index() const;
 
 	_FORCE_INLINE_ void zero();
 
@@ -115,7 +115,7 @@ Vector3i Vector3i::abs() const {
 }
 
 Vector3i Vector3i::sign() const {
-	return Vector3i(SGN(x), SGN(y), SGN(z));
+	return Vector3i(SIGN(x), SIGN(y), SIGN(z));
 }
 
 /* Operators */

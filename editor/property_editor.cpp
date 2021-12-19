@@ -312,7 +312,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 	spinbox->hide();
 	slider->hide();
 	menu->clear();
-	menu->set_size(Size2(1, 1) * EDSCALE);
+	menu->reset_size();
 
 	for (int i = 0; i < MAX_VALUE_EDITORS; i++) {
 		if (i < MAX_VALUE_EDITORS / 4) {
@@ -482,7 +482,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				Vector<String> flags = hint_text.split(",");
 				for (int i = 0; i < flags.size(); i++) {
 					String flag = flags[i];
-					if (flag == "") {
+					if (flag.is_empty()) {
 						continue;
 					}
 					menu->add_check_item(flag, i);
@@ -552,7 +552,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 					add_child(create_dialog);
 				}
 
-				if (hint_text != String()) {
+				if (!hint_text.is_empty()) {
 					create_dialog->set_base_type(hint_text);
 				} else {
 					create_dialog->set_base_type("Object");
@@ -853,7 +853,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			if (p_name == "script" && hint_text == "Script" && Object::cast_to<Node>(owner)) {
 				menu->add_item(TTR("New Script"), OBJ_MENU_NEW_SCRIPT);
 				menu->add_separator();
-			} else if (hint_text != "") {
+			} else if (!hint_text.is_empty()) {
 				int idx = 0;
 
 				Vector<EditorData::CustomType> custom_resources;
@@ -933,7 +933,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			RES cb = EditorSettings::get_singleton()->get_resource_clipboard();
 			bool paste_valid = false;
 			if (cb.is_valid()) {
-				if (hint_text == "") {
+				if (hint_text.is_empty()) {
 					paste_valid = true;
 				} else {
 					for (int i = 0; i < hint_text.get_slice_count(","); i++) {
@@ -1108,7 +1108,7 @@ void CustomPropertyEditor::_node_path_selected(NodePath p_path) {
 		return;
 	}
 
-	if (hint == PROPERTY_HINT_NODE_PATH_TO_EDITED_NODE && hint_text != String()) {
+	if (hint == PROPERTY_HINT_NODE_PATH_TO_EDITED_NODE && !hint_text.is_empty()) {
 		Node *node = get_node(hint_text);
 		if (node) {
 			Node *tonode = node->get_node(p_path);
@@ -1191,7 +1191,7 @@ void CustomPropertyEditor::_action_pressed(int p_which) {
 
 					file->clear_filters();
 
-					if (hint_text != "") {
+					if (!hint_text.is_empty()) {
 						Vector<String> extensions = hint_text.split(",");
 						for (int i = 0; i < extensions.size(); i++) {
 							String filter = extensions[i];
@@ -1343,7 +1343,7 @@ void CustomPropertyEditor::_action_pressed(int p_which) {
 void CustomPropertyEditor::_drag_easing(const Ref<InputEvent> &p_ev) {
 	Ref<InputEventMouseMotion> mm = p_ev;
 
-	if (mm.is_valid() && mm->get_button_mask() & MOUSE_BUTTON_MASK_LEFT) {
+	if (mm.is_valid() && (mm->get_button_mask() & MouseButton::MASK_LEFT) != MouseButton::NONE) {
 		float rel = mm->get_relative().x;
 		if (rel == 0) {
 			return;
@@ -1410,7 +1410,7 @@ void CustomPropertyEditor::_draw_easing() {
 		prev = h;
 	}
 
-	f->draw_string(ci, Point2(10, 10 + f->get_ascent(font_size)), String::num(exp, 2), HALIGN_LEFT, -1, font_size, color);
+	f->draw_string(ci, Point2(10, 10 + f->get_ascent(font_size)), String::num(exp, 2), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color);
 }
 
 void CustomPropertyEditor::_text_edit_changed() {
@@ -1628,7 +1628,7 @@ real_t CustomPropertyEditor::_parse_real_expression(String text) {
 }
 
 void CustomPropertyEditor::_emit_changed_whole_or_field() {
-	if (!Input::get_singleton()->is_key_pressed(KEY_SHIFT)) {
+	if (!Input::get_singleton()->is_key_pressed(Key::SHIFT)) {
 		emit_signal(SNAME("variant_changed"));
 	} else {
 		emit_signal(SNAME("variant_field_changed"), field_names[focused_value_editor]);
@@ -1864,7 +1864,7 @@ CustomPropertyEditor::CustomPropertyEditor() {
 	slider->connect("value_changed", callable_mp(this, &CustomPropertyEditor::_range_modified));
 
 	action_hboxes = memnew(HBoxContainer);
-	action_hboxes->set_alignment(BoxContainer::ALIGN_CENTER);
+	action_hboxes->set_alignment(BoxContainer::ALIGNMENT_CENTER);
 	value_vbox->add_child(action_hboxes);
 	for (int i = 0; i < MAX_ACTION_BUTTONS; i++) {
 		action_buttons[i] = memnew(Button);

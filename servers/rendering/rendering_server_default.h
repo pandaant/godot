@@ -223,8 +223,8 @@ public:
 
 	FUNC2SC(shader_get_param_list, RID, List<PropertyInfo> *)
 
-	FUNC3(shader_set_default_texture_param, RID, const StringName &, RID)
-	FUNC2RC(RID, shader_get_default_texture_param, RID, const StringName &)
+	FUNC4(shader_set_default_texture_param, RID, const StringName &, RID, int)
+	FUNC3RC(RID, shader_get_default_texture_param, RID, const StringName &, int)
 	FUNC2RC(Variant, shader_get_param_default, RID, const StringName &)
 
 	FUNC1RC(ShaderNativeSourceCode, shader_get_native_source_code, RID)
@@ -528,7 +528,6 @@ public:
 	FUNCRIDSPLIT(viewport)
 
 	FUNC2(viewport_set_use_xr, RID, bool)
-	FUNC2(viewport_set_scale_3d, RID, float)
 	FUNC3(viewport_set_size, RID, int, int)
 
 	FUNC2(viewport_set_active, RID, bool)
@@ -538,6 +537,11 @@ public:
 
 	FUNC3(viewport_attach_to_screen, RID, const Rect2 &, int)
 	FUNC2(viewport_set_render_direct_to_screen, RID, bool)
+
+	FUNC2(viewport_set_scaling_3d_mode, RID, ViewportScaling3DMode)
+	FUNC2(viewport_set_scaling_3d_scale, RID, float)
+	FUNC2(viewport_set_fsr_sharpness, RID, float)
+	FUNC2(viewport_set_fsr_mipmap_bias, RID, float)
 
 	FUNC2(viewport_set_update_mode, RID, ViewportUpdateMode)
 

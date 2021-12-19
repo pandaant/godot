@@ -59,7 +59,7 @@ JoypadLinux::Joypad::~Joypad() {
 }
 
 void JoypadLinux::Joypad::reset() {
-	dpad = 0;
+	dpad = HatMask::CENTER;
 	fd = -1;
 
 	Input::JoyAxisValue jx;
@@ -253,7 +253,7 @@ void JoypadLinux::close_joypad(int p_id) {
 	if (joy.fd != -1) {
 		close(joy.fd);
 		joy.fd = -1;
-		attached_devices.remove(attached_devices.find(joy.devpath));
+		attached_devices.remove_at(attached_devices.find(joy.devpath));
 		input->joy_connection_changed(p_id, false, "");
 	};
 }
@@ -484,12 +484,12 @@ void JoypadLinux::process_joypads() {
 							case ABS_HAT0X:
 								if (ev.value != 0) {
 									if (ev.value < 0) {
-										joy->dpad = (HatMask)((joy->dpad | HatMask::HAT_MASK_LEFT) & ~HatMask::HAT_MASK_RIGHT);
+										joy->dpad = (HatMask)((joy->dpad | HatMask::LEFT) & ~HatMask::RIGHT);
 									} else {
-										joy->dpad = (HatMask)((joy->dpad | HatMask::HAT_MASK_RIGHT) & ~HatMask::HAT_MASK_LEFT);
+										joy->dpad = (HatMask)((joy->dpad | HatMask::RIGHT) & ~HatMask::LEFT);
 									}
 								} else {
-									joy->dpad &= ~(HatMask::HAT_MASK_LEFT | HatMask::HAT_MASK_RIGHT);
+									joy->dpad &= ~(HatMask::LEFT | HatMask::RIGHT);
 								}
 
 								input->joy_hat(i, (HatMask)joy->dpad);
@@ -498,12 +498,12 @@ void JoypadLinux::process_joypads() {
 							case ABS_HAT0Y:
 								if (ev.value != 0) {
 									if (ev.value < 0) {
-										joy->dpad = (HatMask)((joy->dpad | HatMask::HAT_MASK_UP) & ~HatMask::HAT_MASK_DOWN);
+										joy->dpad = (HatMask)((joy->dpad | HatMask::UP) & ~HatMask::DOWN);
 									} else {
-										joy->dpad = (HatMask)((joy->dpad | HatMask::HAT_MASK_DOWN) & ~HatMask::HAT_MASK_UP);
+										joy->dpad = (HatMask)((joy->dpad | HatMask::DOWN) & ~HatMask::UP);
 									}
 								} else {
-									joy->dpad &= ~(HatMask::HAT_MASK_UP | HatMask::HAT_MASK_DOWN);
+									joy->dpad &= ~(HatMask::UP | HatMask::DOWN);
 								}
 
 								input->joy_hat(i, (HatMask)joy->dpad);

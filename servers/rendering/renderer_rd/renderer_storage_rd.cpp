@@ -1089,7 +1089,7 @@ Vector<Ref<Image>> RendererStorageRD::texture_3d_get(RID p_texture) const {
 		const Texture::BufferSlice3D &bs = tex->buffer_slices_3d[i];
 		ERR_FAIL_COND_V(bs.offset >= (uint32_t)all_data.size(), Vector<Ref<Image>>());
 		ERR_FAIL_COND_V(bs.offset + bs.buffer_size > (uint32_t)all_data.size(), Vector<Ref<Image>>());
-		Vector<uint8_t> sub_region = all_data.subarray(bs.offset, bs.offset + bs.buffer_size - 1);
+		Vector<uint8_t> sub_region = all_data.slice(bs.offset, bs.offset + bs.buffer_size);
 
 		Ref<Image> img;
 		img.instantiate();
@@ -1225,6 +1225,100 @@ void RendererStorageRD::CanvasTexture::clear_sets() {
 
 RendererStorageRD::CanvasTexture::~CanvasTexture() {
 	clear_sets();
+}
+
+void RendererStorageRD::sampler_rd_configure_custom(float p_mipmap_bias) {
+	for (int i = 1; i < RS::CANVAS_ITEM_TEXTURE_FILTER_MAX; i++) {
+		for (int j = 1; j < RS::CANVAS_ITEM_TEXTURE_REPEAT_MAX; j++) {
+			RD::SamplerState sampler_state;
+			switch (i) {
+				case RS::CANVAS_ITEM_TEXTURE_FILTER_NEAREST: {
+					sampler_state.mag_filter = RD::SAMPLER_FILTER_NEAREST;
+					sampler_state.min_filter = RD::SAMPLER_FILTER_NEAREST;
+					sampler_state.max_lod = 0;
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_FILTER_LINEAR: {
+					sampler_state.mag_filter = RD::SAMPLER_FILTER_LINEAR;
+					sampler_state.min_filter = RD::SAMPLER_FILTER_LINEAR;
+					sampler_state.max_lod = 0;
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_FILTER_NEAREST_WITH_MIPMAPS: {
+					sampler_state.mag_filter = RD::SAMPLER_FILTER_NEAREST;
+					sampler_state.min_filter = RD::SAMPLER_FILTER_NEAREST;
+					if (GLOBAL_GET("rendering/textures/default_filters/use_nearest_mipmap_filter")) {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_NEAREST;
+					} else {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_LINEAR;
+					}
+					sampler_state.lod_bias = p_mipmap_bias;
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_FILTER_LINEAR_WITH_MIPMAPS: {
+					sampler_state.mag_filter = RD::SAMPLER_FILTER_LINEAR;
+					sampler_state.min_filter = RD::SAMPLER_FILTER_LINEAR;
+					if (GLOBAL_GET("rendering/textures/default_filters/use_nearest_mipmap_filter")) {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_NEAREST;
+					} else {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_LINEAR;
+					}
+					sampler_state.lod_bias = p_mipmap_bias;
+
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC: {
+					sampler_state.mag_filter = RD::SAMPLER_FILTER_NEAREST;
+					sampler_state.min_filter = RD::SAMPLER_FILTER_NEAREST;
+					if (GLOBAL_GET("rendering/textures/default_filters/use_nearest_mipmap_filter")) {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_NEAREST;
+					} else {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_LINEAR;
+					}
+					sampler_state.lod_bias = p_mipmap_bias;
+					sampler_state.use_anisotropy = true;
+					sampler_state.anisotropy_max = 1 << int(GLOBAL_GET("rendering/textures/default_filters/anisotropic_filtering_level"));
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC: {
+					sampler_state.mag_filter = RD::SAMPLER_FILTER_LINEAR;
+					sampler_state.min_filter = RD::SAMPLER_FILTER_LINEAR;
+					if (GLOBAL_GET("rendering/textures/default_filters/use_nearest_mipmap_filter")) {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_NEAREST;
+					} else {
+						sampler_state.mip_filter = RD::SAMPLER_FILTER_LINEAR;
+					}
+					sampler_state.lod_bias = p_mipmap_bias;
+					sampler_state.use_anisotropy = true;
+					sampler_state.anisotropy_max = 1 << int(GLOBAL_GET("rendering/textures/default_filters/anisotropic_filtering_level"));
+
+				} break;
+				default: {
+				}
+			}
+			switch (j) {
+				case RS::CANVAS_ITEM_TEXTURE_REPEAT_DISABLED: {
+					sampler_state.repeat_u = RD::SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE;
+					sampler_state.repeat_v = RD::SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE;
+					sampler_state.repeat_w = RD::SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE;
+
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_REPEAT_ENABLED: {
+					sampler_state.repeat_u = RD::SAMPLER_REPEAT_MODE_REPEAT;
+					sampler_state.repeat_v = RD::SAMPLER_REPEAT_MODE_REPEAT;
+					sampler_state.repeat_w = RD::SAMPLER_REPEAT_MODE_REPEAT;
+				} break;
+				case RS::CANVAS_ITEM_TEXTURE_REPEAT_MIRROR: {
+					sampler_state.repeat_u = RD::SAMPLER_REPEAT_MODE_MIRRORED_REPEAT;
+					sampler_state.repeat_v = RD::SAMPLER_REPEAT_MODE_MIRRORED_REPEAT;
+					sampler_state.repeat_w = RD::SAMPLER_REPEAT_MODE_MIRRORED_REPEAT;
+				} break;
+				default: {
+				}
+			}
+
+			if (custom_rd_samplers[i][j].is_valid()) {
+				RD::get_singleton()->free(custom_rd_samplers[i][j]);
+			}
+
+			custom_rd_samplers[i][j] = RD::get_singleton()->sampler_create(sampler_state);
+		}
+	}
 }
 
 RID RendererStorageRD::canvas_texture_allocate() {
@@ -1440,8 +1534,10 @@ void RendererStorageRD::shader_set_code(RID p_shader, const String &p_code) {
 		}
 
 		if (shader->data) {
-			for (const KeyValue<StringName, RID> &E : shader->default_texture_parameter) {
-				shader->data->set_default_texture_param(E.key, E.value);
+			for (const KeyValue<StringName, Map<int, RID>> &E : shader->default_texture_parameter) {
+				for (const KeyValue<int, RID> &E2 : E.value) {
+					shader->data->set_default_texture_param(E.key, E2.value, E2.key);
+				}
 			}
 		}
 	}
@@ -1471,17 +1567,26 @@ void RendererStorageRD::shader_get_param_list(RID p_shader, List<PropertyInfo> *
 	}
 }
 
-void RendererStorageRD::shader_set_default_texture_param(RID p_shader, const StringName &p_name, RID p_texture) {
+void RendererStorageRD::shader_set_default_texture_param(RID p_shader, const StringName &p_name, RID p_texture, int p_index) {
 	Shader *shader = shader_owner.get_or_null(p_shader);
 	ERR_FAIL_COND(!shader);
 
 	if (p_texture.is_valid() && texture_owner.owns(p_texture)) {
-		shader->default_texture_parameter[p_name] = p_texture;
+		if (!shader->default_texture_parameter.has(p_name)) {
+			shader->default_texture_parameter[p_name] = Map<int, RID>();
+		}
+		shader->default_texture_parameter[p_name][p_index] = p_texture;
 	} else {
-		shader->default_texture_parameter.erase(p_name);
+		if (shader->default_texture_parameter.has(p_name) && shader->default_texture_parameter[p_name].has(p_index)) {
+			shader->default_texture_parameter[p_name].erase(p_index);
+
+			if (shader->default_texture_parameter[p_name].is_empty()) {
+				shader->default_texture_parameter.erase(p_name);
+			}
+		}
 	}
 	if (shader->data) {
-		shader->data->set_default_texture_param(p_name, p_texture);
+		shader->data->set_default_texture_param(p_name, p_texture, p_index);
 	}
 	for (Set<Material *>::Element *E = shader->owners.front(); E; E = E->next()) {
 		Material *material = E->get();
@@ -1489,11 +1594,11 @@ void RendererStorageRD::shader_set_default_texture_param(RID p_shader, const Str
 	}
 }
 
-RID RendererStorageRD::shader_get_default_texture_param(RID p_shader, const StringName &p_name) const {
+RID RendererStorageRD::shader_get_default_texture_param(RID p_shader, const StringName &p_name, int p_index) const {
 	Shader *shader = shader_owner.get_or_null(p_shader);
 	ERR_FAIL_COND_V(!shader, RID());
-	if (shader->default_texture_parameter.has(p_name)) {
-		return shader->default_texture_parameter[p_name];
+	if (shader->default_texture_parameter.has(p_name) && shader->default_texture_parameter[p_name].has(p_index)) {
+		return shader->default_texture_parameter[p_name][p_index];
 	}
 
 	return RID();
@@ -2547,7 +2652,17 @@ void RendererStorageRD::MaterialData::update_uniform_buffer(const Map<StringName
 		//regular uniform
 		uint32_t offset = p_uniform_offsets[E.value.order];
 #ifdef DEBUG_ENABLED
-		uint32_t size = ShaderLanguage::get_type_size(E.value.type);
+		uint32_t size = 0U;
+		// The following code enforces a 16-byte alignment of uniform arrays.
+		if (E.value.array_size > 0) {
+			size = ShaderLanguage::get_type_size(E.value.type) * E.value.array_size;
+			int m = (16 * E.value.array_size);
+			if ((size % m) != 0U) {
+				size += m - (size % m);
+			}
+		} else {
+			size = ShaderLanguage::get_type_size(E.value.type);
+		}
 		ERR_CONTINUE(offset + size > p_buffer_size);
 #endif
 		uint8_t *data = &p_buffer[offset];
@@ -2610,7 +2725,7 @@ RendererStorageRD::MaterialData::~MaterialData() {
 	}
 }
 
-void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Variant> &p_parameters, const Map<StringName, RID> &p_default_textures, const Vector<ShaderCompilerRD::GeneratedCode::Texture> &p_texture_uniforms, RID *p_textures, bool p_use_linear_color) {
+void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Variant> &p_parameters, const Map<StringName, Map<int, RID>> &p_default_textures, const Vector<ShaderCompilerRD::GeneratedCode::Texture> &p_texture_uniforms, RID *p_textures, bool p_use_linear_color) {
 	RendererStorageRD *singleton = (RendererStorageRD *)RendererStorage::base_singleton;
 #ifdef TOOLS_ENABLED
 	Texture *roughness_detect_texture = nullptr;
@@ -2673,19 +2788,19 @@ void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Vari
 
 			if (uniform_array_size > 0) {
 				if (textures.size() < uniform_array_size) {
-					const Map<StringName, RID>::Element *W = p_default_textures.find(uniform_name);
+					const Map<StringName, Map<int, RID>>::Element *W = p_default_textures.find(uniform_name);
 					for (int j = textures.size(); j < uniform_array_size; j++) {
-						if (W) {
-							textures.push_back(W->get());
+						if (W && W->get().has(j)) {
+							textures.push_back(W->get()[j]);
 						} else {
 							textures.push_back(RID());
 						}
 					}
 				}
 			} else if (textures.is_empty()) {
-				const Map<StringName, RID>::Element *W = p_default_textures.find(uniform_name);
-				if (W) {
-					textures.push_back(W->get());
+				const Map<StringName, Map<int, RID>>::Element *W = p_default_textures.find(uniform_name);
+				if (W && W->get().has(0)) {
+					textures.push_back(W->get()[0]);
 				}
 			}
 		}
@@ -2706,7 +2821,7 @@ void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Vari
 						case ShaderLanguage::ShaderNode::Uniform::HINT_NONE: {
 							rd_texture = singleton->texture_rd_get_default(DEFAULT_RD_TEXTURE_NORMAL);
 						} break;
-						case ShaderLanguage::ShaderNode::Uniform::HINT_ANISO: {
+						case ShaderLanguage::ShaderNode::Uniform::HINT_ANISOTROPY: {
 							rd_texture = singleton->texture_rd_get_default(DEFAULT_RD_TEXTURE_ANISO);
 						} break;
 						default: {
@@ -2746,7 +2861,7 @@ void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Vari
 				}
 			}
 #ifdef TOOLS_ENABLED
-			if (roughness_detect_texture && normal_detect_texture && normal_detect_texture->path != String()) {
+			if (roughness_detect_texture && normal_detect_texture && !normal_detect_texture->path.is_empty()) {
 				roughness_detect_texture->detect_roughness_callback(roughness_detect_texture->detect_roughness_callback_ud, normal_detect_texture->path, roughness_channel);
 			}
 #endif
@@ -2786,7 +2901,7 @@ void RendererStorageRD::MaterialData::update_textures(const Map<StringName, Vari
 					rd_texture = singleton->texture_rd_get_default(DEFAULT_RD_TEXTURE_WHITE);
 				}
 #ifdef TOOLS_ENABLED
-				if (roughness_detect_texture && normal_detect_texture && normal_detect_texture->path != String()) {
+				if (roughness_detect_texture && normal_detect_texture && !normal_detect_texture->path.is_empty()) {
 					roughness_detect_texture->detect_roughness_callback(roughness_detect_texture->detect_roughness_callback_ud, normal_detect_texture->path, roughness_channel);
 				}
 #endif
@@ -2833,7 +2948,7 @@ void RendererStorageRD::MaterialData::free_parameters_uniform_set(RID p_uniform_
 	}
 }
 
-bool RendererStorageRD::MaterialData::update_parameters_uniform_set(const Map<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty, const Map<StringName, ShaderLanguage::ShaderNode::Uniform> &p_uniforms, const uint32_t *p_uniform_offsets, const Vector<ShaderCompilerRD::GeneratedCode::Texture> &p_texture_uniforms, const Map<StringName, RID> &p_default_texture_params, uint32_t p_ubo_size, RID &uniform_set, RID p_shader, uint32_t p_shader_uniform_set, uint32_t p_barrier) {
+bool RendererStorageRD::MaterialData::update_parameters_uniform_set(const Map<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty, const Map<StringName, ShaderLanguage::ShaderNode::Uniform> &p_uniforms, const uint32_t *p_uniform_offsets, const Vector<ShaderCompilerRD::GeneratedCode::Texture> &p_texture_uniforms, const Map<StringName, Map<int, RID>> &p_default_texture_params, uint32_t p_ubo_size, RID &uniform_set, RID p_shader, uint32_t p_shader_uniform_set, uint32_t p_barrier) {
 	if ((uint32_t)ubo_data.size() != p_ubo_size) {
 		p_uniform_dirty = true;
 		if (uniform_buffer.is_valid()) {
@@ -2857,7 +2972,7 @@ bool RendererStorageRD::MaterialData::update_parameters_uniform_set(const Map<St
 
 	//check whether buffer changed
 	if (p_uniform_dirty && ubo_data.size()) {
-		update_uniform_buffer(p_uniforms, p_uniform_offsets, p_parameters, ubo_data.ptrw(), ubo_data.size(), false);
+		update_uniform_buffer(p_uniforms, p_uniform_offsets, p_parameters, ubo_data.ptrw(), ubo_data.size(), true);
 		RD::get_singleton()->buffer_update(uniform_buffer, 0, ubo_data.size(), ubo_data.ptrw(), p_barrier);
 	}
 
@@ -5705,7 +5820,7 @@ void RendererStorageRD::ParticlesShaderData::set_code(const String &p_code) {
 	uniforms.clear();
 	uses_collision = false;
 
-	if (code == String()) {
+	if (code.is_empty()) {
 		return; //just invalid, but no error
 	}
 
@@ -5748,11 +5863,20 @@ void RendererStorageRD::ParticlesShaderData::set_code(const String &p_code) {
 	valid = true;
 }
 
-void RendererStorageRD::ParticlesShaderData::set_default_texture_param(const StringName &p_name, RID p_texture) {
+void RendererStorageRD::ParticlesShaderData::set_default_texture_param(const StringName &p_name, RID p_texture, int p_index) {
 	if (!p_texture.is_valid()) {
-		default_texture_params.erase(p_name);
+		if (default_texture_params.has(p_name) && default_texture_params[p_name].has(p_index)) {
+			default_texture_params[p_name].erase(p_index);
+
+			if (default_texture_params[p_name].is_empty()) {
+				default_texture_params.erase(p_name);
+			}
+		}
 	} else {
-		default_texture_params[p_name] = p_texture;
+		if (!default_texture_params.has(p_name)) {
+			default_texture_params[p_name] = Map<int, RID>();
+		}
+		default_texture_params[p_name][p_index] = p_texture;
 	}
 }
 
@@ -9141,7 +9265,6 @@ void RendererStorageRD::_update_global_variables() {
 			ERR_CONTINUE(!material); //wtf
 
 			_material_queue_update(material, false, true);
-			print_line("update material texture?");
 		}
 
 		global_variables.must_update_texture_materials = false;
@@ -9754,6 +9877,9 @@ RendererStorageRD::RendererStorageRD() {
 		}
 	}
 
+	//custom sampler
+	sampler_rd_configure_custom(0.0f);
+
 	//default rd buffers
 	{
 		Vector<uint8_t> buffer;
@@ -9906,7 +10032,7 @@ RendererStorageRD::RendererStorageRD() {
 		actions.renames["RESTART"] = "restart";
 		actions.renames["CUSTOM"] = "PARTICLE.custom";
 		actions.renames["TRANSFORM"] = "PARTICLE.xform";
-		actions.renames["TIME"] = "FRAME.time";
+		actions.renames["TIME"] = "frame_history.data[0].time";
 		actions.renames["PI"] = _MKSTR(Math_PI);
 		actions.renames["TAU"] = _MKSTR(Math_TAU);
 		actions.renames["E"] = _MKSTR(Math_E);
@@ -10081,6 +10207,15 @@ RendererStorageRD::~RendererStorageRD() {
 	for (int i = 1; i < RS::CANVAS_ITEM_TEXTURE_FILTER_MAX; i++) {
 		for (int j = 1; j < RS::CANVAS_ITEM_TEXTURE_REPEAT_MAX; j++) {
 			RD::get_singleton()->free(default_rd_samplers[i][j]);
+		}
+	}
+
+	//custom samplers
+	for (int i = 1; i < RS::CANVAS_ITEM_TEXTURE_FILTER_MAX; i++) {
+		for (int j = 0; j < RS::CANVAS_ITEM_TEXTURE_REPEAT_MAX; j++) {
+			if (custom_rd_samplers[i][j].is_valid()) {
+				RD::get_singleton()->free(custom_rd_samplers[i][j]);
+			}
 		}
 	}
 

@@ -52,7 +52,7 @@ public:
 	bool is_mode_2d() const;
 
 	Vector<StringName> get_editable_properties() const override;
-	Map<StringName, String> get_editable_properties_names() const override;
+	virtual Map<StringName, String> get_editable_properties_names() const override;
 	bool is_show_prop_names() const override;
 
 	VisualShaderNodeParticleEmitter();
@@ -104,6 +104,58 @@ public:
 	virtual String generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview = false) const override;
 
 	VisualShaderNodeParticleRingEmitter();
+};
+
+class VisualShaderNodeParticleMeshEmitter : public VisualShaderNodeParticleEmitter {
+	GDCLASS(VisualShaderNodeParticleMeshEmitter, VisualShaderNodeParticleEmitter);
+	Ref<Mesh> mesh;
+	bool use_all_surfaces = true;
+	int surface_index = 0;
+
+	Ref<ImageTexture> position_texture;
+	Ref<ImageTexture> normal_texture;
+	Ref<ImageTexture> color_texture;
+	Ref<ImageTexture> uv_texture;
+	Ref<ImageTexture> uv2_texture;
+
+	String _generate_code(VisualShader::Type p_type, int p_id, const String *p_output_vars, int p_index, const String &p_texture_name, bool p_ignore_mode2d = false) const;
+
+	void _update_texture(const Vector<Vector2> &p_array, Ref<ImageTexture> &r_texture);
+	void _update_texture(const Vector<Vector3> &p_array, Ref<ImageTexture> &r_texture);
+	void _update_texture(const Vector<Color> &p_array, Ref<ImageTexture> &r_texture);
+	void _update_textures();
+
+protected:
+	static void _bind_methods();
+
+public:
+	virtual String get_caption() const override;
+
+	virtual int get_output_port_count() const override;
+	virtual PortType get_output_port_type(int p_port) const override;
+	virtual String get_output_port_name(int p_port) const override;
+
+	virtual int get_input_port_count() const override;
+	virtual PortType get_input_port_type(int p_port) const override;
+	virtual String get_input_port_name(int p_port) const override;
+
+	virtual String generate_global(Shader::Mode p_mode, VisualShader::Type p_type, int p_id) const override;
+	virtual String generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview = false) const override;
+
+	void set_mesh(Ref<Mesh> p_mesh);
+	Ref<Mesh> get_mesh() const;
+
+	void set_use_all_surfaces(bool p_enabled);
+	bool is_use_all_surfaces() const;
+
+	void set_surface_index(int p_surface_index);
+	int get_surface_index() const;
+
+	Vector<StringName> get_editable_properties() const override;
+	Map<StringName, String> get_editable_properties_names() const override;
+	Vector<VisualShader::DefaultTextureParam> get_default_texture_parameters(VisualShader::Type p_type, int p_id) const override;
+
+	VisualShaderNodeParticleMeshEmitter();
 };
 
 class VisualShaderNodeParticleMultiplyByAxisAngle : public VisualShaderNode {

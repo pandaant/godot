@@ -92,7 +92,7 @@ void SceneImportSettings::_fill_material(Tree *p_tree, const Ref<Material> &p_ma
 	if (p_material->has_meta("import_id")) {
 		import_id = p_material->get_meta("import_id");
 		has_import_id = true;
-	} else if (p_material->get_name() != "") {
+	} else if (!p_material->get_name().is_empty()) {
 		import_id = p_material->get_name();
 		has_import_id = true;
 	} else {
@@ -148,7 +148,7 @@ void SceneImportSettings::_fill_mesh(Tree *p_tree, const Ref<Mesh> &p_mesh, Tree
 	if (p_mesh->has_meta("import_id")) {
 		import_id = p_mesh->get_meta("import_id");
 		has_import_id = true;
-	} else if (p_mesh->get_name() != String()) {
+	} else if (!p_mesh->get_name().is_empty()) {
 		import_id = p_mesh->get_name();
 		has_import_id = true;
 	} else {
@@ -414,7 +414,7 @@ void SceneImportSettings::_update_camera() {
 	float rot_y = cam_rot_y;
 	float zoom = cam_zoom;
 
-	if (selected_type == "Node" || selected_type == "") {
+	if (selected_type == "Node" || selected_type.is_empty()) {
 		camera_aabb = contents_aabb;
 	} else {
 		if (mesh_preview->get_mesh().is_valid()) {
@@ -664,7 +664,7 @@ void SceneImportSettings::_select(Tree *p_from, String p_type, String p_id) {
 	List<ResourceImporter::ImportOption> options;
 
 	if (scene_import_settings_data->category == ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_MAX) {
-		ResourceImporterScene::get_singleton()->get_import_options(&options);
+		ResourceImporterScene::get_singleton()->get_import_options(base_path, &options);
 	} else {
 		ResourceImporterScene::get_singleton()->get_internal_import_options(scene_import_settings_data->category, &options);
 	}
@@ -737,21 +737,21 @@ void SceneImportSettings::_viewport_input(const Ref<InputEvent> &p_input) {
 		zoom = &md.cam_zoom;
 	}
 	Ref<InputEventMouseMotion> mm = p_input;
-	if (mm.is_valid() && mm->get_button_mask() & MOUSE_BUTTON_MASK_LEFT) {
+	if (mm.is_valid() && (mm->get_button_mask() & MouseButton::MASK_LEFT) != MouseButton::NONE) {
 		(*rot_x) -= mm->get_relative().y * 0.01 * EDSCALE;
 		(*rot_y) -= mm->get_relative().x * 0.01 * EDSCALE;
 		(*rot_x) = CLAMP((*rot_x), -Math_PI / 2, Math_PI / 2);
 		_update_camera();
 	}
 	Ref<InputEventMouseButton> mb = p_input;
-	if (mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_WHEEL_DOWN) {
+	if (mb.is_valid() && mb->get_button_index() == MouseButton::WHEEL_DOWN) {
 		(*zoom) *= 1.1;
 		if ((*zoom) > 10.0) {
 			(*zoom) = 10.0;
 		}
 		_update_camera();
 	}
-	if (mb.is_valid() && mb->get_button_index() == MOUSE_BUTTON_WHEEL_UP) {
+	if (mb.is_valid() && mb->get_button_index() == MouseButton::WHEEL_UP) {
 		(*zoom) /= 1.1;
 		if ((*zoom) < 0.1) {
 			(*zoom) = 0.1;

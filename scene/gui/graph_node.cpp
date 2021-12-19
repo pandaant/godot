@@ -442,7 +442,7 @@ void GraphNode::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			_shape();
 
-			minimum_size_changed();
+			update_minimum_size();
 			update();
 		} break;
 	}
@@ -458,7 +458,7 @@ void GraphNode::_shape() {
 	} else {
 		title_buf->set_direction((TextServer::Direction)text_direction);
 	}
-	title_buf->add_string(title, font, font_size, opentype_features, (language != "") ? language : TranslationServer::get_singleton()->get_tool_locale());
+	title_buf->add_string(title, font, font_size, opentype_features, (!language.is_empty()) ? language : TranslationServer::get_singleton()->get_tool_locale());
 }
 
 #ifdef TOOLS_ENABLED
@@ -666,7 +666,7 @@ void GraphNode::set_title(const String &p_title) {
 	_shape();
 
 	update();
-	minimum_size_changed();
+	update_minimum_size();
 }
 
 String GraphNode::get_title() const {
@@ -894,7 +894,7 @@ void GraphNode::gui_input(const Ref<InputEvent> &p_ev) {
 	if (mb.is_valid()) {
 		ERR_FAIL_COND_MSG(get_parent_control() == nullptr, "GraphNode must be the child of a GraphEdit node.");
 
-		if (mb->is_pressed() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+		if (mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT) {
 			Vector2 mpos = mb->get_position();
 			if (close_rect.size != Size2() && close_rect.has_point(mpos)) {
 				//send focus to parent
@@ -917,7 +917,7 @@ void GraphNode::gui_input(const Ref<InputEvent> &p_ev) {
 			emit_signal(SNAME("raise_request"));
 		}
 
-		if (!mb->is_pressed() && mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+		if (!mb->is_pressed() && mb->get_button_index() == MouseButton::LEFT) {
 			resizing = false;
 		}
 	}

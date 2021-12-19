@@ -291,7 +291,7 @@ void OccluderInstance3D::_bake_node(Node *p_node, PackedVector3Array &r_vertices
 }
 
 OccluderInstance3D::BakeError OccluderInstance3D::bake(Node *p_from_node, String p_occluder_path) {
-	if (p_occluder_path == "") {
+	if (p_occluder_path.is_empty()) {
 		if (get_occluder().is_null()) {
 			return BAKE_ERROR_NO_SAVE_PATH;
 		}
@@ -329,9 +329,6 @@ TypedArray<String> OccluderInstance3D::get_configuration_warnings() const {
 	}
 
 	if (bake_mask == 0) {
-		// NOTE: This warning will not be emitted if none of the 20 checkboxes
-		// exposed in the editor are checked. This is because there are
-		// currently 12 unexposed layers in the editor inspector.
 		warnings.push_back(TTR("The Bake Mask has no bits enabled, which means baking will not produce any occluder meshes for this OccluderInstance3D.\nTo resolve this, enable at least one bit in the Bake Mask property."));
 	}
 

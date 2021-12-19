@@ -162,11 +162,11 @@ void EditorLog::_clear_request() {
 void EditorLog::_copy_request() {
 	String text = log->get_selected_text();
 
-	if (text == "") {
+	if (text.is_empty()) {
 		text = log->get_text();
 	}
 
-	if (text != "") {
+	if (!text.is_empty()) {
 		DisplayServer::get_singleton()->clipboard_set(text);
 	}
 }
@@ -237,7 +237,7 @@ void EditorLog::_add_log_line(LogMessage &p_message, bool p_replace_previous) {
 	// Only add the message to the log if it passes the filters.
 	bool filter_active = type_filter_map[p_message.type]->is_active();
 	String search_text = search_box->get_text();
-	bool search_match = search_text == String() || p_message.text.findn(search_text) > -1;
+	bool search_match = search_text.is_empty() || p_message.text.findn(search_text) > -1;
 
 	if (!filter_active || !search_match) {
 		return;
@@ -366,7 +366,7 @@ EditorLog::EditorLog() {
 	clear_button = memnew(Button);
 	clear_button->set_flat(true);
 	clear_button->set_focus_mode(FOCUS_NONE);
-	clear_button->set_shortcut(ED_SHORTCUT("editor/clear_output", TTR("Clear Output"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_K));
+	clear_button->set_shortcut(ED_SHORTCUT("editor/clear_output", TTR("Clear Output"), KeyModifierMask::CMD | KeyModifierMask::SHIFT | Key::K));
 	clear_button->set_shortcut_context(this);
 	clear_button->connect("pressed", callable_mp(this, &EditorLog::_clear_request));
 	hb_tools->add_child(clear_button);
@@ -375,7 +375,7 @@ EditorLog::EditorLog() {
 	copy_button = memnew(Button);
 	copy_button->set_flat(true);
 	copy_button->set_focus_mode(FOCUS_NONE);
-	copy_button->set_shortcut(ED_SHORTCUT("editor/copy_output", TTR("Copy Selection"), KEY_MASK_CMD | KEY_C));
+	copy_button->set_shortcut(ED_SHORTCUT("editor/copy_output", TTR("Copy Selection"), KeyModifierMask::CMD | Key::C));
 	copy_button->set_shortcut_context(this);
 	copy_button->connect("pressed", callable_mp(this, &EditorLog::_copy_request));
 	hb_tools->add_child(copy_button);
@@ -401,7 +401,7 @@ EditorLog::EditorLog() {
 	show_search_button->set_focus_mode(FOCUS_NONE);
 	show_search_button->set_toggle_mode(true);
 	show_search_button->set_pressed(true);
-	show_search_button->set_shortcut(ED_SHORTCUT("editor/open_search", TTR("Focus Search/Filter Bar"), KEY_MASK_CMD | KEY_F));
+	show_search_button->set_shortcut(ED_SHORTCUT("editor/open_search", TTR("Focus Search/Filter Bar"), KeyModifierMask::CMD | Key::F));
 	show_search_button->set_shortcut_context(this);
 	show_search_button->connect("toggled", callable_mp(this, &EditorLog::_set_search_visible));
 	hb_tools2->add_child(show_search_button);

@@ -170,7 +170,7 @@ void Polygon2DEditor::_update_bone_list() {
 		if (np.get_name_count()) {
 			name = np.get_name(np.get_name_count() - 1);
 		}
-		if (name == String()) {
+		if (name.is_empty()) {
 			name = "Bone " + itos(i);
 		}
 		cb->set_text(name);
@@ -447,7 +447,7 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 	Ref<InputEventMouseButton> mb = p_input;
 
 	if (mb.is_valid()) {
-		if (mb->get_button_index() == MOUSE_BUTTON_LEFT) {
+		if (mb->get_button_index() == MouseButton::LEFT) {
 			if (mb->is_pressed()) {
 				uv_drag_from = snap_point(mb->get_position());
 				uv_drag = true;
@@ -584,10 +584,10 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 						return;
 					}
 
-					uv_create_poly_prev.remove(closest);
-					uv_create_uv_prev.remove(closest);
+					uv_create_poly_prev.remove_at(closest);
+					uv_create_uv_prev.remove_at(closest);
 					if (uv_create_colors_prev.size()) {
-						uv_create_colors_prev.remove(closest);
+						uv_create_colors_prev.remove_at(closest);
 					}
 
 					undo_redo->create_action(TTR("Remove Internal Vertex"));
@@ -599,7 +599,7 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 					undo_redo->add_undo_method(node, "set_vertex_colors", node->get_vertex_colors());
 					for (int i = 0; i < node->get_bone_count(); i++) {
 						Vector<float> bonew = node->get_bone_weights(i);
-						bonew.remove(closest);
+						bonew.remove_at(closest);
 						undo_redo->add_do_method(node, "set_bone_weights", i, bonew);
 						undo_redo->add_undo_method(node, "set_bone_weights", i, node->get_bone_weights(i));
 					}
@@ -702,7 +702,7 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 					}
 
 					if (erase_index != -1) {
-						polygons.remove(erase_index);
+						polygons.remove_at(erase_index);
 						undo_redo->create_action(TTR("Remove Custom Polygon"));
 						undo_redo->add_do_method(node, "set_polygons", polygons);
 						undo_redo->add_undo_method(node, "set_polygons", node->get_polygons());
@@ -759,7 +759,7 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 					bone_painting = false;
 				}
 			}
-		} else if (mb->get_button_index() == MOUSE_BUTTON_RIGHT && mb->is_pressed()) {
+		} else if (mb->get_button_index() == MouseButton::RIGHT && mb->is_pressed()) {
 			_cancel_editing();
 
 			if (bone_painting) {
@@ -768,9 +768,9 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 
 			uv_edit_draw->update();
 
-		} else if (mb->get_button_index() == MOUSE_BUTTON_WHEEL_UP && mb->is_pressed()) {
+		} else if (mb->get_button_index() == MouseButton::WHEEL_UP && mb->is_pressed()) {
 			uv_zoom->set_value(uv_zoom->get_value() / (1 - (0.1 * mb->get_factor())));
-		} else if (mb->get_button_index() == MOUSE_BUTTON_WHEEL_DOWN && mb->is_pressed()) {
+		} else if (mb->get_button_index() == MouseButton::WHEEL_DOWN && mb->is_pressed()) {
 			uv_zoom->set_value(uv_zoom->get_value() * (1 - (0.1 * mb->get_factor())));
 		}
 	}
@@ -778,7 +778,7 @@ void Polygon2DEditor::_uv_input(const Ref<InputEvent> &p_input) {
 	Ref<InputEventMouseMotion> mm = p_input;
 
 	if (mm.is_valid()) {
-		if ((mm->get_button_mask() & MOUSE_BUTTON_MASK_MIDDLE) || Input::get_singleton()->is_key_pressed(KEY_SPACE)) {
+		if ((mm->get_button_mask() & MouseButton::MASK_MIDDLE) != MouseButton::NONE || Input::get_singleton()->is_key_pressed(Key::SPACE)) {
 			Vector2 drag = mm->get_relative();
 			uv_hscroll->set_value(uv_hscroll->get_value() - drag.x);
 			uv_vscroll->set_value(uv_vscroll->get_value() - drag.y);

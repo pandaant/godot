@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="@GlobalScope" version="4.0">
 	<brief_description>
-		Global scope constants and variables.
+		Global scope constants and functions.
 	</brief_description>
 	<description>
-		Global scope constants and variables. This is all that resides in the globals, constants regarding error codes, keycodes, property hints, etc.
+		A list of global scope enumerated constants and built-in functions. This is all that resides in the globals, constants regarding error codes, keycodes, property hints, etc.
 		Singletons are also documented here, since they can be accessed from anywhere.
+		For the entries related to GDScript which can be accessed in any script see [@GDScript].
 	</description>
 	<tutorials>
+		<link title="Random number generation">$DOCS_URL/tutorials/math/random_number_generation.html</link>
 	</tutorials>
 	<methods>
 		<method name="abs">
@@ -248,9 +250,9 @@
 				- 1.0: Linear
 				- Between -1.0 and 0.0 (exclusive): Ease out-in
 				- 0.0: Constant
-				- Between 0.0 to 1.0 (exclusive): Ease in
+				- Between 0.0 to 1.0 (exclusive): Ease out
 				- 1.0: Linear
-				- Greater than 1.0 (exclusive): Ease out
+				- Greater than 1.0 (exclusive): Ease in
 				[/codeblock]
 				[url=https://raw.githubusercontent.com/godotengine/godot-docs/master/img/ease_cheatsheet.png]ease() curve values cheatsheet[/url]
 				See also [method smoothstep]. If you need to perform more advanced transitions, use [Tween] or [AnimationPlayer].
@@ -721,6 +723,14 @@
 				[codeblock]
 				prints(randf_range(-10, 10), randf_range(-10, 10)) # Prints e.g. -3.844535 7.45315
 				[/codeblock]
+			</description>
+		</method>
+		<method name="randfn">
+			<return type="float" />
+			<argument index="0" name="mean" type="float" />
+			<argument index="1" name="deviation" type="float" />
+			<description>
+				Returns a normally-distributed pseudo-random floating point value using Box-Muller transform with the specified [code]mean[/code] and a standard [code]deviation[/code]. This is also called Gaussian distribution.
 			</description>
 		</method>
 		<method name="randi">
@@ -1200,58 +1210,61 @@
 		</constant>
 		<constant name="COUNTERCLOCKWISE" value="1" enum="ClockDirection">
 		</constant>
-		<constant name="HALIGN_LEFT" value="0" enum="HAlign">
+		<constant name="HORIZONTAL_ALIGNMENT_LEFT" value="0" enum="HorizontalAlignment">
 			Horizontal left alignment, usually for text-derived classes.
 		</constant>
-		<constant name="HALIGN_CENTER" value="1" enum="HAlign">
+		<constant name="HORIZONTAL_ALIGNMENT_CENTER" value="1" enum="HorizontalAlignment">
 			Horizontal center alignment, usually for text-derived classes.
 		</constant>
-		<constant name="HALIGN_RIGHT" value="2" enum="HAlign">
+		<constant name="HORIZONTAL_ALIGNMENT_RIGHT" value="2" enum="HorizontalAlignment">
 			Horizontal right alignment, usually for text-derived classes.
 		</constant>
-		<constant name="HALIGN_FILL" value="3" enum="HAlign">
+		<constant name="HORIZONTAL_ALIGNMENT_FILL" value="3" enum="HorizontalAlignment">
 			Expand row to fit width, usually for text-derived classes.
 		</constant>
-		<constant name="VALIGN_TOP" value="0" enum="VAlign">
+		<constant name="VERTICAL_ALIGNMENT_TOP" value="0" enum="VerticalAlignment">
 			Vertical top alignment, usually for text-derived classes.
 		</constant>
-		<constant name="VALIGN_CENTER" value="1" enum="VAlign">
+		<constant name="VERTICAL_ALIGNMENT_CENTER" value="1" enum="VerticalAlignment">
 			Vertical center alignment, usually for text-derived classes.
 		</constant>
-		<constant name="VALIGN_BOTTOM" value="2" enum="VAlign">
+		<constant name="VERTICAL_ALIGNMENT_BOTTOM" value="2" enum="VerticalAlignment">
 			Vertical bottom alignment, usually for text-derived classes.
 		</constant>
-		<constant name="INLINE_ALIGN_TOP_TO" value="0" enum="InlineAlign">
-			Aligns the top of the inline object (e.g. image, table) to the position of the text specified by [code]INLINE_ALIGN_TO_*[/code] constant.
+		<constant name="VERTICAL_ALIGNMENT_FILL" value="3" enum="VerticalAlignment">
+			Expand rows to fit height, usually for text-derived classes.
 		</constant>
-		<constant name="INLINE_ALIGN_CENTER_TO" value="1" enum="InlineAlign">
-			Aligns the center of the inline object (e.g. image, table) to the position of the text specified by [code]INLINE_ALIGN_TO_*[/code] constant.
+		<constant name="INLINE_ALIGNMENT_TOP_TO" value="0" enum="InlineAlignment">
+			Aligns the top of the inline object (e.g. image, table) to the position of the text specified by [code]INLINE_ALIGNMENT_TO_*[/code] constant.
 		</constant>
-		<constant name="INLINE_ALIGN_BOTTOM_TO" value="2" enum="InlineAlign">
-			Aligns the bottom of the inline object (e.g. image, table) to the position of the text specified by [code]INLINE_ALIGN_TO_*[/code] constant.
+		<constant name="INLINE_ALIGNMENT_CENTER_TO" value="1" enum="InlineAlignment">
+			Aligns the center of the inline object (e.g. image, table) to the position of the text specified by [code]INLINE_ALIGNMENT_TO_*[/code] constant.
 		</constant>
-		<constant name="INLINE_ALIGN_TO_TOP" value="0" enum="InlineAlign">
-			Aligns the position of the inline object (e.g. image, table) specified by [code]INLINE_ALIGN_*_TO[/code] constant to the top of the text.
+		<constant name="INLINE_ALIGNMENT_BOTTOM_TO" value="2" enum="InlineAlignment">
+			Aligns the bottom of the inline object (e.g. image, table) to the position of the text specified by [code]INLINE_ALIGNMENT_TO_*[/code] constant.
 		</constant>
-		<constant name="INLINE_ALIGN_TO_CENTER" value="4" enum="InlineAlign">
-			Aligns the position of the inline object (e.g. image, table) specified by [code]INLINE_ALIGN_*_TO[/code] constant to the center of the text.
+		<constant name="INLINE_ALIGNMENT_TO_TOP" value="0" enum="InlineAlignment">
+			Aligns the position of the inline object (e.g. image, table) specified by [code]INLINE_ALIGNMENT_*_TO[/code] constant to the top of the text.
 		</constant>
-		<constant name="INLINE_ALIGN_TO_BASELINE" value="8" enum="InlineAlign">
-			Aligns the position of the inline object (e.g. image, table) specified by [code]INLINE_ALIGN_*_TO[/code] constant to the baseline of the text.
+		<constant name="INLINE_ALIGNMENT_TO_CENTER" value="4" enum="InlineAlignment">
+			Aligns the position of the inline object (e.g. image, table) specified by [code]INLINE_ALIGNMENT_*_TO[/code] constant to the center of the text.
 		</constant>
-		<constant name="INLINE_ALIGN_TO_BOTTOM" value="12" enum="InlineAlign">
+		<constant name="INLINE_ALIGNMENT_TO_BASELINE" value="8" enum="InlineAlignment">
+			Aligns the position of the inline object (e.g. image, table) specified by [code]INLINE_ALIGNMENT_*_TO[/code] constant to the baseline of the text.
+		</constant>
+		<constant name="INLINE_ALIGNMENT_TO_BOTTOM" value="12" enum="InlineAlignment">
 			Aligns inline object (e.g. image, table) to the bottom of the text.
 		</constant>
-		<constant name="INLINE_ALIGN_TOP" value="0" enum="InlineAlign">
-			Aligns top of the inline object (e.g. image, table) to the top of the text. Equvalent to [code]INLINE_ALIGN_TOP_TO | INLINE_ALIGN_TO_TOP[/code].
+		<constant name="INLINE_ALIGNMENT_TOP" value="0" enum="InlineAlignment">
+			Aligns top of the inline object (e.g. image, table) to the top of the text. Equvalent to [code]INLINE_ALIGNMENT_TOP_TO | INLINE_ALIGNMENT_TO_TOP[/code].
 		</constant>
-		<constant name="INLINE_ALIGN_CENTER" value="5" enum="InlineAlign">
-			Aligns center of the inline object (e.g. image, table) to the center of the text. Equvalent to [code]INLINE_ALIGN_CENTER_TO | INLINE_ALIGN_TO_CENTER[/code].
+		<constant name="INLINE_ALIGNMENT_CENTER" value="5" enum="InlineAlignment">
+			Aligns center of the inline object (e.g. image, table) to the center of the text. Equvalent to [code]INLINE_ALIGNMENT_CENTER_TO | INLINE_ALIGNMENT_TO_CENTER[/code].
 		</constant>
-		<constant name="INLINE_ALIGN_BOTTOM" value="14" enum="InlineAlign">
-			Aligns bottom of the inline object (e.g. image, table) to the bottom of the text. Equvalent to [code]INLINE_ALIGN_BOTTOM_TO | INLINE_ALIGN_TO_BOTTOM[/code].
+		<constant name="INLINE_ALIGNMENT_BOTTOM" value="14" enum="InlineAlignment">
+			Aligns bottom of the inline object (e.g. image, table) to the bottom of the text. Equvalent to [code]INLINE_ALIGNMENT_BOTTOM_TO | INLINE_ALIGNMENT_TO_BOTTOM[/code].
 		</constant>
-		<constant name="SPKEY" value="16777216">
+		<constant name="KEY_SPECIAL" value="16777216" enum="Key">
 			Keycodes with this bit applied are non-printable.
 		</constant>
 		<constant name="KEY_ESCAPE" value="16777217" enum="Key">
@@ -2016,12 +2029,6 @@
 		<constant name="MOUSE_BUTTON_MIDDLE" value="3" enum="MouseButton">
 			Middle mouse button.
 		</constant>
-		<constant name="MOUSE_BUTTON_XBUTTON1" value="8" enum="MouseButton">
-			Extra mouse button 1 (only present on some mice).
-		</constant>
-		<constant name="MOUSE_BUTTON_XBUTTON2" value="9" enum="MouseButton">
-			Extra mouse button 2 (only present on some mice).
-		</constant>
 		<constant name="MOUSE_BUTTON_WHEEL_UP" value="4" enum="MouseButton">
 			Mouse wheel up.
 		</constant>
@@ -2033,6 +2040,12 @@
 		</constant>
 		<constant name="MOUSE_BUTTON_WHEEL_RIGHT" value="7" enum="MouseButton">
 			Mouse wheel right button (only present on some mice).
+		</constant>
+		<constant name="MOUSE_BUTTON_XBUTTON1" value="8" enum="MouseButton">
+			Extra mouse button 1 (only present on some mice).
+		</constant>
+		<constant name="MOUSE_BUTTON_XBUTTON2" value="9" enum="MouseButton">
+			Extra mouse button 2 (only present on some mice).
 		</constant>
 		<constant name="MOUSE_BUTTON_MASK_LEFT" value="1" enum="MouseButton">
 			Left mouse button mask.

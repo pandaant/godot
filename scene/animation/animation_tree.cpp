@@ -138,7 +138,7 @@ real_t AnimationNode::_pre_process(const StringName &p_base_path, AnimationNode 
 void AnimationNode::make_invalid(const String &p_reason) {
 	ERR_FAIL_COND(!state);
 	state->valid = false;
-	if (state->invalid_reasons != String()) {
+	if (!state->invalid_reasons.is_empty()) {
 		state->invalid_reasons += "\n";
 	}
 	state->invalid_reasons += String::utf8("•  ") + p_reason;
@@ -329,7 +329,7 @@ void AnimationNode::set_input_name(int p_input, const String &p_name) {
 
 void AnimationNode::remove_input(int p_index) {
 	ERR_FAIL_INDEX(p_index, inputs.size());
-	inputs.remove(p_index);
+	inputs.remove_at(p_index);
 	emit_changed();
 }
 
@@ -901,7 +901,9 @@ void AnimationTree::_process_graph(real_t p_delta) {
 			real_t weight = as.blend;
 			bool seeked = as.seeked;
 			int pingponged = as.pingponged;
+#ifndef _3D_DISABLED
 			bool backward = signbit(delta);
+#endif // _3D_DISABLED
 
 			for (int i = 0; i < a->get_track_count(); i++) {
 				NodePath path = a->track_get_path(i);
@@ -1237,8 +1239,7 @@ void AnimationTree::_process_graph(real_t p_delta) {
 							continue;
 						}
 
-						t->value = Math::lerp(t->value, value, blend);
-
+						t->value = Math::lerp(t->value, value, (float)blend);
 #endif // _3D_DISABLED
 					} break;
 					case Animation::TYPE_VALUE: {

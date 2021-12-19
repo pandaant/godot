@@ -38,13 +38,6 @@ class LineEdit : public Control {
 	GDCLASS(LineEdit, Control);
 
 public:
-	enum Align {
-		ALIGN_LEFT,
-		ALIGN_CENTER,
-		ALIGN_RIGHT,
-		ALIGN_FILL
-	};
-
 	enum MenuItems {
 		MENU_CUT,
 		MENU_COPY,
@@ -78,7 +71,7 @@ public:
 	};
 
 private:
-	Align align = ALIGN_LEFT;
+	HorizontalAlignment alignment = HORIZONTAL_ALIGNMENT_LEFT;
 
 	bool editable = false;
 	bool pass = false;
@@ -129,6 +122,9 @@ private:
 
 	bool middle_mouse_paste_enabled = true;
 
+	bool drag_action = false;
+	bool drag_caret_force_displayed = false;
+
 	Ref<Texture2D> right_icon;
 	bool flat = false;
 
@@ -170,7 +166,7 @@ private:
 	void _clear_redo();
 	void _create_undo_state();
 
-	int _get_menu_action_accelerator(const String &p_action);
+	Key _get_menu_action_accelerator(const String &p_action);
 
 	void _shape();
 	void _fit_to_width();
@@ -215,8 +211,8 @@ protected:
 	void _validate_property(PropertyInfo &property) const override;
 
 public:
-	void set_align(Align p_align);
-	Align get_align() const;
+	void set_horizontal_alignment(HorizontalAlignment p_alignment);
+	HorizontalAlignment get_horizontal_alignment() const;
 
 	virtual Variant get_drag_data(const Point2 &p_point) override;
 	virtual bool can_drop_data(const Point2 &p_point, const Variant &p_data) const override;
@@ -344,7 +340,6 @@ public:
 	~LineEdit();
 };
 
-VARIANT_ENUM_CAST(LineEdit::Align);
 VARIANT_ENUM_CAST(LineEdit::MenuItems);
 
 #endif

@@ -2332,6 +2332,20 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(2));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
 
+		// Indent with blank lines.
+		code_edit->set_text("line1\n\tline2\n\n\nline3");
+		CHECK(code_edit->can_fold_line(0));
+		for (int i = 1; i < 2; i++) {
+			CHECK_FALSE(code_edit->can_fold_line(i));
+			code_edit->fold_line(i);
+			CHECK_FALSE(code_edit->is_line_folded(i));
+		}
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		CHECK_FALSE(code_edit->is_line_folded(2));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
+
 		// Nested indents.
 		code_edit->set_text("line1\n\tline2\n\t\tline3\nline4");
 		CHECK(code_edit->can_fold_line(0));
@@ -2408,7 +2422,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		for (int i = 1; i < code_edit->get_line_count(); i++) {
 			CHECK_FALSE(code_edit->is_line_folded(i));
 		}
-		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 6);
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 5);
 
 		// End of file.
 		code_edit->set_text("line1\n\tline2");
@@ -2490,7 +2504,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 
 		// Multiline blocks.
 		code_edit->add_comment_delimiter("&", "&", false);
-		code_edit->set_text("&line1\n\tline2&");
+		code_edit->set_text("&line1\n\tline2&\nline3");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(1));
 		code_edit->fold_line(1);
@@ -2498,7 +2512,17 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		code_edit->fold_line(0);
 		CHECK(code_edit->is_line_folded(0));
 		CHECK_FALSE(code_edit->is_line_folded(1));
-		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 1);
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
+
+		// Multiline comment before last line.
+		code_edit->set_text("&line1\nline2&\ntest");
+		CHECK(code_edit->can_fold_line(0));
+		CHECK_FALSE(code_edit->can_fold_line(2));
+		code_edit->fold_line(1);
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
 
 		// Has to be full line.
 		code_edit->set_text("test &line1\n\tline2&");
@@ -2554,7 +2578,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(1));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 1);
 
-		// Non-indented comments/ strings.
+		// Non-indented comments/strings.
 		// Single line
 		code_edit->set_text("test\n\tline1\n#line1\n#line2\n\ttest");
 		CHECK(code_edit->can_fold_line(0));
@@ -2575,6 +2599,50 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK(code_edit->is_line_folded(0));
 		CHECK_FALSE(code_edit->is_line_folded(1));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 4);
+
+		// Indent level 0->1, comment after lines
+		code_edit->set_text("line1\n\tline2\n#test");
+		CHECK(code_edit->can_fold_line(0));
+		CHECK_FALSE(code_edit->can_fold_line(1));
+		code_edit->fold_line(1);
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
+
+		// Indent level 0->1, comment between lines
+		code_edit->set_text("line1\n#test\n\tline2\nline3");
+		CHECK(code_edit->can_fold_line(0));
+		CHECK_FALSE(code_edit->can_fold_line(2));
+		code_edit->fold_line(2);
+		CHECK_FALSE(code_edit->is_line_folded(2));
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(2));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 3);
+
+		// Indent level 1->2, comment after lines
+		code_edit->set_text("\tline1\n\t\tline2\n#test");
+		CHECK(code_edit->can_fold_line(0));
+		CHECK_FALSE(code_edit->can_fold_line(1));
+		code_edit->fold_line(1);
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
+
+		// Indent level 1->2, comment between lines
+		code_edit->set_text("\tline1\n#test\n\t\tline2\nline3");
+		CHECK(code_edit->can_fold_line(0));
+		CHECK_FALSE(code_edit->can_fold_line(2));
+		code_edit->fold_line(2);
+		CHECK_FALSE(code_edit->is_line_folded(2));
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(2));
+		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 3);
 
 		// Multiline
 		code_edit->set_text("test\n\tline1\n&line1\nline2&\n\ttest");
@@ -2673,18 +2741,18 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 
 		/* Check typing inserts closing pair. */
 		code_edit->clear();
-		SEND_GUI_KEY_EVENT(code_edit, KEY_BRACKETLEFT);
+		SEND_GUI_KEY_EVENT(code_edit, Key::BRACKETLEFT);
 		CHECK(code_edit->get_line(0) == "[]");
 
 		/* Should first match and insert smaller key. */
 		code_edit->clear();
-		SEND_GUI_KEY_EVENT(code_edit, KEY_APOSTROPHE);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "''");
 		CHECK(code_edit->get_caret_column() == 1);
 
 		/* Move out from centre, Should match and insert larger key. */
 		SEND_GUI_ACTION(code_edit, "ui_text_caret_right");
-		SEND_GUI_KEY_EVENT(code_edit, KEY_APOSTROPHE);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "''''''");
 		CHECK(code_edit->get_caret_column() == 3);
 
@@ -2693,30 +2761,30 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		CHECK(code_edit->get_line(0).is_empty());
 
 		/* If in between and typing close key should "skip". */
-		SEND_GUI_KEY_EVENT(code_edit, KEY_BRACKETLEFT);
+		SEND_GUI_KEY_EVENT(code_edit, Key::BRACKETLEFT);
 		CHECK(code_edit->get_line(0) == "[]");
 		CHECK(code_edit->get_caret_column() == 1);
-		SEND_GUI_KEY_EVENT(code_edit, KEY_BRACKETRIGHT);
+		SEND_GUI_KEY_EVENT(code_edit, Key::BRACKETRIGHT);
 		CHECK(code_edit->get_line(0) == "[]");
 		CHECK(code_edit->get_caret_column() == 2);
 
 		/* If current is char and inserting a string, do not autocomplete. */
 		code_edit->clear();
-		SEND_GUI_KEY_EVENT(code_edit, KEY_A);
-		SEND_GUI_KEY_EVENT(code_edit, KEY_APOSTROPHE);
+		SEND_GUI_KEY_EVENT(code_edit, Key::A);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "A'");
 
 		/* If in comment, do not complete. */
 		code_edit->add_comment_delimiter("#", "");
 		code_edit->clear();
-		SEND_GUI_KEY_EVENT(code_edit, KEY_NUMBERSIGN);
-		SEND_GUI_KEY_EVENT(code_edit, KEY_APOSTROPHE);
+		SEND_GUI_KEY_EVENT(code_edit, Key::NUMBERSIGN);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "#'");
 
 		/* If in string, and inserting string do not complete. */
 		code_edit->clear();
-		SEND_GUI_KEY_EVENT(code_edit, KEY_APOSTROPHE);
-		SEND_GUI_KEY_EVENT(code_edit, KEY_QUOTEDBL);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
+		SEND_GUI_KEY_EVENT(code_edit, Key::QUOTEDBL);
 		CHECK(code_edit->get_line(0) == "'\"'");
 	}
 
@@ -2862,7 +2930,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		SEND_GUI_ACTION(code_edit, "ui_down");
 		CHECK(code_edit->get_code_completion_selected_index() == 0);
 
-		SEND_GUI_KEY_EVENT(code_edit, KEY_T);
+		SEND_GUI_KEY_EVENT(code_edit, Key::T);
 		CHECK(code_edit->get_code_completion_selected_index() == 0);
 
 		SEND_GUI_ACTION(code_edit, "ui_left");
@@ -2876,14 +2944,14 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 
 		Point2 caret_pos = code_edit->get_caret_draw_pos();
 		caret_pos.y -= code_edit->get_line_height();
-		SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_NONE);
+		SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MouseButton::WHEEL_DOWN, MouseButton::NONE);
 		CHECK(code_edit->get_code_completion_selected_index() == 1);
 
-		SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_NONE);
+		SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MouseButton::WHEEL_UP, MouseButton::NONE);
 		CHECK(code_edit->get_code_completion_selected_index() == 0);
 
 		/* Single click selects. */
-		SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MOUSE_BUTTON_LEFT, MOUSE_BUTTON_MASK_LEFT);
+		SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MouseButton::LEFT, MouseButton::MASK_LEFT);
 		CHECK(code_edit->get_code_completion_selected_index() == 2);
 
 		/* Double click inserts. */
@@ -3091,15 +3159,15 @@ TEST_CASE("[SceneTree][CodeEdit] symbol lookup") {
 
 	Point2 caret_pos = code_edit->get_caret_draw_pos();
 	caret_pos.x += 55;
-	SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MOUSE_BUTTON_NONE, MOUSE_BUTTON_NONE);
+	SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MouseButton::NONE, MouseButton::NONE);
 	CHECK(code_edit->get_text_for_symbol_lookup() == "this is s" + String::chr(0xFFFF) + "ome text");
 
 	SIGNAL_WATCH(code_edit, "symbol_validate");
 
 #ifdef OSX_ENABLED
-	SEND_GUI_KEY_EVENT(code_edit, KEY_META);
+	SEND_GUI_KEY_EVENT(code_edit, Key::META);
 #else
-	SEND_GUI_KEY_EVENT(code_edit, KEY_CTRL);
+	SEND_GUI_KEY_EVENT(code_edit, Key::CTRL);
 #endif
 
 	Array signal_args;
@@ -3167,7 +3235,7 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	code_edit->insert_text_at_caret("line 1\nline 2\nline 3");
 	code_edit->select_all();
 	code_edit->backspace();
-	CHECK(code_edit->get_text() == "");
+	CHECK(code_edit->get_text().is_empty());
 
 	/* Backspace at the beginning without selection has no effect. */
 	code_edit->set_text("");

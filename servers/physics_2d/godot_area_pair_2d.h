@@ -41,6 +41,7 @@ class GodotAreaPair2D : public GodotConstraint2D {
 	int body_shape = 0;
 	int area_shape = 0;
 	bool colliding = false;
+	bool has_space_override = false;
 	bool process_collision = false;
 
 public:
@@ -61,6 +62,8 @@ class GodotArea2Pair2D : public GodotConstraint2D {
 	bool colliding_b = false;
 	bool process_collision_a = false;
 	bool process_collision_b = false;
+	bool area_a_monitorable;
+	bool area_b_monitorable;
 
 public:
 	virtual bool setup(real_t p_step) override;

@@ -82,7 +82,7 @@ def configure(env):
         env.Append(CCFLAGS=["-arch", "arm64", "-mmacosx-version-min=10.15"])
         env.Append(LINKFLAGS=["-arch", "arm64", "-mmacosx-version-min=10.15"])
     else:
-        print("Building for macOS 10.12+, platform x86-64.")
+        print("Building for macOS 10.12+, platform x86_64.")
         env.Append(CCFLAGS=["-arch", "x86_64", "-mmacosx-version-min=10.12"])
         env.Append(LINKFLAGS=["-arch", "x86_64", "-mmacosx-version-min=10.12"])
 
@@ -124,7 +124,7 @@ def configure(env):
         env["AS"] = basecmd + "as"
 
     if env["use_ubsan"] or env["use_asan"] or env["use_tsan"]:
-        env.extra_suffix += "s"
+        env.extra_suffix += ".san"
 
         if env["use_ubsan"]:
             env.Append(

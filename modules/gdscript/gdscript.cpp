@@ -361,7 +361,7 @@ ScriptInstance *GDScript::instance_create(Object *p_this) {
 	if (top->native.is_valid()) {
 		if (!ClassDB::is_parent_class(p_this->get_class_name(), top->native->get_name())) {
 			if (EngineDebugger::is_active()) {
-				GDScriptLanguage::get_singleton()->debug_break_parse(get_path(), 1, "Script inherits from native type '" + String(top->native->get_name()) + "', so it can't be instantiated in object of type: '" + p_this->get_class() + "'");
+				GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), 1, "Script inherits from native type '" + String(top->native->get_name()) + "', so it can't be instantiated in object of type: '" + p_this->get_class() + "'");
 			}
 			ERR_FAIL_V_MSG(nullptr, "Script inherits from native type '" + String(top->native->get_name()) + "', so it can't be instantiated in object of type '" + p_this->get_class() + "'" + ".");
 		}
@@ -389,7 +389,7 @@ bool GDScript::instance_has(const Object *p_this) const {
 }
 
 bool GDScript::has_source_code() const {
-	return source != "";
+	return !source.is_empty();
 }
 
 String GDScript::get_source_code() const {
@@ -427,7 +427,7 @@ void GDScript::_add_doc(const DocData::ClassDoc &p_inner_class) {
 	} else {
 		for (int i = 0; i < docs.size(); i++) {
 			if (docs[i].name == p_inner_class.name) {
-				docs.remove(i);
+				docs.remove_at(i);
 				break;
 			}
 		}
@@ -458,7 +458,7 @@ void GDScript::_update_doc() {
 	doc.is_script_doc = true;
 
 	if (base.is_valid() && base->is_valid()) {
-		if (base->doc.name != String()) {
+		if (!base->doc.name.is_empty()) {
 			doc.inherits = base->doc.name;
 		} else {
 			doc.inherits = base->get_instance_base_type();
@@ -472,7 +472,7 @@ void GDScript::_update_doc() {
 	doc.tutorials = doc_tutorials;
 
 	for (const KeyValue<String, DocData::EnumDoc> &E : doc_enums) {
-		if (E.value.description != "") {
+		if (!E.value.description.is_empty()) {
 			doc.enums[E.key] = E.value.description;
 		}
 	}
@@ -616,11 +616,11 @@ bool GDScript::_update_exports(bool *r_err, bool p_recursive_call, PlaceHolderSc
 
 		String basedir = path;
 
-		if (basedir == "") {
+		if (basedir.is_empty()) {
 			basedir = get_path();
 		}
 
-		if (basedir != "") {
+		if (!basedir.is_empty()) {
 			basedir = basedir.get_base_dir();
 		}
 
@@ -642,7 +642,7 @@ bool GDScript::_update_exports(bool *r_err, bool p_recursive_call, PlaceHolderSc
 					path = c->extends_path;
 					if (path.is_relative_path()) {
 						String base = get_path();
-						if (base == "" || base.is_relative_path()) {
+						if (base.is_empty() || base.is_relative_path()) {
 							ERR_PRINT(("Could not resolve relative path for parent class: " + path).utf8().get_data());
 						} else {
 							path = base.get_base_dir().plus_file(path);
@@ -656,7 +656,7 @@ bool GDScript::_update_exports(bool *r_err, bool p_recursive_call, PlaceHolderSc
 					}
 				}
 
-				if (path != "") {
+				if (!path.is_empty()) {
 					if (path != get_path()) {
 						Ref<GDScript> bf = ResourceLoader::load(path);
 
@@ -789,6 +789,14 @@ void GDScript::_set_subclass_path(Ref<GDScript> &p_sc, const String &p_path) {
 	}
 }
 
+String GDScript::_get_debug_path() const {
+	if (is_built_in() && !get_name().is_empty()) {
+		return get_name() + " (" + get_path().get_slice("::", 0) + ")";
+	} else {
+		return get_path();
+	}
+}
+
 Error GDScript::reload(bool p_keep_state) {
 	bool has_instances;
 	{
@@ -801,11 +809,11 @@ Error GDScript::reload(bool p_keep_state) {
 
 	String basedir = path;
 
-	if (basedir == "") {
+	if (basedir.is_empty()) {
 		basedir = get_path();
 	}
 
-	if (basedir != "") {
+	if (!basedir.is_empty()) {
 		basedir = basedir.get_base_dir();
 	}
 
@@ -832,7 +840,7 @@ Error GDScript::reload(bool p_keep_state) {
 	Error err = parser.parse(source, path, false);
 	if (err) {
 		if (EngineDebugger::is_active()) {
-			GDScriptLanguage::get_singleton()->debug_break_parse(get_path(), parser.get_errors().front()->get().line, "Parser Error: " + parser.get_errors().front()->get().message);
+			GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), parser.get_errors().front()->get().line, "Parser Error: " + parser.get_errors().front()->get().message);
 		}
 		// TODO: Show all error messages.
 		_err_print_error("GDScript::reload", path.is_empty() ? "built-in" : (const char *)path.utf8().get_data(), parser.get_errors().front()->get().line, ("Parse Error: " + parser.get_errors().front()->get().message).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
@@ -844,7 +852,7 @@ Error GDScript::reload(bool p_keep_state) {
 
 	if (err) {
 		if (EngineDebugger::is_active()) {
-			GDScriptLanguage::get_singleton()->debug_break_parse(get_path(), parser.get_errors().front()->get().line, "Parser Error: " + parser.get_errors().front()->get().message);
+			GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), parser.get_errors().front()->get().line, "Parser Error: " + parser.get_errors().front()->get().message);
 		}
 
 		const List<GDScriptParser::ParserError>::Element *e = parser.get_errors().front();
@@ -867,7 +875,7 @@ Error GDScript::reload(bool p_keep_state) {
 	if (err) {
 		if (can_run) {
 			if (EngineDebugger::is_active()) {
-				GDScriptLanguage::get_singleton()->debug_break_parse(get_path(), compiler.get_error_line(), "Parser Error: " + compiler.get_error());
+				GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), compiler.get_error_line(), "Parser Error: " + compiler.get_error());
 			}
 			_err_print_error("GDScript::reload", path.is_empty() ? "built-in" : (const char *)path.utf8().get_data(), compiler.get_error_line(), ("Compile Error: " + compiler.get_error()).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
 			ERR_FAIL_V(ERR_COMPILATION_FAILED);
@@ -1114,7 +1122,7 @@ String GDScript::_get_gdscript_reference_class_name(const GDScript *p_gdscript) 
 
 	String class_name;
 	while (p_gdscript) {
-		if (class_name == "") {
+		if (class_name.is_empty()) {
 			class_name = p_gdscript->get_script_class_name();
 		} else {
 			class_name = p_gdscript->get_script_class_name() + "." + class_name;
@@ -1425,7 +1433,7 @@ void GDScriptInstance::get_property_list(List<PropertyInfo> *p_properties) const
 					pinfo.type = Variant::Type(d["type"].operator int());
 					ERR_CONTINUE(pinfo.type < 0 || pinfo.type >= Variant::VARIANT_MAX);
 					pinfo.name = d["name"];
-					ERR_CONTINUE(pinfo.name == "");
+					ERR_CONTINUE(pinfo.name.is_empty());
 					if (d.has("hint")) {
 						pinfo.hint = PropertyHint(d["hint"].operator int());
 					}
@@ -2123,7 +2131,7 @@ String GDScriptLanguage::get_global_class_name(const String &p_path, String *r_b
 
 									const GDScriptParser::ClassNode *inner_class = subclass->members[i].m_class;
 									if (inner_class->identifier->name == extend_classes[0]) {
-										extend_classes.remove(0);
+										extend_classes.remove_at(0);
 										found = true;
 										subclass = inner_class;
 										break;

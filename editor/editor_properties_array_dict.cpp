@@ -413,7 +413,7 @@ void EditorPropertyArray::update_property() {
 
 void EditorPropertyArray::_remove_pressed(int p_index) {
 	Variant array = object->get_array();
-	array.call("remove", p_index);
+	array.call("remove_at", p_index);
 
 	emit_changed(get_edited_property(), array, "", false);
 	update_property();
@@ -431,7 +431,7 @@ bool EditorPropertyArray::_is_drop_valid(const Dictionary &p_drag_data) const {
 
 	// When the subtype is of type Object, an additional subtype may be specified in the hint string
 	// (e.g. Resource, Texture2D, ShaderMaterial, etc). We want the allowed type to be that, not just "Object".
-	if (subtype == Variant::OBJECT && subtype_hint_string != "") {
+	if (subtype == Variant::OBJECT && !subtype_hint_string.is_empty()) {
 		allowed_type = subtype_hint_string;
 	}
 

@@ -52,12 +52,6 @@ public:
 		CELL_MODE_CUSTOM, ///< Contains a custom value, show a string, and an edit button
 	};
 
-	enum TextAlign {
-		ALIGN_LEFT,
-		ALIGN_CENTER,
-		ALIGN_RIGHT
-	};
-
 private:
 	friend class Tree;
 
@@ -98,7 +92,7 @@ private:
 		Size2i cached_minimum_size;
 		bool cached_minimum_size_dirty = true;
 
-		TextAlign text_align = ALIGN_LEFT;
+		HorizontalAlignment text_alignment = HORIZONTAL_ALIGNMENT_LEFT;
 
 		Variant meta;
 		String tooltip;
@@ -171,7 +165,7 @@ private:
 		}
 		if (parent) {
 			if (!parent->children_cache.is_empty()) {
-				parent->children_cache.remove(get_index());
+				parent->children_cache.remove_at(get_index());
 			}
 			if (parent->first_child == this) {
 				parent->first_child = next;
@@ -316,8 +310,8 @@ public:
 	void set_tooltip(int p_column, const String &p_tooltip);
 	String get_tooltip(int p_column) const;
 
-	void set_text_align(int p_column, TextAlign p_align);
-	TextAlign get_text_align(int p_column) const;
+	void set_text_alignment(int p_column, HorizontalAlignment p_alignment);
+	HorizontalAlignment get_text_alignment(int p_column) const;
 
 	void set_expand_right(int p_column, bool p_enable);
 	bool get_expand_right(int p_column) const;
@@ -359,7 +353,6 @@ public:
 };
 
 VARIANT_ENUM_CAST(TreeItem::TreeCellMode);
-VARIANT_ENUM_CAST(TreeItem::TextAlign);
 
 class VBoxContainer;
 
@@ -462,7 +455,7 @@ private:
 	void draw_item_rect(TreeItem::Cell &p_cell, const Rect2i &p_rect, const Color &p_color, const Color &p_icon_color, int p_ol_size, const Color &p_ol_color);
 	int draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 &p_draw_size, TreeItem *p_item);
 	void select_single_item(TreeItem *p_selected, TreeItem *p_current, int p_col, TreeItem *p_prev = nullptr, bool *r_in_range = nullptr, bool p_force_deselect = false);
-	int propagate_mouse_event(const Point2i &p_pos, int x_ofs, int y_ofs, int x_limit, bool p_double_click, TreeItem *p_item, int p_button, const Ref<InputEventWithModifiers> &p_mod);
+	int propagate_mouse_event(const Point2i &p_pos, int x_ofs, int y_ofs, int x_limit, bool p_double_click, TreeItem *p_item, MouseButton p_button, const Ref<InputEventWithModifiers> &p_mod);
 	void _text_editor_submit(String p_text);
 	void _text_editor_modal_close();
 	void value_editor_changed(double p_value);
