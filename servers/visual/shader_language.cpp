@@ -445,6 +445,10 @@ ShaderLanguage::Token ShaderLanguage::_get_token() {
 			case ':':
 				return _make_token(TK_COLON);
 			case '^':
+				if (GETCHAR(0) == '=') {
+					char_idx++;
+					return _make_token(TK_OP_ASSIGN_BIT_XOR);
+				}
 				return _make_token(TK_OP_BIT_XOR);
 			case '~':
 				return _make_token(TK_OP_BIT_INVERT);
@@ -3690,7 +3694,6 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 
 			if (tk.type == TK_CURSOR) {
 				//do nothing
-			} else if (tk.type == TK_IDENTIFIER) {
 			} else if (tk.type == TK_PERIOD) {
 				DataType dt = expr->get_datatype();
 				String st = expr->get_datatype_name();
@@ -5067,7 +5070,9 @@ Error ShaderLanguage::_parse_block(BlockNode *p_block, const Map<StringName, Bui
 				block->parent_block = p_block;
 				cf->blocks.push_back(block);
 				err = _parse_block(block, p_builtin_types, true, p_can_break, p_can_continue);
-
+				if (err) {
+					return err;
+				}
 			} else {
 				_set_tkpos(pos); //rollback
 			}
@@ -6001,6 +6006,7 @@ Error ShaderLanguage::_parse_shader(const Map<StringName, FunctionInfo> &p_funct
 
 						} else {
 							_set_error("Expected valid type hint after ':'.");
+							return ERR_PARSE_ERROR;
 						}
 
 						if (uniform2.hint != ShaderNode::Uniform::HINT_RANGE && uniform2.hint != ShaderNode::Uniform::HINT_NONE && uniform2.hint != ShaderNode::Uniform::HINT_COLOR && type <= TYPE_MAT4) {

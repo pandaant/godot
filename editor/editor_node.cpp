@@ -1548,8 +1548,10 @@ void EditorNode::_save_scene(String p_file, int idx) {
 
 	err = ResourceSaver::save(p_file, sdata, flg);
 
-	_save_external_resources();
+	// This needs to be emitted before saving external resources.
+	emit_signal("scene_saved", p_file);
 
+	_save_external_resources();
 	editor_data.save_editor_external_data();
 
 	for (List<Ref<AnimatedValuesBackup>>::Element *E = anim_backups.front(); E; E = E->next()) {
@@ -5668,6 +5670,7 @@ void EditorNode::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("request_help_search"));
 	ADD_SIGNAL(MethodInfo("script_add_function_request", PropertyInfo(Variant::OBJECT, "obj"), PropertyInfo(Variant::STRING, "function"), PropertyInfo(Variant::POOL_STRING_ARRAY, "args")));
 	ADD_SIGNAL(MethodInfo("resource_saved", PropertyInfo(Variant::OBJECT, "obj")));
+	ADD_SIGNAL(MethodInfo("scene_saved", PropertyInfo(Variant::STRING, "path")));
 }
 
 static Node *_resource_get_edited_scene() {
@@ -6790,10 +6793,12 @@ EditorNode::EditorNode() {
 	file_export_lib->connect("file_selected", this, "_dialog_action");
 	file_export_lib_merge = memnew(CheckBox);
 	file_export_lib_merge->set_text(TTR("Merge With Existing"));
+	file_export_lib_merge->set_h_size_flags(Control::SIZE_SHRINK_CENTER);
 	file_export_lib_merge->set_pressed(true);
 	file_export_lib->get_vbox()->add_child(file_export_lib_merge);
 	file_export_lib_apply_xforms = memnew(CheckBox);
 	file_export_lib_apply_xforms->set_text(TTR("Apply MeshInstance Transforms"));
+	file_export_lib_apply_xforms->set_h_size_flags(Control::SIZE_SHRINK_CENTER);
 	file_export_lib_apply_xforms->set_pressed(false);
 	file_export_lib->get_vbox()->add_child(file_export_lib_apply_xforms);
 	gui_base->add_child(file_export_lib);

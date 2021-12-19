@@ -76,6 +76,11 @@ bool InputDefault::is_key_pressed(int p_scancode) const {
 	return keys_pressed.has(p_scancode);
 }
 
+bool InputDefault::is_physical_key_pressed(int p_scancode) const {
+	_THREAD_SAFE_METHOD_
+	return physical_keys_pressed.has(p_scancode);
+}
+
 bool InputDefault::is_mouse_button_pressed(int p_button) const {
 	_THREAD_SAFE_METHOD_
 	return (mouse_button_mask & (1 << (p_button - 1))) != 0;
@@ -314,6 +319,13 @@ void InputDefault::_parse_input_event_impl(const Ref<InputEvent> &p_event, bool 
 			keys_pressed.insert(k->get_scancode());
 		} else {
 			keys_pressed.erase(k->get_scancode());
+		}
+	}
+	if (k.is_valid() && !k->is_echo() && k->get_physical_scancode() != 0) {
+		if (k->is_pressed()) {
+			physical_keys_pressed.insert(k->get_physical_scancode());
+		} else {
+			physical_keys_pressed.erase(k->get_physical_scancode());
 		}
 	}
 
@@ -716,6 +728,7 @@ void InputDefault::release_pressed_events() {
 	flush_buffered_events(); // this is needed to release actions strengths
 
 	keys_pressed.clear();
+	physical_keys_pressed.clear();
 	joy_buttons_pressed.clear();
 	_joy_axis.clear();
 
@@ -798,7 +811,10 @@ void InputDefault::joy_axis(int p_device, int p_axis, const JoyAxis &p_value) {
 
 	Joypad &joy = joy_names[p_device];
 
-	if (joy.last_axis[p_axis] == p_value.value) {
+	// Make sure that we don't generate events for up to 5% jitter
+	// This is needed for Nintendo Switch Pro controllers, which jitter at rest
+	const float MIN_AXIS_CHANGE = 0.05f;
+	if (fabs(joy.last_axis[p_axis] - p_value.value) < MIN_AXIS_CHANGE) {
 		return;
 	}
 
