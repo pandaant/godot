@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,10 +39,6 @@
 #include <LinearMath/btAlignedObjectArray.h>
 #include <LinearMath/btScalar.h>
 #include <LinearMath/btVector3.h>
-
-/**
-	@author AndreaCatania
-*/
 
 class ShapeBullet;
 class btCollisionShape;
@@ -109,7 +105,7 @@ private:
 };
 
 class SphereShapeBullet : public ShapeBullet {
-	real_t radius;
+	real_t radius = 0.0;
 
 public:
 	SphereShapeBullet();
@@ -141,8 +137,8 @@ private:
 };
 
 class CapsuleShapeBullet : public ShapeBullet {
-	real_t height;
-	real_t radius;
+	real_t height = 0.0;
+	real_t radius = 0.0;
 
 public:
 	CapsuleShapeBullet();
@@ -159,8 +155,8 @@ private:
 };
 
 class CylinderShapeBullet : public ShapeBullet {
-	real_t height;
-	real_t radius;
+	real_t height = 0.0;
+	real_t radius = 0.0;
 
 public:
 	CylinderShapeBullet();
@@ -244,4 +240,5 @@ public:
 private:
 	void setup(real_t p_length, bool p_slips_on_slope);
 };
-#endif
+
+#endif // SHAPE_BULLET_H

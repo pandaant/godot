@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -2129,7 +2129,7 @@ bool ConvexHullInternal::shift_face(Face *p_face, real_t p_amount, LocalVector<V
 	printf("Needed %d iterations to remove part\n", n);
 #endif
 
-	p_stack.resize(0);
+	p_stack.clear();
 	p_face->origin = shifted_origin;
 
 	return true;
@@ -2167,9 +2167,9 @@ real_t ConvexHullComputer::compute(const Vector3 *p_coords, int32_t p_count, rea
 		return shift;
 	}
 
-	vertices.resize(0);
-	edges.resize(0);
-	faces.resize(0);
+	vertices.clear();
+	edges.clear();
+	faces.clear();
 
 	LocalVector<ConvexHullInternal::Vertex *> old_vertices;
 	get_vertex_copy(hull.vertex_list, old_vertices);

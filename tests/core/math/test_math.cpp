@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -227,7 +227,7 @@ class GetClassAndNamespace {
 						return TK_SYMBOL;
 					}
 
-					if (code[idx] == '-' || (code[idx] >= '0' && code[idx] <= '9')) {
+					if (code[idx] == '-' || is_digit(code[idx])) {
 						//a number
 						const char32_t *rptr;
 						double number = String::to_float(&code[idx], &rptr);
@@ -235,10 +235,10 @@ class GetClassAndNamespace {
 						value = number;
 						return TK_NUMBER;
 
-					} else if ((code[idx] >= 'A' && code[idx] <= 'Z') || (code[idx] >= 'a' && code[idx] <= 'z') || code[idx] > 127) {
+					} else if (is_ascii_char(code[idx]) || code[idx] > 127) {
 						String id;
 
-						while ((code[idx] >= 'A' && code[idx] <= 'Z') || (code[idx] >= 'a' && code[idx] <= 'z') || code[idx] > 127) {
+						while (is_ascii_char(code[idx]) || code[idx] > 127) {
 							id += code[idx];
 							idx++;
 						}
@@ -308,7 +308,7 @@ public:
 						curly_stack++;
 						break;
 					} else {
-						break; //whathever else
+						break; //whatever else
 					}
 				}
 

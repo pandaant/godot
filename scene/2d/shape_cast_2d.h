@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,6 +33,8 @@
 
 #include "scene/2d/node_2d.h"
 #include "scene/resources/shape_2d.h"
+
+class CollisionObject2D;
 
 class ShapeCast2D : public Node2D {
 	GDCLASS(ShapeCast2D, Node2D);
@@ -109,9 +111,9 @@ public:
 	real_t get_closest_collision_unsafe_fraction() const;
 
 	void add_exception_rid(const RID &p_rid);
-	void add_exception(const Object *p_object);
+	void add_exception(const CollisionObject2D *p_node);
 	void remove_exception_rid(const RID &p_rid);
-	void remove_exception(const Object *p_object);
+	void remove_exception(const CollisionObject2D *p_node);
 	void clear_exceptions();
 
 	TypedArray<String> get_configuration_warnings() const override;

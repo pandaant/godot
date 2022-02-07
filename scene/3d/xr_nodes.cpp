@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -482,22 +482,22 @@ void XRController3D::_unbind_tracker() {
 
 void XRController3D::_button_pressed(const String &p_name) {
 	// just pass it on...
-	emit_signal("button_pressed", p_name);
+	emit_signal(SNAME("button_pressed"), p_name);
 }
 
 void XRController3D::_button_released(const String &p_name) {
 	// just pass it on...
-	emit_signal("button_released", p_name);
+	emit_signal(SNAME("button_released"), p_name);
 }
 
 void XRController3D::_input_value_changed(const String &p_name, float p_value) {
 	// just pass it on...
-	emit_signal("input_value_changed", p_name, p_value);
+	emit_signal(SNAME("input_value_changed"), p_name, p_value);
 }
 
 void XRController3D::_input_axis_changed(const String &p_name, Vector2 p_value) {
 	// just pass it on...
-	emit_signal("input_axis_changed", p_name, p_value);
+	emit_signal(SNAME("input_axis_changed"), p_name, p_value);
 }
 
 bool XRController3D::is_button_pressed(const StringName &p_name) const {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1104,7 +1104,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "");
 
-			/* Check nested strings are handeled correctly. */
+			/* Check nested strings are handled correctly. */
 			code_edit->set_text(" \n#  # \n ");
 
 			/* Check line above is not in string. */
@@ -1132,7 +1132,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check is in string with no column retruns true if entire line is comment excluding whitespace. */
+			/* Check is in string with no column returns true if entire line is comment excluding whitespace. */
 			code_edit->set_text(" \n  #  # \n ");
 			CHECK(code_edit->is_in_string(1) != -1);
 
@@ -1195,7 +1195,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "");
 
-			/* Check nested comments are handeled correctly. */
+			/* Check nested comments are handled correctly. */
 			code_edit->set_text(" \n#  # \n ");
 
 			/* Check line above is not in comment. */
@@ -1223,7 +1223,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check is in comment with no column retruns true if entire line is comment excluding whitespace. */
+			/* Check is in comment with no column returns true if entire line is comment excluding whitespace. */
 			code_edit->set_text(" \n  #  # \n ");
 			CHECK(code_edit->is_in_comment(1) != -1);
 
@@ -1491,7 +1491,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Check is in string with no column retruns true if entire line is string excluding whitespace. */
+			/* Check is in string with no column returns true if entire line is string excluding whitespace. */
 			code_edit->set_text(" \n # \n\n #\n ");
 			CHECK(code_edit->is_in_string(1) != -1);
 			CHECK(code_edit->is_in_string(2) != -1);
@@ -1680,7 +1680,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Check is in comment with no column retruns true if entire line is comment excluding whitespace. */
+			/* Check is in comment with no column returns true if entire line is comment excluding whitespace. */
 			code_edit->set_text(" \n # \n\n #\n ");
 			CHECK(code_edit->is_in_comment(1) != -1);
 			CHECK(code_edit->is_in_comment(2) != -1);
@@ -1746,7 +1746,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Check is in comment with no column retruns true as inner delimiter should not be counted. */
+			/* Check is in comment with no column returns true as inner delimiter should not be counted. */
 			CHECK(code_edit->is_in_comment(1) != -1);
 			CHECK(code_edit->is_in_comment(2) != -1);
 			CHECK(code_edit->is_in_comment(3) != -1);
@@ -2786,6 +2786,52 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
 		SEND_GUI_KEY_EVENT(code_edit, Key::QUOTEDBL);
 		CHECK(code_edit->get_line(0) == "'\"'");
+
+		/* Wrap single line selection with brackets */
+		code_edit->clear();
+		code_edit->insert_text_at_caret("abc");
+		code_edit->select_all();
+		SEND_GUI_KEY_EVENT(code_edit, Key::BRACKETLEFT);
+		CHECK(code_edit->get_line(0) == "[abc]");
+
+		/* Caret should be after the last character of the single line selection */
+		CHECK(code_edit->get_caret_column() == 4);
+
+		/* Wrap multi line selection with brackets */
+		code_edit->clear();
+		code_edit->insert_text_at_caret("abc\nabc");
+		code_edit->select_all();
+		SEND_GUI_KEY_EVENT(code_edit, Key::BRACKETLEFT);
+		CHECK(code_edit->get_text() == "[abc\nabc]");
+
+		/* Caret should be after the last character of the multi line selection */
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 3);
+
+		/* If inserted character is not a auto brace completion open key, replace selected text with the inserted character */
+		code_edit->clear();
+		code_edit->insert_text_at_caret("abc");
+		code_edit->select_all();
+		SEND_GUI_KEY_EVENT(code_edit, Key::KEY_1);
+		CHECK(code_edit->get_text() == "1");
+
+		/* If potential multichar and single brace completion is matched, it should wrap the single.  */
+		code_edit->clear();
+		code_edit->insert_text_at_caret("\'\'abc");
+		code_edit->select(0, 2, 0, 5);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
+		CHECK(code_edit->get_text() == "\'\'\'abc\'");
+
+		/* If only the potential multichar brace completion is matched, it does not wrap or complete. */
+		auto_brace_completion_pairs.erase("\'");
+		code_edit->set_auto_brace_completion_pairs(auto_brace_completion_pairs);
+		CHECK_FALSE(code_edit->has_auto_brace_completion_open_key("\'"));
+
+		code_edit->clear();
+		code_edit->insert_text_at_caret("\'\'abc");
+		code_edit->select(0, 2, 0, 5);
+		SEND_GUI_KEY_EVENT(code_edit, Key::APOSTROPHE);
+		CHECK(code_edit->get_text() == "\'\'\'");
 	}
 
 	SUBCASE("[CodeEdit] autocomplete") {
@@ -2812,7 +2858,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 	}
 
 	SUBCASE("[CodeEdit] autocomplete request") {
-		SIGNAL_WATCH(code_edit, "request_code_completion");
+		SIGNAL_WATCH(code_edit, "code_completion_requested");
 		code_edit->set_code_completion_enabled(true);
 
 		Array signal_args;
@@ -2820,13 +2866,13 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 
 		/* Force request. */
 		code_edit->request_code_completion();
-		SIGNAL_CHECK_FALSE("request_code_completion");
+		SIGNAL_CHECK_FALSE("code_completion_requested");
 		code_edit->request_code_completion(true);
-		SIGNAL_CHECK("request_code_completion", signal_args);
+		SIGNAL_CHECK("code_completion_requested", signal_args);
 
 		/* Manual request should force. */
 		SEND_GUI_ACTION(code_edit, "ui_text_completion_query");
-		SIGNAL_CHECK("request_code_completion", signal_args);
+		SIGNAL_CHECK("code_completion_requested", signal_args);
 
 		/* Insert prefix. */
 		TypedArray<String> completion_prefixes;
@@ -2835,12 +2881,12 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 
 		code_edit->insert_text_at_caret(".");
 		code_edit->request_code_completion();
-		SIGNAL_CHECK("request_code_completion", signal_args);
+		SIGNAL_CHECK("code_completion_requested", signal_args);
 
 		/* Should work with space too. */
 		code_edit->insert_text_at_caret(" ");
 		code_edit->request_code_completion();
-		SIGNAL_CHECK("request_code_completion", signal_args);
+		SIGNAL_CHECK("code_completion_requested", signal_args);
 
 		/* Should work when complete ends with prefix. */
 		code_edit->clear();
@@ -2849,9 +2895,9 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->update_code_completion_options();
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "test.");
-		SIGNAL_CHECK("request_code_completion", signal_args);
+		SIGNAL_CHECK("code_completion_requested", signal_args);
 
-		SIGNAL_UNWATCH(code_edit, "request_code_completion");
+		SIGNAL_UNWATCH(code_edit, "code_completion_requested");
 	}
 
 	SUBCASE("[CodeEdit] autocomplete completion") {
@@ -3158,7 +3204,7 @@ TEST_CASE("[SceneTree][CodeEdit] symbol lookup") {
 	code_edit->set_text("this is some text");
 
 	Point2 caret_pos = code_edit->get_caret_draw_pos();
-	caret_pos.x += 55;
+	caret_pos.x += 58;
 	SEND_GUI_MOUSE_EVENT(code_edit, caret_pos, MouseButton::NONE, MouseButton::NONE);
 	CHECK(code_edit->get_text_for_symbol_lookup() == "this is s" + String::chr(0xFFFF) + "ome text");
 
@@ -3220,7 +3266,7 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	code_edit->backspace();
 	CHECK(code_edit->get_line(0) == "backspace");
 
-	/* Move caret up to the previous line on backspace if carret is at the first column. */
+	/* Move caret up to the previous line on backspace if caret is at the first column. */
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("line 1\nline 2");
 	code_edit->set_caret_line(1);
@@ -3244,6 +3290,55 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	code_edit->set_caret_column(0);
 	code_edit->backspace();
 	CHECK(code_edit->get_text() == "line 1\nline 2\nline 3");
+
+	memdelete(code_edit);
+}
+
+TEST_CASE("[SceneTree][CodeEdit] New Line") {
+	CodeEdit *code_edit = memnew(CodeEdit);
+	SceneTree::get_singleton()->get_root()->add_child(code_edit);
+
+	/* Add a new line. */
+	code_edit->set_text("");
+	code_edit->insert_text_at_caret("test new line");
+	code_edit->set_caret_line(0);
+	code_edit->set_caret_column(13);
+	SEND_GUI_ACTION(code_edit, "ui_text_newline");
+	CHECK(code_edit->get_line(0) == "test new line");
+	CHECK(code_edit->get_line(1) == "");
+
+	/* Split line with new line. */
+	code_edit->set_text("");
+	code_edit->insert_text_at_caret("test new line");
+	code_edit->set_caret_line(0);
+	code_edit->set_caret_column(5);
+	SEND_GUI_ACTION(code_edit, "ui_text_newline");
+	CHECK(code_edit->get_line(0) == "test ");
+	CHECK(code_edit->get_line(1) == "new line");
+
+	/* Delete selection and split with new line. */
+	code_edit->set_text("");
+	code_edit->insert_text_at_caret("test new line");
+	code_edit->select(0, 0, 0, 5);
+	SEND_GUI_ACTION(code_edit, "ui_text_newline");
+	CHECK(code_edit->get_line(0) == "");
+	CHECK(code_edit->get_line(1) == "new line");
+
+	/* Blank new line below with selection should not split. */
+	code_edit->set_text("");
+	code_edit->insert_text_at_caret("test new line");
+	code_edit->select(0, 0, 0, 5);
+	SEND_GUI_ACTION(code_edit, "ui_text_newline_blank");
+	CHECK(code_edit->get_line(0) == "test new line");
+	CHECK(code_edit->get_line(1) == "");
+
+	/* Blank new line above with selection should not split. */
+	code_edit->set_text("");
+	code_edit->insert_text_at_caret("test new line");
+	code_edit->select(0, 0, 0, 5);
+	SEND_GUI_ACTION(code_edit, "ui_text_newline_above");
+	CHECK(code_edit->get_line(0) == "");
+	CHECK(code_edit->get_line(1) == "test new line");
 
 	memdelete(code_edit);
 }

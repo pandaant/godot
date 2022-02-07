@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -732,7 +732,7 @@ void ClassDB::bind_integer_constant(const StringName &p_class, const StringName 
 
 	String enum_name = p_enum;
 	if (!enum_name.is_empty()) {
-		if (enum_name.find(".") != -1) {
+		if (enum_name.contains(".")) {
 			enum_name = enum_name.get_slicec('.', 1);
 		}
 

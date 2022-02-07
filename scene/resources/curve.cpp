@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -661,8 +661,8 @@ void Curve2D::_bake() const {
 	baked_cache_dirty = false;
 
 	if (points.size() == 0) {
-		baked_point_cache.resize(0);
-		baked_dist_cache.resize(0);
+		baked_point_cache.clear();
+		baked_dist_cache.clear();
 		return;
 	}
 
@@ -1164,10 +1164,10 @@ void Curve3D::_bake() const {
 	baked_cache_dirty = false;
 
 	if (points.size() == 0) {
-		baked_point_cache.resize(0);
-		baked_tilt_cache.resize(0);
-		baked_up_vector_cache.resize(0);
-		baked_dist_cache.resize(0);
+		baked_point_cache.clear();
+		baked_tilt_cache.clear();
+		baked_up_vector_cache.clear();
+		baked_dist_cache.clear();
 		return;
 	}
 
@@ -1183,7 +1183,7 @@ void Curve3D::_bake() const {
 			baked_up_vector_cache.resize(1);
 			baked_up_vector_cache.set(0, Vector3(0, 1, 0));
 		} else {
-			baked_up_vector_cache.resize(0);
+			baked_up_vector_cache.clear();
 		}
 
 		return;

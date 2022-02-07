@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -54,13 +54,18 @@ class VisualScriptEditor : public ScriptEditorBase {
 	};
 
 	enum {
+		EDIT_ADD_NODE,
+		EDIT_SEPARATOR, // popup menu separator - ignored
+		EDIT_CUT_NODES,
+		EDIT_COPY_NODES,
+		EDIT_PASTE_NODES,
 		EDIT_DELETE_NODES,
+		EDIT_DUPLICATE_NODES,
+		EDIT_CLEAR_COPY_BUFFER,
+
+		EDIT_CREATE_FUNCTION,
 		EDIT_TOGGLE_BREAKPOINT,
 		EDIT_FIND_NODE_TYPE,
-		EDIT_COPY_NODES,
-		EDIT_CUT_NODES,
-		EDIT_PASTE_NODES,
-		EDIT_CREATE_FUNCTION,
 		REFRESH_GRAPH,
 	};
 
@@ -80,55 +85,55 @@ class VisualScriptEditor : public ScriptEditorBase {
 		MEMBER_SIGNAL
 	};
 
-	VBoxContainer *members_section;
-	MenuButton *edit_menu;
+	VBoxContainer *members_section = nullptr;
+	MenuButton *edit_menu = nullptr;
 
 	Ref<VisualScript> script;
 
-	Button *base_type_select;
+	Button *base_type_select = nullptr;
 
-	LineEdit *func_name_box;
-	ScrollContainer *func_input_scroll;
-	VBoxContainer *func_input_vbox;
-	ConfirmationDialog *function_create_dialog;
+	LineEdit *func_name_box = nullptr;
+	ScrollContainer *func_input_scroll = nullptr;
+	VBoxContainer *func_input_vbox = nullptr;
+	ConfirmationDialog *function_create_dialog = nullptr;
 
-	GraphEdit *graph;
-	HBoxContainer *status_bar;
-	Button *toggle_scripts_button;
+	GraphEdit *graph = nullptr;
+	HBoxContainer *status_bar = nullptr;
+	Button *toggle_scripts_button = nullptr;
 
-	VisualScriptEditorSignalEdit *signal_editor;
+	VisualScriptEditorSignalEdit *signal_editor = nullptr;
 
-	AcceptDialog *edit_signal_dialog;
-	EditorInspector *edit_signal_edit;
+	AcceptDialog *edit_signal_dialog = nullptr;
+	EditorInspector *edit_signal_edit = nullptr;
 
-	VisualScriptPropertySelector *method_select;
-	VisualScriptPropertySelector *new_connect_node_select;
-	VisualScriptPropertySelector *new_virtual_method_select;
+	VisualScriptPropertySelector *method_select = nullptr;
+	VisualScriptPropertySelector *new_connect_node_select = nullptr;
+	VisualScriptPropertySelector *new_virtual_method_select = nullptr;
 
-	VisualScriptEditorVariableEdit *variable_editor;
+	VisualScriptEditorVariableEdit *variable_editor = nullptr;
 
-	AcceptDialog *edit_variable_dialog;
-	EditorInspector *edit_variable_edit;
+	AcceptDialog *edit_variable_dialog = nullptr;
+	EditorInspector *edit_variable_edit = nullptr;
 
-	CustomPropertyEditor *default_value_edit;
+	CustomPropertyEditor *default_value_edit = nullptr;
 
-	UndoRedo *undo_redo;
+	UndoRedo *undo_redo = nullptr;
 
-	Tree *members;
-	AcceptDialog *function_name_edit;
-	LineEdit *function_name_box;
+	Tree *members = nullptr;
+	AcceptDialog *function_name_edit = nullptr;
+	LineEdit *function_name_box = nullptr;
 
-	Label *hint_text;
-	Timer *hint_text_timer;
+	Label *hint_text = nullptr;
+	Timer *hint_text_timer = nullptr;
 
-	Label *select_func_text;
+	Label *select_func_text = nullptr;
 
-	bool updating_graph;
+	bool updating_graph = false;
 
 	void _show_hint(const String &p_hint);
 	void _hide_timer();
 
-	CreateDialog *select_base_type;
+	CreateDialog *select_base_type = nullptr;
 
 	struct VirtualInMenu {
 		String name;
@@ -162,18 +167,18 @@ class VisualScriptEditor : public ScriptEditorBase {
 
 	static Clipboard *clipboard;
 
-	PopupMenu *member_popup;
+	PopupMenu *popup_menu = nullptr;
+	PopupMenu *member_popup = nullptr;
 	MemberType member_type;
 	String member_name;
 
 	PortAction port_action;
-	int port_action_node;
-	int port_action_output;
+	int port_action_node = 0;
+	int port_action_output = 0;
 	Vector2 port_action_pos;
-	int port_action_new_node;
+	int port_action_new_node = 0;
 
-	bool saved_pos_dirty;
-	Vector2 saved_position;
+	bool saved_pos_dirty = false;
 
 	Vector2 mouse_up_position;
 
@@ -191,7 +196,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 	int _create_new_node_from_name(const String &p_text, const Vector2 &p_point);
 	void _selected_new_virtual_method(const String &p_text, const String &p_category, const bool p_connecting);
 
-	int error_line;
+	int error_line = -1;
 
 	void _node_selected(Node *p_node);
 	void _center_on_node(int p_id);
@@ -236,7 +241,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 
 	bool node_has_sequence_connections(int p_id);
 
-	void _generic_search(String p_base_type = "", Vector2 pos = Vector2(), bool node_centered = false);
+	void _generic_search(Vector2 pos = Vector2(), bool node_centered = false);
 
 	virtual void input(const Ref<InputEvent> &p_event) override;
 	void _graph_gui_input(const Ref<InputEvent> &p_event);
@@ -262,12 +267,12 @@ class VisualScriptEditor : public ScriptEditorBase {
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 
-	int editing_id;
-	int editing_input;
+	int editing_id = 0;
+	int editing_input = 0;
 
-	bool can_swap;
-	int data_disconnect_node;
-	int data_disconnect_port;
+	bool can_swap = false;
+	int data_disconnect_node = 0;
+	int data_disconnect_port = 0;
 
 	void _default_value_changed();
 	void _default_value_edited(Node *p_button, int p_id, int p_input_port);
@@ -323,7 +328,7 @@ public:
 	virtual void update_settings() override;
 	virtual bool show_members_overview() override;
 	virtual void set_debugger_active(bool p_active) override;
-	virtual void set_tooltip_request_func(String p_method, Object *p_obj) override;
+	virtual void set_tooltip_request_func(const Callable &p_toolip_callback) override;
 	virtual Control *get_edit_menu() override;
 	virtual void clear_edit_menu() override;
 	virtual void set_find_replace_bar(FindReplaceBar *p_bar) override { p_bar->hide(); }; // Not needed here.

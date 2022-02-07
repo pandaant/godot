@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -148,6 +148,7 @@ public:
 		DEBUG_DRAW_DIRECTIONAL_SHADOW_ATLAS,
 		DEBUG_DRAW_SCENE_LUMINANCE,
 		DEBUG_DRAW_SSAO,
+		DEBUG_DRAW_SSIL,
 		DEBUG_DRAW_PSSM_SPLITS,
 		DEBUG_DRAW_DECAL_ATLAS,
 		DEBUG_DRAW_SDFGI,
@@ -296,7 +297,7 @@ private:
 	float fsr_sharpness = 0.2f;
 	float fsr_mipmap_bias = 0.0f;
 	bool use_debanding = false;
-	float lod_threshold = 1.0;
+	float mesh_lod_threshold = 1.0;
 	bool use_occlusion_culling = false;
 
 	Ref<ViewportTexture> default_texture;
@@ -334,6 +335,7 @@ private:
 		// info used when this is a window
 
 		bool forced_mouse_focus = false; //used for menu buttons
+		bool mouse_in_window = true;
 		bool key_event_accepted = false;
 		Control *mouse_focus = nullptr;
 		Control *last_mouse_focus = nullptr;
@@ -361,7 +363,6 @@ private:
 		bool dragging = false;
 		bool drag_successful = false;
 		bool embed_subwindows_hint = false;
-		bool embedding_subwindows = false;
 
 		Window *subwindow_focused = nullptr;
 		SubWindowDrag subwindow_drag = SUB_WINDOW_DRAG_DISABLED;
@@ -372,7 +373,7 @@ private:
 		SubWindowResize subwindow_resize_mode;
 		Rect2i subwindow_resize_from_rect;
 
-		Vector<SubWindow> sub_windows;
+		Vector<SubWindow> sub_windows; // Don't obtain references or pointers to the elements, as their location can change.
 	} gui;
 
 	DefaultCanvasItemTextureFilter default_canvas_item_texture_filter = DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR;
@@ -410,15 +411,12 @@ private:
 	Control *_gui_get_drag_preview();
 
 	void _gui_remove_focus_for_window(Node *p_window);
-	void _gui_remove_focus();
 	void _gui_unfocus_control(Control *p_control);
 	bool _gui_control_has_focus(const Control *p_control);
 	void _gui_control_grab_focus(Control *p_control);
 	void _gui_grab_click_focus(Control *p_control);
 	void _post_gui_grab_click_focus();
 	void _gui_accept_event();
-
-	Control *_gui_get_focus_owner();
 
 	bool _gui_drop(Control *p_at_control, Point2 p_at_pos, bool p_just_check);
 
@@ -433,6 +431,7 @@ private:
 	void _canvas_layer_add(CanvasLayer *p_canvas_layer);
 	void _canvas_layer_remove(CanvasLayer *p_canvas_layer);
 
+	void _drop_mouse_over();
 	void _drop_mouse_focus();
 	void _drop_physics_mouseover(bool p_paused_only = false);
 
@@ -530,8 +529,8 @@ public:
 	void set_use_debanding(bool p_use_debanding);
 	bool is_using_debanding() const;
 
-	void set_lod_threshold(float p_pixels);
-	float get_lod_threshold() const;
+	void set_mesh_lod_threshold(float p_pixels);
+	float get_mesh_lod_threshold() const;
 
 	void set_use_occlusion_culling(bool p_us_occlusion_culling);
 	bool is_using_occlusion_culling() const;
@@ -556,6 +555,9 @@ public:
 
 	void gui_reset_canvas_sort_index();
 	int gui_get_canvas_sort_index();
+
+	void gui_release_focus();
+	Control *gui_get_focus_owner();
 
 	TypedArray<String> get_configuration_warnings() const override;
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1451,8 +1451,8 @@ Ref<Material> CSGCylinder3D::get_material() const {
 
 CSGCylinder3D::CSGCylinder3D() {
 	// defaults
-	radius = 1.0;
-	height = 1.0;
+	radius = 0.5;
+	height = 2.0;
 	sides = 8;
 	cone = false;
 	smooth_faces = true;
@@ -1671,8 +1671,8 @@ Ref<Material> CSGTorus3D::get_material() const {
 
 CSGTorus3D::CSGTorus3D() {
 	// defaults
-	inner_radius = 2.0;
-	outer_radius = 3.0;
+	inner_radius = 0.5;
+	outer_radius = 1.0;
 	sides = 8;
 	ring_sides = 6;
 	smooth_faces = true;
@@ -1694,7 +1694,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 	}
 	int shape_sides = shape_polygon.size();
 	Vector<int> shape_faces = Geometry2D::triangulate_polygon(shape_polygon);
-	ERR_FAIL_COND_V_MSG(shape_faces.size() < 3, brush, "Failed to triangulate CSGPolygon");
+	ERR_FAIL_COND_V_MSG(shape_faces.size() < 3, brush, "Failed to triangulate CSGPolygon. Make sure the polygon doesn't have any intersecting edges.");
 
 	// Get polygon enclosing Rect2.
 	Rect2 shape_rect(shape_polygon[0], Vector2());
@@ -1760,7 +1760,7 @@ CSGBrush *CSGPolygon3D::_build_brush() {
 	}
 	int face_count = extrusions * extrusion_face_count + end_count * shape_face_count;
 
-	// Intialize variables used to create the mesh.
+	// Initialize variables used to create the mesh.
 	Ref<Material> material = get_material();
 
 	Vector<Vector3> faces;

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -50,7 +50,7 @@ bool AnimationNodeStateMachineTransition::has_auto_advance() const {
 
 void AnimationNodeStateMachineTransition::set_advance_condition(const StringName &p_condition) {
 	String cs = p_condition;
-	ERR_FAIL_COND(cs.find("/") != -1 || cs.find(":") != -1);
+	ERR_FAIL_COND(cs.contains("/") || cs.contains(":"));
 	advance_condition = p_condition;
 	if (!cs.is_empty()) {
 		advance_condition_name = "conditions/" + cs;
@@ -536,7 +536,7 @@ Variant AnimationNodeStateMachine::get_parameter_default_value(const StringName 
 void AnimationNodeStateMachine::add_node(const StringName &p_name, Ref<AnimationNode> p_node, const Vector2 &p_position) {
 	ERR_FAIL_COND(states.has(p_name));
 	ERR_FAIL_COND(p_node.is_null());
-	ERR_FAIL_COND(String(p_name).find("/") != -1);
+	ERR_FAIL_COND(String(p_name).contains("/"));
 
 	State state;
 	state.node = p_node;
@@ -553,7 +553,7 @@ void AnimationNodeStateMachine::add_node(const StringName &p_name, Ref<Animation
 void AnimationNodeStateMachine::replace_node(const StringName &p_name, Ref<AnimationNode> p_node) {
 	ERR_FAIL_COND(states.has(p_name) == false);
 	ERR_FAIL_COND(p_node.is_null());
-	ERR_FAIL_COND(String(p_name).find("/") != -1);
+	ERR_FAIL_COND(String(p_name).contains("/"));
 
 	{
 		Ref<AnimationNode> node = states[p_name].node;

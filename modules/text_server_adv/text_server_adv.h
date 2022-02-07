@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -187,6 +187,7 @@ class TextServerAdvanced : public TextServer {
 		Set<uint32_t> supported_scripts;
 		Dictionary supported_features;
 		Dictionary supported_varaitions;
+		Dictionary feature_overrides;
 
 		// Language/script support override.
 		Map<String, bool> language_support_overrides;
@@ -241,12 +242,32 @@ class TextServerAdvanced : public TextServer {
 	// Shaped text cache data.
 
 	struct ShapedTextDataAdvanced : public ShapedTextData {
+		struct Span {
+			int start = -1;
+			int end = -1;
+
+			Vector<RID> fonts;
+			int font_size = 0;
+
+			Variant embedded_key;
+
+			String language;
+			Dictionary features;
+			Variant meta;
+		};
+		Vector<Span> spans;
+
 		/* Intermediate data */
 		Char16String utf16;
 		Vector<UBiDi *> bidi_iter;
 		Vector<Vector2i> bidi_override;
 		ScriptIterator *script_iter = nullptr;
 		hb_buffer_t *hb_buffer = nullptr;
+
+		HashMap<int, bool> jstops;
+		HashMap<int, bool> breaks;
+		bool break_ops_valid = false;
+		bool js_ops_valid = false;
 
 		~ShapedTextDataAdvanced() {
 			for (int i = 0; i < bidi_iter.size(); i++) {
@@ -267,11 +288,13 @@ class TextServerAdvanced : public TextServer {
 	mutable RID_PtrOwner<FontDataAdvanced> font_owner;
 	mutable RID_PtrOwner<ShapedTextDataAdvanced> shaped_owner;
 
+	void _realign(ShapedTextDataAdvanced *p_sd) const;
 	int _convert_pos(const ShapedTextDataAdvanced *p_sd, int p_pos) const;
 	int _convert_pos_inv(const ShapedTextDataAdvanced *p_sd, int p_pos) const;
 	bool _shape_substr(ShapedTextDataAdvanced *p_new_sd, const ShapedTextDataAdvanced *p_sd, int p_start, int p_length) const;
 	void _shape_run(ShapedTextDataAdvanced *p_sd, int32_t p_start, int32_t p_end, hb_script_t p_script, hb_direction_t p_direction, Vector<RID> p_fonts, int p_span, int p_fb_index);
 	Glyph _shape_single_glyph(ShapedTextDataAdvanced *p_sd, char32_t p_char, hb_script_t p_script, hb_direction_t p_direction, RID p_font, int p_font_size);
+	_FORCE_INLINE_ void _add_featuers(const Dictionary &p_source, Vector<hb_feature_t> &r_ftrs);
 
 	// HarfBuzz bitmap font interface.
 
@@ -300,7 +323,7 @@ protected:
 	static void _bind_methods(){};
 
 	void full_copy(ShapedTextDataAdvanced *p_shaped);
-	void invalidate(ShapedTextDataAdvanced *p_shaped);
+	void invalidate(ShapedTextDataAdvanced *p_shaped, bool p_text = false);
 
 public:
 	virtual bool has_feature(Feature p_feature) const override;
@@ -447,6 +470,9 @@ public:
 	virtual void font_remove_script_support_override(RID p_font_rid, const String &p_script) override;
 	virtual Vector<String> font_get_script_support_overrides(RID p_font_rid) override;
 
+	virtual void font_set_opentype_feature_overrides(RID p_font_rid, const Dictionary &p_overrides) override;
+	virtual Dictionary font_get_opentype_feature_overrides(RID p_font_rid) const override;
+
 	virtual Dictionary font_supported_feature_list(RID p_font_rid) const override;
 	virtual Dictionary font_supported_variation_list(RID p_font_rid) const override;
 
@@ -461,6 +487,7 @@ public:
 
 	virtual void shaped_text_set_direction(RID p_shaped, Direction p_direction = DIRECTION_AUTO) override;
 	virtual Direction shaped_text_get_direction(RID p_shaped) const override;
+	virtual Direction shaped_text_get_inferred_direction(RID p_shaped) const override;
 
 	virtual void shaped_text_set_bidi_override(RID p_shaped, const Array &p_override) override;
 
@@ -476,9 +503,13 @@ public:
 	virtual void shaped_text_set_preserve_control(RID p_shaped, bool p_enabled) override;
 	virtual bool shaped_text_get_preserve_control(RID p_shaped) const override;
 
-	virtual bool shaped_text_add_string(RID p_shaped, const String &p_text, const Vector<RID> &p_fonts, int p_size, const Dictionary &p_opentype_features = Dictionary(), const String &p_language = "") override;
+	virtual bool shaped_text_add_string(RID p_shaped, const String &p_text, const Vector<RID> &p_fonts, int p_size, const Dictionary &p_opentype_features = Dictionary(), const String &p_language = "", const Variant &p_meta = Variant()) override;
 	virtual bool shaped_text_add_object(RID p_shaped, Variant p_key, const Size2 &p_size, InlineAlignment p_inline_align = INLINE_ALIGNMENT_CENTER, int p_length = 1) override;
 	virtual bool shaped_text_resize_object(RID p_shaped, Variant p_key, const Size2 &p_size, InlineAlignment p_inline_align = INLINE_ALIGNMENT_CENTER) override;
+
+	virtual int shaped_get_span_count(RID p_shaped) const override;
+	virtual Variant shaped_get_span_meta(RID p_shaped, int p_index) const override;
+	virtual void shaped_set_span_update_font(RID p_shaped, int p_index, const Vector<RID> &p_fonts, int p_size, const Dictionary &p_opentype_features = Dictionary()) override;
 
 	virtual RID shaped_text_substr(RID p_shaped, int p_start, int p_length) const override;
 	virtual RID shaped_text_get_parent(RID p_shaped) const override;
@@ -520,6 +551,9 @@ public:
 	virtual String percent_sign(const String &p_language = "") const override;
 
 	virtual String strip_diacritics(const String &p_string) const override;
+
+	virtual String string_to_upper(const String &p_string, const String &p_language = "") const override;
+	virtual String string_to_lower(const String &p_string, const String &p_language = "") const override;
 
 	TextServerAdvanced();
 	~TextServerAdvanced();

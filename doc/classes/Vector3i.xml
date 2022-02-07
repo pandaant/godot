@@ -58,6 +58,19 @@
 				Returns a new vector with all components clamped between the components of [code]min[/code] and [code]max[/code], by running [method @GlobalScope.clamp] on each component.
 			</description>
 		</method>
+		<method name="length" qualifiers="const">
+			<return type="float" />
+			<description>
+				Returns the length (magnitude) of this vector.
+			</description>
+		</method>
+		<method name="length_squared" qualifiers="const">
+			<return type="int" />
+			<description>
+				Returns the squared length (squared magnitude) of this vector.
+				This method runs faster than [method length], so prefer it if you need to compare vectors or need the squared distance for some formula.
+			</description>
+		</method>
 		<method name="max_axis_index" qualifiers="const">
 			<return type="int" />
 			<description>
@@ -167,12 +180,12 @@
 			</description>
 		</operator>
 		<operator name="operator *">
-			<return type="Vector3i" />
+			<return type="Vector3" />
 			<argument index="0" name="right" type="float" />
 			<description>
-				Multiplies each component of the [Vector3i] by the given [float] truncated to an integer.
+				Multiplies each component of the [Vector3i] by the given [float]. Returns a [Vector3].
 				[codeblock]
-				print(Vector3i(10, 20, 30) * 0.9) # Prints "(0, 0, 0)"
+				print(Vector3i(10, 15, 20) * 0.9) # Prints "(9, 13.5, 18)"
 				[/codeblock]
 			</description>
 		</operator>
@@ -214,10 +227,10 @@
 			</description>
 		</operator>
 		<operator name="operator /">
-			<return type="Vector3i" />
+			<return type="Vector3" />
 			<argument index="0" name="right" type="float" />
 			<description>
-				Divides each component of the [Vector3i] by the given [float] truncated to an integer.
+				Divides each component of the [Vector3i] by the given [float]. Returns a [Vector3].
 				[codeblock]
 				print(Vector3i(10, 20, 30) / 2.9) # Prints "(5, 10, 15)"
 				[/codeblock]

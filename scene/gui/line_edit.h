@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -82,7 +82,6 @@ private:
 	String placeholder;
 	String placeholder_translated;
 	String secret_character = "*";
-	float placeholder_alpha = 0.6;
 	String ime_text;
 	Point2 ime_selection;
 
@@ -97,7 +96,7 @@ private:
 	PopupMenu *menu_dir = nullptr;
 	PopupMenu *menu_ctl = nullptr;
 
-	bool caret_mid_grapheme_enabled = false;
+	bool caret_mid_grapheme_enabled = true;
 
 	int caret_column = 0;
 	int scroll_offset = 0;
@@ -261,9 +260,6 @@ public:
 
 	void set_placeholder(String p_text);
 	String get_placeholder() const;
-
-	void set_placeholder_alpha(float p_alpha);
-	float get_placeholder_alpha() const;
 
 	void set_caret_column(int p_column);
 	int get_caret_column() const;

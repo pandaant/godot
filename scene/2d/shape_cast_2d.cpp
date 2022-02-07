@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -223,7 +223,7 @@ void ShapeCast2D::_notification(int p_what) {
 				draw_col.g = g;
 				draw_col.b = g;
 			}
-			// Draw continuos chain of shapes along the cast.
+			// Draw continuous chain of shapes along the cast.
 			const int steps = MAX(2, target_position.length() / shape->get_rect().get_size().length() * 4);
 			for (int i = 0; i <= steps; ++i) {
 				Vector2 t = (real_t(i) / steps) * target_position;
@@ -239,14 +239,16 @@ void ShapeCast2D::_notification(int p_what) {
 				xf.translate(Vector2(target_position.length(), 0));
 
 				draw_line(Vector2(), target_position, draw_col, 2);
-				Vector<Vector2> pts;
+
 				float tsize = 8;
-				pts.push_back(xf.xform(Vector2(tsize, 0)));
-				pts.push_back(xf.xform(Vector2(0, Math_SQRT12 * tsize)));
-				pts.push_back(xf.xform(Vector2(0, -Math_SQRT12 * tsize)));
-				Vector<Color> cols;
-				for (int i = 0; i < 3; i++)
-					cols.push_back(draw_col);
+
+				Vector<Vector2> pts = {
+					xf.xform(Vector2(tsize, 0)),
+					xf.xform(Vector2(0, Math_SQRT12 * tsize)),
+					xf.xform(Vector2(0, -Math_SQRT12 * tsize))
+				};
+
+				Vector<Color> cols = { draw_col, draw_col, draw_col };
 
 				draw_primitive(pts, cols, Vector<Vector2>());
 			}
@@ -320,26 +322,18 @@ void ShapeCast2D::add_exception_rid(const RID &p_rid) {
 	exclude.insert(p_rid);
 }
 
-void ShapeCast2D::add_exception(const Object *p_object) {
-	ERR_FAIL_NULL(p_object);
-	const CollisionObject2D *co = Object::cast_to<CollisionObject2D>(p_object);
-	if (!co) {
-		return;
-	}
-	add_exception_rid(co->get_rid());
+void ShapeCast2D::add_exception(const CollisionObject2D *p_node) {
+	ERR_FAIL_NULL_MSG(p_node, "The passed Node must be an instance of CollisionObject2D.");
+	add_exception_rid(p_node->get_rid());
 }
 
 void ShapeCast2D::remove_exception_rid(const RID &p_rid) {
 	exclude.erase(p_rid);
 }
 
-void ShapeCast2D::remove_exception(const Object *p_object) {
-	ERR_FAIL_NULL(p_object);
-	const CollisionObject2D *co = Object::cast_to<CollisionObject2D>(p_object);
-	if (!co) {
-		return;
-	}
-	remove_exception_rid(co->get_rid());
+void ShapeCast2D::remove_exception(const CollisionObject2D *p_node) {
+	ERR_FAIL_NULL_MSG(p_node, "The passed Node must be an instance of CollisionObject2D.");
+	remove_exception_rid(p_node->get_rid());
 }
 
 void ShapeCast2D::clear_exceptions() {

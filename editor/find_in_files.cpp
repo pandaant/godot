@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -53,11 +53,6 @@ inline void pop_back(T &container) {
 	container.resize(container.size() - 1);
 }
 
-// TODO: Copied from TextEdit private, would be nice to extract it in a single place.
-static bool is_text_char(char32_t c) {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
-}
-
 static bool find_next(const String &line, String pattern, int from, bool match_case, bool whole_words, int &out_begin, int &out_end) {
 	int end = from;
 
@@ -73,10 +68,10 @@ static bool find_next(const String &line, String pattern, int from, bool match_c
 		out_end = end;
 
 		if (whole_words) {
-			if (begin > 0 && is_text_char(line[begin - 1])) {
+			if (begin > 0 && (is_ascii_identifier_char(line[begin - 1]))) {
 				continue;
 			}
-			if (end < line.size() && is_text_char(line[end])) {
+			if (end < line.size() && (is_ascii_identifier_char(line[end]))) {
 				continue;
 			}
 		}

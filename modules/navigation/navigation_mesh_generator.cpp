@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -140,12 +140,12 @@ void NavigationMeshGenerator::_add_faces(const PackedVector3Array &p_faces, cons
 	}
 }
 
-void NavigationMeshGenerator::_parse_geometry(Transform3D p_accumulated_transform, Node *p_node, Vector<float> &p_vertices, Vector<int> &p_indices, NavigationMesh::ParsedGeometryType p_generate_from, uint32_t p_collision_mask, bool p_recurse_children) {
+void NavigationMeshGenerator::_parse_geometry(const Transform3D &p_navmesh_transform, Node *p_node, Vector<float> &p_vertices, Vector<int> &p_indices, NavigationMesh::ParsedGeometryType p_generate_from, uint32_t p_collision_mask, bool p_recurse_children) {
 	if (Object::cast_to<MeshInstance3D>(p_node) && p_generate_from != NavigationMesh::PARSED_GEOMETRY_STATIC_COLLIDERS) {
 		MeshInstance3D *mesh_instance = Object::cast_to<MeshInstance3D>(p_node);
 		Ref<Mesh> mesh = mesh_instance->get_mesh();
 		if (mesh.is_valid()) {
-			_add_mesh(mesh, p_accumulated_transform * mesh_instance->get_transform(), p_vertices, p_indices);
+			_add_mesh(mesh, p_navmesh_transform * mesh_instance->get_global_transform(), p_vertices, p_indices);
 		}
 	}
 
@@ -159,7 +159,7 @@ void NavigationMeshGenerator::_parse_geometry(Transform3D p_accumulated_transfor
 				n = multimesh->get_instance_count();
 			}
 			for (int i = 0; i < n; i++) {
-				_add_mesh(mesh, p_accumulated_transform * multimesh->get_instance_transform(i), p_vertices, p_indices);
+				_add_mesh(mesh, p_navmesh_transform * multimesh_instance->get_global_transform() * multimesh->get_instance_transform(i), p_vertices, p_indices);
 			}
 		}
 	}
@@ -171,7 +171,7 @@ void NavigationMeshGenerator::_parse_geometry(Transform3D p_accumulated_transfor
 		if (!meshes.is_empty()) {
 			Ref<Mesh> mesh = meshes[1];
 			if (mesh.is_valid()) {
-				_add_mesh(mesh, p_accumulated_transform * csg_shape->get_transform(), p_vertices, p_indices);
+				_add_mesh(mesh, p_navmesh_transform * csg_shape->get_global_transform(), p_vertices, p_indices);
 			}
 		}
 	}
@@ -186,7 +186,7 @@ void NavigationMeshGenerator::_parse_geometry(Transform3D p_accumulated_transfor
 				if (Object::cast_to<CollisionShape3D>(child)) {
 					CollisionShape3D *col_shape = Object::cast_to<CollisionShape3D>(child);
 
-					Transform3D transform = p_accumulated_transform * static_body->get_transform() * col_shape->get_transform();
+					Transform3D transform = p_navmesh_transform * static_body->get_global_transform() * col_shape->get_transform();
 
 					Ref<Mesh> mesh;
 					Ref<Shape3D> s = col_shape->get_shape();
@@ -265,27 +265,108 @@ void NavigationMeshGenerator::_parse_geometry(Transform3D p_accumulated_transfor
 	}
 
 #ifdef MODULE_GRIDMAP_ENABLED
-	if (Object::cast_to<GridMap>(p_node) && p_generate_from != NavigationMesh::PARSED_GEOMETRY_STATIC_COLLIDERS) {
-		GridMap *gridmap_instance = Object::cast_to<GridMap>(p_node);
-		Array meshes = gridmap_instance->get_meshes();
-		Transform3D xform = gridmap_instance->get_transform();
-		for (int i = 0; i < meshes.size(); i += 2) {
-			Ref<Mesh> mesh = meshes[i + 1];
-			if (mesh.is_valid()) {
-				_add_mesh(mesh, p_accumulated_transform * xform * (Transform3D)meshes[i], p_vertices, p_indices);
+	GridMap *gridmap = Object::cast_to<GridMap>(p_node);
+
+	if (gridmap) {
+		if (p_generate_from != NavigationMesh::PARSED_GEOMETRY_STATIC_COLLIDERS) {
+			Array meshes = gridmap->get_meshes();
+			Transform3D xform = gridmap->get_global_transform();
+			for (int i = 0; i < meshes.size(); i += 2) {
+				Ref<Mesh> mesh = meshes[i + 1];
+				if (mesh.is_valid()) {
+					_add_mesh(mesh, p_navmesh_transform * xform * (Transform3D)meshes[i], p_vertices, p_indices);
+				}
+			}
+		}
+
+		if (p_generate_from != NavigationMesh::PARSED_GEOMETRY_MESH_INSTANCES && (gridmap->get_collision_layer() & p_collision_mask)) {
+			Array shapes = gridmap->get_collision_shapes();
+			for (int i = 0; i < shapes.size(); i += 2) {
+				RID shape = shapes[i + 1];
+				PhysicsServer3D::ShapeType type = PhysicsServer3D::get_singleton()->shape_get_type(shape);
+				Variant data = PhysicsServer3D::get_singleton()->shape_get_data(shape);
+				Ref<Mesh> mesh;
+
+				switch (type) {
+					case PhysicsServer3D::SHAPE_SPHERE: {
+						real_t radius = data;
+						Ref<SphereMesh> sphere_mesh;
+						sphere_mesh.instantiate();
+						sphere_mesh->set_radius(radius);
+						sphere_mesh->set_height(radius * 2.0);
+						mesh = sphere_mesh;
+					} break;
+					case PhysicsServer3D::SHAPE_BOX: {
+						Vector3 extents = data;
+						Ref<BoxMesh> box_mesh;
+						box_mesh.instantiate();
+						box_mesh->set_size(2.0 * extents);
+						mesh = box_mesh;
+					} break;
+					case PhysicsServer3D::SHAPE_CAPSULE: {
+						Dictionary dict = data;
+						real_t radius = dict["radius"];
+						real_t height = dict["height"];
+						Ref<CapsuleMesh> capsule_mesh;
+						capsule_mesh.instantiate();
+						capsule_mesh->set_radius(radius);
+						capsule_mesh->set_height(height);
+						mesh = capsule_mesh;
+					} break;
+					case PhysicsServer3D::SHAPE_CYLINDER: {
+						Dictionary dict = data;
+						real_t radius = dict["radius"];
+						real_t height = dict["height"];
+						Ref<CylinderMesh> cylinder_mesh;
+						cylinder_mesh.instantiate();
+						cylinder_mesh->set_height(height);
+						cylinder_mesh->set_bottom_radius(radius);
+						cylinder_mesh->set_top_radius(radius);
+						mesh = cylinder_mesh;
+					} break;
+					case PhysicsServer3D::SHAPE_CONVEX_POLYGON: {
+						PackedVector3Array vertices = data;
+						Geometry3D::MeshData md;
+
+						Error err = ConvexHullComputer::convex_hull(vertices, md);
+
+						if (err == OK) {
+							PackedVector3Array faces;
+
+							for (int j = 0; j < md.faces.size(); ++j) {
+								Geometry3D::MeshData::Face face = md.faces[j];
+
+								for (int k = 2; k < face.indices.size(); ++k) {
+									faces.push_back(md.vertices[face.indices[0]]);
+									faces.push_back(md.vertices[face.indices[k - 1]]);
+									faces.push_back(md.vertices[face.indices[k]]);
+								}
+							}
+
+							_add_faces(faces, shapes[i], p_vertices, p_indices);
+						}
+					} break;
+					case PhysicsServer3D::SHAPE_CONCAVE_POLYGON: {
+						Dictionary dict = data;
+						PackedVector3Array faces = Variant(dict["faces"]);
+						_add_faces(faces, shapes[i], p_vertices, p_indices);
+					} break;
+					default: {
+						WARN_PRINT("Unsupported collision shape type.");
+					} break;
+				}
+
+				if (mesh.is_valid()) {
+					_add_mesh(mesh, shapes[i], p_vertices, p_indices);
+				}
 			}
 		}
 	}
 #endif
 
-	if (Object::cast_to<Node3D>(p_node)) {
-		Node3D *spatial = Object::cast_to<Node3D>(p_node);
-		p_accumulated_transform = p_accumulated_transform * spatial->get_transform();
-	}
-
 	if (p_recurse_children) {
 		for (int i = 0; i < p_node->get_child_count(); i++) {
-			_parse_geometry(p_accumulated_transform, p_node->get_child(i), p_vertices, p_indices, p_generate_from, p_collision_mask, p_recurse_children);
+			_parse_geometry(p_navmesh_transform, p_node->get_child(i), p_vertices, p_indices, p_generate_from, p_collision_mask, p_recurse_children);
 		}
 	}
 }
@@ -530,7 +611,7 @@ void NavigationMeshGenerator::bake(Ref<NavigationMesh> p_nav_mesh, Node *p_node)
 		p_node->get_tree()->get_nodes_in_group(p_nav_mesh->get_source_group_name(), &parse_nodes);
 	}
 
-	Transform3D navmesh_xform = Object::cast_to<Node3D>(p_node)->get_transform().affine_inverse();
+	Transform3D navmesh_xform = Object::cast_to<Node3D>(p_node)->get_global_transform().affine_inverse();
 	for (Node *E : parse_nodes) {
 		NavigationMesh::ParsedGeometryType geometry_type = p_nav_mesh->get_parsed_geometry_type();
 		uint32_t collision_mask = p_nav_mesh->get_collision_mask();

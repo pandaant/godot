@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -180,7 +180,7 @@ void AnimationNodeBlendSpace2DEditor::_blend_space_gui_input(const Ref<InputEven
 		selected_point = -1;
 
 		for (int i = 0; i < points.size(); i++) {
-			if (making_triangle.find(i) != -1) {
+			if (making_triangle.has(i)) {
 				continue;
 			}
 
@@ -488,10 +488,11 @@ void AnimationNodeBlendSpace2DEditor::_blend_space_draw() {
 			color.a *= 0.2;
 		}
 
-		Vector<Color> colors;
-		colors.push_back(color);
-		colors.push_back(color);
-		colors.push_back(color);
+		Vector<Color> colors = {
+			color,
+			color,
+			color
+		};
 		blend_space_draw->draw_primitive(points, colors, Vector<Vector2>());
 	}
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -158,12 +158,7 @@ static NSCursor *_cursorFromSelector(SEL selector, SEL fallback = nil) {
 	}
 
 	if (wd.transient_parent != DisplayServerOSX::INVALID_WINDOW_ID) {
-		DisplayServerOSX::WindowData &pwd = DS_OSX->windows[wd.transient_parent];
-		[pwd.window_object makeKeyAndOrderFront:nil]; // Move focus back to parent.
 		DS_OSX->window_set_transient(window_id, DisplayServerOSX::INVALID_WINDOW_ID);
-	} else if ((window_id != DisplayServerOSX::MAIN_WINDOW_ID) && (DS_OSX->windows.size() == 1)) {
-		DisplayServerOSX::WindowData &pwd = DS_OSX->windows[DisplayServerOSX::MAIN_WINDOW_ID];
-		[pwd.window_object makeKeyAndOrderFront:nil]; // Move focus back to main window if there is no parent or other windows left.
 	}
 
 #if defined(GLES3_ENABLED)
@@ -321,11 +316,12 @@ static NSCursor *_cursorFromSelector(SEL selector, SEL fallback = nil) {
 		CGPoint lMouseWarpPos = { pointOnScreen.x, CGDisplayBounds(CGMainDisplayID()).size.height - pointOnScreen.y };
 		CGWarpMouseCursorPosition(lMouseWarpPos);
 	} else {
-		_get_mouse_pos(wd, [wd.window_object mouseLocationOutsideOfEventStream]);
+		_ALLOW_DISCARD_ _get_mouse_pos(wd, [wd.window_object mouseLocationOutsideOfEventStream]);
 		Input::get_singleton()->set_mouse_position(wd.mouse_pos);
 	}
 
 	DS_OSX->window_focused = true;
+	DS_OSX->last_focused_window = window_id;
 	DS_OSX->_send_window_event(wd, DisplayServerOSX::WINDOW_EVENT_FOCUS_IN);
 }
 
@@ -360,6 +356,7 @@ static NSCursor *_cursorFromSelector(SEL selector, SEL fallback = nil) {
 	DisplayServerOSX::WindowData &wd = DS_OSX->windows[window_id];
 
 	DS_OSX->window_focused = true;
+	DS_OSX->last_focused_window = window_id;
 	DS_OSX->_send_window_event(wd, DisplayServerOSX::WINDOW_EVENT_FOCUS_IN);
 }
 
@@ -787,12 +784,11 @@ static void _mouseDownEvent(DisplayServer::WindowID window_id, NSEvent *event, M
 		mm->set_tilt(Vector2(p.x, p.y));
 	}
 	mm->set_global_position(pos);
-	mm->set_speed(Input::get_singleton()->get_last_mouse_speed());
+	mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
 	const Vector2i relativeMotion = Vector2i(delta.x, delta.y) * DS_OSX->screen_get_max_scale();
 	mm->set_relative(relativeMotion);
 	_get_key_modifier_state([event modifierFlags], mm);
 
-	Input::get_singleton()->set_mouse_position(wd.mouse_pos);
 	Input::get_singleton()->parse_input_event(mm);
 }
 
@@ -1396,7 +1392,7 @@ inline void sendPanEvent(DisplayServer::WindowID window_id, double dx, double dy
 
 	double deltaX, deltaY;
 
-	_get_mouse_pos(wd, [event locationInWindow]);
+	_ALLOW_DISCARD_ _get_mouse_pos(wd, [event locationInWindow]);
 
 	deltaX = [event scrollingDeltaX];
 	deltaY = [event scrollingDeltaY];
@@ -1480,7 +1476,6 @@ bool DisplayServerOSX::has_feature(Feature p_feature) const {
 		case FEATURE_CURSOR_SHAPE:
 		case FEATURE_CUSTOM_CURSOR_SHAPE:
 		case FEATURE_NATIVE_DIALOG:
-		//case FEATURE_CONSOLE_WINDOW:
 		case FEATURE_IME:
 		case FEATURE_WINDOW_TRANSPARENCY:
 		case FEATURE_HIDPI:
@@ -1920,7 +1915,8 @@ void DisplayServerOSX::mouse_set_mode(MouseMode p_mode) {
 		return;
 	}
 
-	WindowData &wd = windows[MAIN_WINDOW_ID];
+	WindowID window_id = windows.has(last_focused_window) ? last_focused_window : MAIN_WINDOW_ID;
+	WindowData &wd = windows[window_id];
 	if (p_mode == MOUSE_MODE_CAPTURED) {
 		// Apple Docs state that the display parameter is not used.
 		// "This parameter is not used. By default, you may pass kCGDirectMainDisplay."
@@ -1979,7 +1975,8 @@ void DisplayServerOSX::mouse_warp_to_position(const Point2i &p_to) {
 	if (mouse_mode == MOUSE_MODE_CAPTURED) {
 		last_mouse_pos = p_to;
 	} else {
-		WindowData &wd = windows[MAIN_WINDOW_ID];
+		WindowID window_id = windows.has(last_focused_window) ? last_focused_window : MAIN_WINDOW_ID;
+		WindowData &wd = windows[window_id];
 
 		//local point in window coords
 		const NSRect contentRect = [wd.window_view frame];
@@ -2002,10 +1999,6 @@ void DisplayServerOSX::mouse_warp_to_position(const Point2i &p_to) {
 }
 
 Point2i DisplayServerOSX::mouse_get_position() const {
-	return last_mouse_pos;
-}
-
-Point2i DisplayServerOSX::mouse_get_absolute_position() const {
 	_THREAD_SAFE_METHOD_
 
 	const NSPoint mouse_pos = [NSEvent mouseLocation];
@@ -2072,10 +2065,8 @@ int DisplayServerOSX::get_screen_count() const {
 // to convert between OS X native screen coordinates and the ones expected by Godot
 
 static bool displays_arrangement_dirty = true;
-static bool displays_scale_dirty = true;
 static void displays_arrangement_changed(CGDirectDisplayID display_id, CGDisplayChangeSummaryFlags flags, void *user_info) {
 	displays_arrangement_dirty = true;
-	displays_scale_dirty = true;
 }
 
 Point2i DisplayServerOSX::_get_screens_origin() const {
@@ -2186,15 +2177,8 @@ float DisplayServerOSX::screen_get_scale(int p_screen) const {
 float DisplayServerOSX::screen_get_max_scale() const {
 	_THREAD_SAFE_METHOD_
 
-	static float scale = 1.f;
-	if (displays_scale_dirty) {
-		int screen_count = get_screen_count();
-		for (int i = 0; i < screen_count; i++) {
-			scale = fmax(scale, screen_get_scale(i));
-		}
-		displays_scale_dirty = false;
-	}
-	return scale;
+	// Note: Do not update max display scale on screen configuration change, existing editor windows can't be rescaled on the fly.
+	return display_max_scale;
 }
 
 Rect2i DisplayServerOSX::screen_get_usable_rect(int p_screen) const {
@@ -2217,6 +2201,24 @@ Rect2i DisplayServerOSX::screen_get_usable_rect(int p_screen) const {
 	}
 
 	return Rect2i();
+}
+
+float DisplayServerOSX::screen_get_refresh_rate(int p_screen) const {
+	_THREAD_SAFE_METHOD_
+
+	if (p_screen == SCREEN_OF_MAIN_WINDOW) {
+		p_screen = window_get_current_screen();
+	}
+
+	NSArray *screenArray = [NSScreen screens];
+	if ((NSUInteger)p_screen < [screenArray count]) {
+		NSDictionary *description = [[screenArray objectAtIndex:p_screen] deviceDescription];
+		const CGDisplayModeRef displayMode = CGDisplayCopyDisplayMode([[description objectForKey:@"NSScreenNumber"] unsignedIntValue]);
+		const double displayRefreshRate = CGDisplayModeGetRefreshRate(displayMode);
+		return (float)displayRefreshRate;
+	}
+	ERR_PRINT("An error occured while trying to get the screen refresh rate.");
+	return SCREEN_REFRESH_RATE_FALLBACK;
 }
 
 Vector<DisplayServer::WindowID> DisplayServerOSX::get_window_list() const {
@@ -2381,8 +2383,24 @@ int DisplayServerOSX::window_get_current_screen(WindowID p_window) const {
 
 void DisplayServerOSX::window_set_current_screen(int p_screen, WindowID p_window) {
 	_THREAD_SAFE_METHOD_
+
+	ERR_FAIL_COND(!windows.has(p_window));
+	WindowData &wd = windows[p_window];
+
+	bool was_fullscreen = false;
+	if (wd.fullscreen) {
+		// Temporary exit fullscreen mode to move window.
+		[wd.window_object toggleFullScreen:nil];
+		was_fullscreen = true;
+	}
+
 	Point2i wpos = window_get_position(p_window) - screen_get_position(window_get_current_screen(p_window));
 	window_set_position(wpos + screen_get_position(p_screen), p_window);
+
+	if (was_fullscreen) {
+		// Re-enter fullscreen mode.
+		[wd.window_object toggleFullScreen:nil];
+	}
 }
 
 void DisplayServerOSX::window_set_transient(WindowID p_window, WindowID p_parent) {
@@ -2405,7 +2423,7 @@ void DisplayServerOSX::window_set_transient(WindowID p_window, WindowID p_parent
 		wd_window.transient_parent = INVALID_WINDOW_ID;
 		wd_parent.transient_children.erase(p_window);
 
-		[wd_parent.window_object removeChildWindow:wd_window.window_object];
+		[wd_window.window_object setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 	} else {
 		ERR_FAIL_COND(!windows.has(p_parent));
 		ERR_FAIL_COND_MSG(wd_window.transient_parent != INVALID_WINDOW_ID, "Window already has a transient parent");
@@ -2414,7 +2432,7 @@ void DisplayServerOSX::window_set_transient(WindowID p_window, WindowID p_parent
 		wd_window.transient_parent = p_parent;
 		wd_parent.transient_children.insert(p_window);
 
-		[wd_parent.window_object addChildWindow:wd_window.window_object ordered:NSWindowAbove];
+		[wd_window.window_object setCollectionBehavior:NSWindowCollectionBehaviorFullScreenAuxiliary];
 	}
 }
 
@@ -2424,7 +2442,9 @@ Point2i DisplayServerOSX::window_get_position(WindowID p_window) const {
 	ERR_FAIL_COND_V(!windows.has(p_window), Point2i());
 	const WindowData &wd = windows[p_window];
 
-	NSRect nsrect = [wd.window_object frame];
+	// Use content rect position (without titlebar / window border).
+	const NSRect contentRect = [wd.window_view frame];
+	const NSRect nsrect = [wd.window_object convertRectToScreen:contentRect];
 	Point2i pos;
 
 	// Return the position of the top-left corner, for OS X the y starts at the bottom
@@ -2452,10 +2472,19 @@ void DisplayServerOSX::window_set_position(const Point2i &p_position, WindowID p
 	position += _get_screens_origin();
 	position /= screen_get_max_scale();
 
-	[wd.window_object setFrameTopLeftPoint:NSMakePoint(position.x, position.y)];
+	// Remove titlebar / window border size.
+	const NSRect contentRect = [wd.window_view frame];
+	const NSRect windowRect = [wd.window_object frame];
+	const NSRect nsrect = [wd.window_object convertRectToScreen:contentRect];
+	Point2i offset;
+	offset.x = (nsrect.origin.x - windowRect.origin.x);
+	offset.y = (nsrect.origin.y + nsrect.size.height);
+	offset.y -= (windowRect.origin.y + windowRect.size.height);
+
+	[wd.window_object setFrameTopLeftPoint:NSMakePoint(position.x - offset.x, position.y - offset.y)];
 
 	_update_window(wd);
-	_get_mouse_pos(wd, [wd.window_object mouseLocationOutsideOfEventStream]);
+	_ALLOW_DISCARD_ _get_mouse_pos(wd, [wd.window_object mouseLocationOutsideOfEventStream]);
 }
 
 void DisplayServerOSX::window_set_max_size(const Size2i p_size, WindowID p_window) {
@@ -2641,6 +2670,7 @@ void DisplayServerOSX::window_set_mode(WindowMode p_mode, WindowID p_window) {
 		case WINDOW_MODE_MINIMIZED: {
 			[wd.window_object deminiaturize:nil];
 		} break;
+		case WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 		case WINDOW_MODE_FULLSCREEN: {
 			[wd.window_object setLevel:NSNormalWindowLevel];
 			if (wd.layered_window) {
@@ -2674,6 +2704,7 @@ void DisplayServerOSX::window_set_mode(WindowMode p_mode, WindowID p_window) {
 		case WINDOW_MODE_MINIMIZED: {
 			[wd.window_object performMiniaturize:nil];
 		} break;
+		case WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 		case WINDOW_MODE_FULLSCREEN: {
 			if (wd.layered_window)
 				_set_window_per_pixel_transparency_enabled(false, p_window);
@@ -3519,6 +3550,24 @@ DisplayServer::WindowID DisplayServerOSX::get_window_at_screen_position(const Po
 	return INVALID_WINDOW_ID;
 }
 
+int64_t DisplayServerOSX::window_get_native_handle(HandleType p_handle_type, WindowID p_window) const {
+	ERR_FAIL_COND_V(!windows.has(p_window), 0);
+	switch (p_handle_type) {
+		case DISPLAY_HANDLE: {
+			return 0; // Not supported.
+		}
+		case WINDOW_HANDLE: {
+			return (int64_t)windows[p_window].window_object;
+		}
+		case WINDOW_VIEW: {
+			return (int64_t)windows[p_window].window_view;
+		}
+		default: {
+			return 0;
+		}
+	}
+}
+
 void DisplayServerOSX::window_attach_instance_id(ObjectID p_instance, WindowID p_window) {
 	_THREAD_SAFE_METHOD_
 
@@ -3575,6 +3624,7 @@ DisplayServerOSX::WindowID DisplayServerOSX::_create_window(WindowMode p_mode, V
 		[wd.window_object setDelegate:wd.window_delegate];
 		[wd.window_object setAcceptsMouseMovedEvents:YES];
 		[wd.window_object setRestorable:NO];
+		[wd.window_object setColorSpace:[NSColorSpace sRGBColorSpace]];
 
 		if ([wd.window_object respondsToSelector:@selector(setTabbingMode:)]) {
 			[wd.window_object setTabbingMode:NSWindowTabbingModeDisallowed];
@@ -3678,14 +3728,6 @@ void DisplayServerOSX::swap_buffers() {
 #endif
 }
 
-void DisplayServerOSX::console_set_visible(bool p_enabled) {
-	//TODO - open terminal and redirect
-}
-
-bool DisplayServerOSX::is_console_visible() const {
-	return isatty(STDIN_FILENO);
-}
-
 DisplayServerOSX::DisplayServerOSX(const String &p_rendering_driver, WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i &p_resolution, Error &r_error) {
 	Input::get_singleton()->set_event_dispatch_function(_dispatch_input_events);
 
@@ -3707,7 +3749,11 @@ DisplayServerOSX::DisplayServerOSX(const String &p_rendering_driver, WindowMode 
 
 	keyboard_layout_dirty = true;
 	displays_arrangement_dirty = true;
-	displays_scale_dirty = true;
+
+	int screen_count = get_screen_count();
+	for (int i = 0; i < screen_count; i++) {
+		display_max_scale = fmax(display_max_scale, screen_get_scale(i));
+	}
 
 	// Register to be notified on keyboard layout changes
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(),

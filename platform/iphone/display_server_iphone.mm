@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -293,7 +293,6 @@ void DisplayServerIPhone::update_gyroscope(float p_x, float p_y, float p_z) {
 
 bool DisplayServerIPhone::has_feature(Feature p_feature) const {
 	switch (p_feature) {
-		// case FEATURE_CONSOLE_WINDOW:
 		// case FEATURE_CURSOR_SHAPE:
 		// case FEATURE_CUSTOM_CURSOR_SHAPE:
 		// case FEATURE_GLOBAL_MENU:
@@ -394,6 +393,10 @@ int DisplayServerIPhone::screen_get_dpi(int p_screen) const {
 	}
 }
 
+float DisplayServerIPhone::screen_get_refresh_rate(int p_screen) const {
+	return [UIScreen mainScreen].maximumFramesPerSecond;
+}
+
 float DisplayServerIPhone::screen_get_scale(int p_screen) const {
 	return [UIScreen mainScreen].nativeScale;
 }
@@ -406,6 +409,24 @@ Vector<DisplayServer::WindowID> DisplayServerIPhone::get_window_list() const {
 
 DisplayServer::WindowID DisplayServerIPhone::get_window_at_screen_position(const Point2i &p_position) const {
 	return MAIN_WINDOW_ID;
+}
+
+int64_t DisplayServerIPhone::window_get_native_handle(HandleType p_handle_type, WindowID p_window) const {
+	ERR_FAIL_COND_V(p_window != MAIN_WINDOW_ID, 0);
+	switch (p_handle_type) {
+		case DISPLAY_HANDLE: {
+			return 0; // Not supported.
+		}
+		case WINDOW_HANDLE: {
+			return (int64_t)AppDelegate.viewController;
+		}
+		case WINDOW_VIEW: {
+			return (int64_t)AppDelegate.viewController.godotView;
+		}
+		default: {
+			return 0;
+		}
+	}
 }
 
 void DisplayServerIPhone::window_attach_instance_id(ObjectID p_instance, WindowID p_window) {

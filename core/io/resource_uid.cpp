@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -71,9 +71,9 @@ ResourceUID::ID ResourceUID::text_to_id(const String &p_text) const {
 	for (uint32_t i = 6; i < l; i++) {
 		uid *= base;
 		uint32_t c = p_text[i];
-		if (c >= 'a' && c <= 'z') {
+		if (is_ascii_lower_case(c)) {
 			uid += c - 'a';
-		} else if (c >= '0' && c <= '9') {
+		} else if (is_digit(c)) {
 			uid += c - '0' + char_count;
 		} else {
 			return INVALID_ID;

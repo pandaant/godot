@@ -174,7 +174,7 @@
 		<member name="caret_force_displayed" type="bool" setter="set_caret_force_displayed" getter="is_caret_force_displayed" default="false">
 			If [code]true[/code], the [LineEdit] will always show the caret, even if focus is lost.
 		</member>
-		<member name="caret_mid_grapheme" type="bool" setter="set_caret_mid_grapheme_enabled" getter="is_caret_mid_grapheme_enabled" default="false">
+		<member name="caret_mid_grapheme" type="bool" setter="set_caret_mid_grapheme_enabled" getter="is_caret_mid_grapheme_enabled" default="true">
 			Allow moving caret, selecting and removing the individual composite character components.
 			[b]Note:[/b] [kbd]Backspace[/kbd] is always removing individual composite character components.
 		</member>
@@ -233,9 +233,6 @@
 			[b]Note:[/b] This method is only implemented on Linux.
 		</member>
 		<member name="mouse_default_cursor_shape" type="int" setter="set_default_cursor_shape" getter="get_default_cursor_shape" overrides="Control" enum="Control.CursorShape" default="1" />
-		<member name="placeholder_alpha" type="float" setter="set_placeholder_alpha" getter="get_placeholder_alpha" default="0.6">
-			Opacity of the [member placeholder_text]. From [code]0[/code] to [code]1[/code].
-		</member>
 		<member name="placeholder_text" type="String" setter="set_placeholder" getter="get_placeholder" default="&quot;&quot;">
 			Text shown when the [LineEdit] is empty. It is [b]not[/b] the [LineEdit]'s default value (see [member text]).
 		</member>
@@ -382,29 +379,35 @@
 		</constant>
 	</constants>
 	<theme_items>
-		<theme_item name="caret_color" data_type="color" type="Color" default="Color(0.94, 0.94, 0.94, 1)">
-			Color of the [LineEdit]'s caret (text cursor).
+		<theme_item name="caret_color" data_type="color" type="Color" default="Color(0.95, 0.95, 0.95, 1)">
+			Color of the [LineEdit]'s caret (text cursor). This can be set to a fully transparent color to hide the caret entirely.
 		</theme_item>
-		<theme_item name="clear_button_color" data_type="color" type="Color" default="Color(0.88, 0.88, 0.88, 1)">
+		<theme_item name="clear_button_color" data_type="color" type="Color" default="Color(0.875, 0.875, 0.875, 1)">
 			Color used as default tint for the clear button.
 		</theme_item>
 		<theme_item name="clear_button_color_pressed" data_type="color" type="Color" default="Color(1, 1, 1, 1)">
 			Color used for the clear button when it's pressed.
 		</theme_item>
-		<theme_item name="font_color" data_type="color" type="Color" default="Color(0.88, 0.88, 0.88, 1)">
+		<theme_item name="font_color" data_type="color" type="Color" default="Color(0.875, 0.875, 0.875, 1)">
 			Default font color.
 		</theme_item>
 		<theme_item name="font_outline_color" data_type="color" type="Color" default="Color(1, 1, 1, 1)">
 			The tint of text outline of the [LineEdit].
 		</theme_item>
-		<theme_item name="font_selected_color" data_type="color" type="Color" default="Color(0, 0, 0, 1)">
+		<theme_item name="font_placeholder_color" data_type="color" type="Color" default="Color(0.875, 0.875, 0.875, 0.6)">
+			Font color for [member placeholder_text].
+		</theme_item>
+		<theme_item name="font_selected_color" data_type="color" type="Color" default="Color(1, 1, 1, 1)">
 			Font color for selected text (inside the selection rectangle).
 		</theme_item>
-		<theme_item name="font_uneditable_color" data_type="color" type="Color" default="Color(0.88, 0.88, 0.88, 0.5)">
+		<theme_item name="font_uneditable_color" data_type="color" type="Color" default="Color(0.875, 0.875, 0.875, 0.5)">
 			Font color when editing is disabled.
 		</theme_item>
-		<theme_item name="selection_color" data_type="color" type="Color" default="Color(0.49, 0.49, 0.49, 1)">
+		<theme_item name="selection_color" data_type="color" type="Color" default="Color(0.5, 0.5, 0.5, 1)">
 			Color of the selection rectangle.
+		</theme_item>
+		<theme_item name="caret_width" data_type="constant" type="int" default="1">
+			The caret's width in pixels. Greater values can be used to improve accessibility by ensuring the caret is easily visible, or to ensure consistency with a large font size.
 		</theme_item>
 		<theme_item name="minimum_character_width" data_type="constant" type="int" default="4">
 			Minimum horizontal space for the text (not counting the clear button and content margins). This value is measured in count of 'M' characters (i.e. this amount of 'M' characters can be displayed without scrolling).

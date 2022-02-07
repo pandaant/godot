@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -82,8 +82,11 @@ void Label::_shape() {
 	Ref<StyleBox> style = get_theme_stylebox(SNAME("normal"), SNAME("Label"));
 	int width = (get_size().width - style->get_minimum_size().width);
 
-	if (dirty) {
-		TS->shaped_text_clear(text_rid);
+	if (dirty || font_dirty) {
+		String lang = (!language.is_empty()) ? language : TranslationServer::get_singleton()->get_tool_locale();
+		if (dirty) {
+			TS->shaped_text_clear(text_rid);
+		}
 		if (text_direction == Control::TEXT_DIRECTION_INHERITED) {
 			TS->shaped_text_set_direction(text_rid, is_layout_rtl() ? TextServer::DIRECTION_RTL : TextServer::DIRECTION_LTR);
 		} else {
@@ -92,13 +95,21 @@ void Label::_shape() {
 		const Ref<Font> &font = get_theme_font(SNAME("font"));
 		int font_size = get_theme_font_size(SNAME("font_size"));
 		ERR_FAIL_COND(font.is_null());
-		String text = (uppercase) ? xl_text.to_upper() : xl_text;
+		String text = (uppercase) ? TS->string_to_upper(xl_text, lang) : xl_text;
 		if (visible_chars >= 0 && visible_chars_behavior == VC_CHARS_BEFORE_SHAPING) {
 			text = text.substr(0, visible_chars);
 		}
-		TS->shaped_text_add_string(text_rid, text, font->get_rids(), font_size, opentype_features, (!language.is_empty()) ? language : TranslationServer::get_singleton()->get_tool_locale());
+		if (dirty) {
+			TS->shaped_text_add_string(text_rid, text, font->get_rids(), font_size, opentype_features, lang);
+		} else {
+			int spans = TS->shaped_get_span_count(text_rid);
+			for (int i = 0; i < spans; i++) {
+				TS->shaped_set_span_update_font(text_rid, i, font->get_rids(), font_size, opentype_features);
+			}
+		}
 		TS->shaped_text_set_bidi_override(text_rid, structured_text_parser(st_parser, st_args, text));
 		dirty = false;
+		font_dirty = false;
 		lines_dirty = true;
 	}
 
@@ -183,11 +194,9 @@ void Label::_shape() {
 						TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], width, overrun_flags);
 					}
 				}
-
 			} else if (lines_hidden) {
 				TS->shaped_text_overrun_trim_to_width(lines_rid[visible_lines - 1], width, overrun_flags);
 			}
-
 		} else {
 			// Autowrap disabled.
 			for (int i = 0; i < lines_rid.size(); i++) {
@@ -277,7 +286,7 @@ void Label::_notification(int p_what) {
 			RenderingServer::get_singleton()->canvas_item_set_clip(get_canvas_item(), true);
 		}
 
-		if (dirty || lines_dirty) {
+		if (dirty || font_dirty || lines_dirty) {
 			_shape();
 		}
 
@@ -294,7 +303,7 @@ void Label::_notification(int p_what) {
 		Color font_outline_color = get_theme_color(SNAME("font_outline_color"));
 		int outline_size = get_theme_constant(SNAME("outline_size"));
 		int shadow_outline_size = get_theme_constant(SNAME("shadow_outline_size"));
-		bool rtl = TS->shaped_text_get_direction(text_rid);
+		bool rtl = (TS->shaped_text_get_inferred_direction(text_rid) == TextServer::DIRECTION_RTL);
 		bool rtl_layout = is_layout_rtl();
 
 		style->draw(ci, Rect2(Point2(0, 0), get_size()));
@@ -422,19 +431,19 @@ void Label::_notification(int p_what) {
 
 				// Draw main text.
 				for (int j = 0; j < gl_size; j++) {
-					for (int k = 0; k < glyphs[j].repeat; k++) {
-						// Trim when necessary.
-						if (trim_pos >= 0) {
-							if (rtl) {
-								if (j < trim_pos && (glyphs[j].flags & TextServer::GRAPHEME_IS_VIRTUAL) != TextServer::GRAPHEME_IS_VIRTUAL) {
-									continue;
-								}
-							} else {
-								if (j >= trim_pos && (glyphs[j].flags & TextServer::GRAPHEME_IS_VIRTUAL) != TextServer::GRAPHEME_IS_VIRTUAL) {
-									break;
-								}
+					// Trim when necessary.
+					if (trim_pos >= 0) {
+						if (rtl) {
+							if (j < trim_pos) {
+								continue;
+							}
+						} else {
+							if (j >= trim_pos) {
+								break;
 							}
 						}
+					}
+					for (int k = 0; k < glyphs[j].repeat; k++) {
 						bool skip = (trim_chars && glyphs[j].end > visible_chars) || (trim_glyphs_ltr && (processed_glyphs_ol >= visible_glyphs)) || (trim_glyphs_rtl && (processed_glyphs_ol < total_glyphs - visible_glyphs));
 
 						// Draw glyph outlines and shadow.
@@ -480,19 +489,19 @@ void Label::_notification(int p_what) {
 
 			// Draw main text.
 			for (int j = 0; j < gl_size; j++) {
-				for (int k = 0; k < glyphs[j].repeat; k++) {
-					// Trim when necessary.
-					if (trim_pos >= 0) {
-						if (rtl) {
-							if (j < trim_pos && (glyphs[j].flags & TextServer::GRAPHEME_IS_VIRTUAL) != TextServer::GRAPHEME_IS_VIRTUAL) {
-								continue;
-							}
-						} else {
-							if (j >= trim_pos && (glyphs[j].flags & TextServer::GRAPHEME_IS_VIRTUAL) != TextServer::GRAPHEME_IS_VIRTUAL) {
-								break;
-							}
+				// Trim when necessary.
+				if (trim_pos >= 0) {
+					if (rtl) {
+						if (j < trim_pos) {
+							continue;
+						}
+					} else {
+						if (j >= trim_pos) {
+							break;
 						}
 					}
+				}
+				for (int k = 0; k < glyphs[j].repeat; k++) {
 					bool skip = (trim_chars && glyphs[j].end > visible_chars) || (trim_glyphs_ltr && (processed_glyphs >= visible_glyphs)) || (trim_glyphs_rtl && (processed_glyphs < total_glyphs - visible_glyphs));
 
 					// Draw glyph outlines and shadow.
@@ -522,7 +531,7 @@ void Label::_notification(int p_what) {
 	}
 
 	if (p_what == NOTIFICATION_THEME_CHANGED) {
-		dirty = true;
+		font_dirty = true;
 		update();
 	}
 	if (p_what == NOTIFICATION_RESIZED) {
@@ -532,7 +541,7 @@ void Label::_notification(int p_what) {
 
 Size2 Label::get_minimum_size() const {
 	// don't want to mutable everything
-	if (dirty || lines_dirty) {
+	if (dirty || font_dirty || lines_dirty) {
 		const_cast<Label *>(this)->_shape();
 	}
 
@@ -556,7 +565,7 @@ int Label::get_line_count() const {
 	if (!is_inside_tree()) {
 		return 1;
 	}
-	if (dirty || lines_dirty) {
+	if (dirty || font_dirty || lines_dirty) {
 		const_cast<Label *>(this)->_shape();
 	}
 
@@ -631,7 +640,7 @@ void Label::set_text_direction(Control::TextDirection p_text_direction) {
 	ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3);
 	if (text_direction != p_text_direction) {
 		text_direction = p_text_direction;
-		dirty = true;
+		font_dirty = true;
 		update();
 	}
 }
@@ -639,7 +648,7 @@ void Label::set_text_direction(Control::TextDirection p_text_direction) {
 void Label::set_structured_text_bidi_override(Control::StructuredTextParser p_parser) {
 	if (st_parser != p_parser) {
 		st_parser = p_parser;
-		dirty = true;
+		font_dirty = true;
 		update();
 	}
 }
@@ -650,7 +659,7 @@ Control::StructuredTextParser Label::get_structured_text_bidi_override() const {
 
 void Label::set_structured_text_bidi_override_options(Array p_args) {
 	st_args = p_args;
-	dirty = true;
+	font_dirty = true;
 	update();
 }
 
@@ -664,7 +673,7 @@ Control::TextDirection Label::get_text_direction() const {
 
 void Label::clear_opentype_features() {
 	opentype_features.clear();
-	dirty = true;
+	font_dirty = true;
 	update();
 }
 
@@ -672,7 +681,7 @@ void Label::set_opentype_feature(const String &p_name, int p_value) {
 	int32_t tag = TS->name_to_tag(p_name);
 	if (!opentype_features.has(tag) || (int)opentype_features[tag] != p_value) {
 		opentype_features[tag] = p_value;
-		dirty = true;
+		font_dirty = true;
 		update();
 	}
 }
@@ -799,7 +808,7 @@ int Label::get_max_lines_visible() const {
 }
 
 int Label::get_total_character_count() const {
-	if (dirty || lines_dirty) {
+	if (dirty || font_dirty || lines_dirty) {
 		const_cast<Label *>(this)->_shape();
 	}
 
@@ -811,17 +820,17 @@ bool Label::_set(const StringName &p_name, const Variant &p_value) {
 	if (str.begins_with("opentype_features/")) {
 		String name = str.get_slicec('/', 1);
 		int32_t tag = TS->name_to_tag(name);
-		double value = p_value;
+		int value = p_value;
 		if (value == -1) {
 			if (opentype_features.has(tag)) {
 				opentype_features.erase(tag);
-				dirty = true;
+				font_dirty = true;
 				update();
 			}
 		} else {
-			if ((double)opentype_features[tag] != value) {
+			if (!opentype_features.has(tag) || (int)opentype_features[tag] != value) {
 				opentype_features[tag] = value;
-				dirty = true;
+				font_dirty = true;
 				update();
 			}
 		}
@@ -851,7 +860,7 @@ bool Label::_get(const StringName &p_name, Variant &r_ret) const {
 void Label::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (const Variant *ftr = opentype_features.next(nullptr); ftr != nullptr; ftr = opentype_features.next(ftr)) {
 		String name = TS->tag_to_name(*ftr);
-		p_list->push_back(PropertyInfo(Variant::FLOAT, "opentype_features/" + name));
+		p_list->push_back(PropertyInfo(Variant::INT, "opentype_features/" + name));
 	}
 	p_list->push_back(PropertyInfo(Variant::NIL, "opentype_features/_new", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR));
 }
@@ -917,7 +926,7 @@ void Label::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT, "", PROPERTY_USAGE_DEFAULT_INTL), "set_text", "get_text");
 	ADD_GROUP("Locale", "");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "text_direction", PROPERTY_HINT_ENUM, "Auto,Left-to-Right,Right-to-Left,Inherited"), "set_text_direction", "get_text_direction");
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "language"), "set_language", "get_language");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "language", PROPERTY_HINT_LOCALE_ID, ""), "set_language", "get_language");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "horizontal_alignment", PROPERTY_HINT_ENUM, "Left,Center,Right,Fill"), "set_horizontal_alignment", "get_horizontal_alignment");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "vertical_alignment", PROPERTY_HINT_ENUM, "Top,Center,Bottom,Fill"), "set_vertical_alignment", "get_vertical_alignment");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "autowrap_mode", PROPERTY_HINT_ENUM, "Off,Arbitrary,Word,Word (Smart)"), "set_autowrap_mode", "get_autowrap_mode");

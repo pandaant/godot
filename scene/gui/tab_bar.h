@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -63,16 +63,19 @@ private:
 
 		Ref<TextLine> text_buf;
 		Ref<Texture2D> icon;
-		int ofs_cache = 0;
 		bool disabled = false;
+		bool hidden = false;
+		int ofs_cache = 0;
 		int size_cache = 0;
 		int size_text = 0;
-		int x_cache = 0;
-		int x_size_cache = 0;
 
 		Ref<Texture2D> right_button;
 		Rect2 rb_rect;
 		Rect2 cb_rect;
+
+		Tab() {
+			text_buf.instantiate();
+		}
 	};
 
 	int offset = 0;
@@ -98,6 +101,7 @@ private:
 	int min_width = 0;
 	bool scrolling_enabled = true;
 	bool drag_to_rearrange_enabled = false;
+	bool scroll_to_selected = true;
 	int tabs_rearrange_group = -1;
 
 	int get_tab_width(int p_idx) const;
@@ -109,9 +113,13 @@ private:
 	void _on_mouse_exited();
 
 	void _shape(int p_tab);
+	void _draw_tab(Ref<StyleBox> &p_tab_style, Color &p_font_color, int p_index, float p_x);
 
 protected:
 	virtual void gui_input(const Ref<InputEvent> &p_event) override;
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 	void _notification(int p_what);
 	static void _bind_methods();
 
@@ -140,10 +148,13 @@ public:
 	Ref<Texture2D> get_tab_icon(int p_tab) const;
 
 	void set_tab_disabled(int p_tab, bool p_disabled);
-	bool get_tab_disabled(int p_tab) const;
+	bool is_tab_disabled(int p_tab) const;
 
-	void set_tab_right_button(int p_tab, const Ref<Texture2D> &p_right_button);
-	Ref<Texture2D> get_tab_right_button(int p_tab) const;
+	void set_tab_hidden(int p_tab, bool p_hidden);
+	bool is_tab_hidden(int p_tab) const;
+
+	void set_tab_button_icon(int p_tab, const Ref<Texture2D> &p_icon);
+	Ref<Texture2D> get_tab_button_icon(int p_tab) const;
 
 	void set_tab_alignment(AlignmentMode p_alignment);
 	AlignmentMode get_tab_alignment() const;
@@ -156,7 +167,9 @@ public:
 	void set_tab_close_display_policy(CloseButtonDisplayPolicy p_policy);
 	CloseButtonDisplayPolicy get_tab_close_display_policy() const;
 
+	void set_tab_count(int p_count);
 	int get_tab_count() const;
+
 	void set_current_tab(int p_current);
 	int get_current_tab() const;
 	int get_previous_tab() const;
@@ -176,6 +189,9 @@ public:
 	bool get_drag_to_rearrange_enabled() const;
 	void set_tabs_rearrange_group(int p_group_id);
 	int get_tabs_rearrange_group() const;
+
+	void set_scroll_to_selected(bool p_enabled);
+	bool get_scroll_to_selected() const;
 
 	void set_select_with_rmb(bool p_enabled);
 	bool get_select_with_rmb() const;

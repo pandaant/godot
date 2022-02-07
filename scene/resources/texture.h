@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -595,7 +595,7 @@ public:
 private:
 	mutable RID _texture;
 	Ref<Curve> _curve;
-	int _width = 2048;
+	int _width = 256;
 	int _current_width = 0;
 	TextureMode texture_mode = TEXTURE_MODE_RGB;
 	TextureMode _current_texture_mode = TEXTURE_MODE_RGB;
@@ -637,7 +637,7 @@ private:
 	Ref<Curve> _curve_x;
 	Ref<Curve> _curve_y;
 	Ref<Curve> _curve_z;
-	int _width = 2048;
+	int _width = 256;
 	int _current_width = 0;
 
 	void _update();
@@ -685,7 +685,7 @@ private:
 	Ref<Gradient> gradient;
 	bool update_pending = false;
 	RID texture;
-	int width = 2048;
+	int width = 256;
 	bool use_hdr = false;
 
 	void _queue_update();
