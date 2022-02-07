@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -146,6 +146,10 @@ bool OS::is_in_low_processor_usage_mode() const {
 	return low_processor_usage_mode;
 }
 
+void OS::set_update_vital_only(bool p_enabled) {
+	_update_vital_only = p_enabled;
+}
+
 void OS::set_low_processor_usage_mode_sleep_usec(int p_usec) {
 	low_processor_usage_mode_sleep_usec = p_usec;
 }
@@ -157,8 +161,13 @@ int OS::get_low_processor_usage_mode_sleep_usec() const {
 void OS::set_clipboard(const String &p_text) {
 	_local_clipboard = p_text;
 }
+
 String OS::get_clipboard() const {
 	return _local_clipboard;
+}
+
+bool OS::has_clipboard() const {
+	return !get_clipboard().empty();
 }
 
 String OS::get_executable_path() const {
@@ -213,6 +222,10 @@ void OS::hide_virtual_keyboard() {
 
 int OS::get_virtual_keyboard_height() const {
 	return 0;
+}
+
+uint32_t OS::keyboard_get_scancode_from_physical(uint32_t p_scancode) const {
+	return p_scancode;
 }
 
 void OS::set_cursor_shape(CursorShape p_shape) {
@@ -478,7 +491,7 @@ String OS::get_model_name() const {
 }
 
 void OS::set_cmdline(const char *p_execpath, const List<String> &p_args) {
-	_execpath = p_execpath;
+	_execpath = String::utf8(p_execpath);
 	_cmdline = p_args;
 };
 
@@ -825,6 +838,8 @@ OS::OS() {
 	_keep_screen_on = true; // set default value to true, because this had been true before godot 2.0.
 	low_processor_usage_mode = false;
 	low_processor_usage_mode_sleep_usec = 10000;
+	_update_vital_only = false;
+	_update_pending = false;
 	_verbose_stdout = false;
 	_debug_stdout = false;
 	_no_window = false;

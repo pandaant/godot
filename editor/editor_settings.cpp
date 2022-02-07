@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -335,7 +335,6 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	hints["interface/editor/unfocused_low_processor_mode_sleep_usec"] = PropertyInfo(Variant::REAL, "interface/editor/unfocused_low_processor_mode_sleep_usec", PROPERTY_HINT_RANGE, "1,1000000,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/editor/separate_distraction_mode", false);
 	_initial_set("interface/editor/automatically_open_screenshots", true);
-	_initial_set("interface/editor/hide_console_window", false);
 	_initial_set("interface/editor/save_each_scene_on_quit", true); // Regression
 	_initial_set("interface/editor/quit_confirmation", true);
 
@@ -1293,6 +1292,19 @@ void EditorSettings::load_favorites() {
 	}
 }
 
+// The logic for this is rather convoluted as it takes into account whether
+// vital updates only is selected.
+bool EditorSettings::is_caret_blink_active() const {
+	bool blink = get("text_editor/cursor/caret_blink");
+	bool vital_only = get("interface/editor/update_vital_only");
+	bool continuous = get("interface/editor/update_continuously");
+
+	if (vital_only && !continuous) {
+		blink = false;
+	}
+	return blink;
+}
+
 bool EditorSettings::is_dark_theme() {
 	int AUTO_COLOR = 0;
 	int LIGHT_COLOR = 2;
@@ -1450,7 +1462,7 @@ float EditorSettings::get_auto_display_scale() const {
 	return OS::get_singleton()->get_screen_max_scale();
 #else
 	const int screen = OS::get_singleton()->get_current_screen();
-	// Use the smallest dimension to use a correct display scale on portait displays.
+	// Use the smallest dimension to use a correct display scale on portrait displays.
 	const int smallest_dimension = MIN(OS::get_singleton()->get_screen_size(screen).x, OS::get_singleton()->get_screen_size(screen).y);
 	if (OS::get_singleton()->get_screen_dpi(screen) >= 192 && smallest_dimension >= 1400) {
 		// hiDPI display.
