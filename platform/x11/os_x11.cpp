@@ -806,6 +806,20 @@ String OS_X11::get_unique_id() const {
 	return machine_id;
 }
 
+String OS_X11::get_processor_name() const {
+	FileAccessRef f = FileAccess::open("/proc/cpuinfo", FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(!f, "", String("Couldn't open `/proc/cpuinfo` to get the CPU model name. Returning an empty string."));
+
+	while (!f->eof_reached()) {
+		const String line = f->get_line();
+		if (line.find("model name") != -1) {
+			return line.split(":")[1].strip_edges();
+		}
+	}
+
+	ERR_FAIL_V_MSG("", String("Couldn't get the CPU model name from `/proc/cpuinfo`. Returning an empty string."));
+}
+
 void OS_X11::finalize() {
 	events_thread_done = true;
 	events_thread.wait_to_finish();
@@ -1868,7 +1882,7 @@ void OS_X11::_handle_key_event(XKeyEvent *p_event, LocalVector<XEvent> &p_events
 	// still works in half the cases. (won't handle deadkeys)
 	// For more complex input methods (deadkeys and more advanced)
 	// you have to use XmbLookupString (??).
-	// So.. then you have to chosse which of both results
+	// So.. then you have to choose which of both results
 	// you want to keep.
 	// This is a real bizarreness and cpu waster.
 
@@ -2638,7 +2652,7 @@ void OS_X11::process_xevents() {
 				window_focused = false;
 
 				if (mouse_mode_grab) {
-					//dear X11, I try, I really try, but you never work, you do whathever you want.
+					//dear X11, I try, I really try, but you never work, you do whatever you want.
 					if (mouse_mode == MOUSE_MODE_CAPTURED) {
 						// Show the cursor if we're in captured mode so it doesn't look weird.
 						XUndefineCursor(x11_display, x11_window);
@@ -3890,7 +3904,7 @@ Error OS_X11::move_to_trash(const String &p_path) {
 		DirAccessRef dir_access = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		Error err = dir_access->make_dir_recursive(trash_path);
 
-		// Issue an error if trash can is not created proprely.
+		// Issue an error if trash can is not created properly.
 		ERR_FAIL_COND_V_MSG(err != OK, err, "Could not create the trash path \"" + trash_path + "\"");
 		err = dir_access->make_dir_recursive(trash_path + "/files");
 		ERR_FAIL_COND_V_MSG(err != OK, err, "Could not create the trash path \"" + trash_path + "\"/files");

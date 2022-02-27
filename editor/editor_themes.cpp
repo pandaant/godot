@@ -1010,6 +1010,12 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_constant("margin_bottom", "MarginContainer", 0);
 	theme->set_constant("hseparation", "GridContainer", default_margin_size * EDSCALE);
 	theme->set_constant("vseparation", "GridContainer", default_margin_size * EDSCALE);
+	theme->set_constant("hseparation", "FlowContainer", default_margin_size * EDSCALE);
+	theme->set_constant("vseparation", "FlowContainer", default_margin_size * EDSCALE);
+	theme->set_constant("hseparation", "HFlowContainer", default_margin_size * EDSCALE);
+	theme->set_constant("vseparation", "HFlowContainer", default_margin_size * EDSCALE);
+	theme->set_constant("hseparation", "VFlowContainer", default_margin_size * EDSCALE);
+	theme->set_constant("vseparation", "VFlowContainer", default_margin_size * EDSCALE);
 
 	// WindowDialog
 	Ref<StyleBoxFlat> style_window = style_popup->duplicate();
@@ -1331,7 +1337,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	const Color completion_background_color = dark_theme ? base_color : background_color;
 	const Color completion_selected_color = alpha1;
 	const Color completion_existing_color = alpha2;
-	const Color completion_scroll_color = alpha1;
+	const Color completion_scroll_color = Color(mono_value, mono_value, mono_value, 0.29);
 	const Color completion_font_color = font_color;
 	const Color text_color = font_color;
 	const Color line_number_color = dim_color;

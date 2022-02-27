@@ -165,8 +165,25 @@ String ProjectSettings::globalize_path(const String &p_path) const {
 	return p_path;
 }
 
+void ProjectSettings::update() {
+	if (_dirty_this_frame) {
+		// A signal is sent a single time at the end of the frame when project settings
+		// are changed. This allows objects to respond.
+		// Alternatively objects outside the signal system can query ProjectSettings::has_changes()
+		if (_dirty_this_frame == 2) {
+			emit_signal("project_settings_changed");
+		}
+
+		_dirty_this_frame--;
+	}
+}
+
 bool ProjectSettings::_set(const StringName &p_name, const Variant &p_value) {
 	_THREAD_SAFE_METHOD_
+
+	// marking the project settings as dirty allows them only to be
+	// checked when dirty.
+	_dirty_this_frame = 2;
 
 	if (p_value.get_type() == Variant::NIL) {
 		props.erase(p_name);
@@ -514,7 +531,11 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bo
 bool ProjectSettings::has_setting(String p_var) const {
 	_THREAD_SAFE_METHOD_
 
-	return props.has(p_var);
+	StringName name = p_var;
+	if (!disable_feature_overrides && feature_overrides.has(name)) {
+		name = feature_overrides[name];
+	}
+	return props.has(name);
 }
 
 void ProjectSettings::set_registering_order(bool p_enable) {
@@ -1022,6 +1043,8 @@ void ProjectSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("property_get_revert", "name"), &ProjectSettings::property_get_revert);
 
 	ClassDB::bind_method(D_METHOD("save_custom", "file"), &ProjectSettings::_save_custom_bnd);
+
+	ADD_SIGNAL(MethodInfo("project_settings_changed"));
 }
 
 ProjectSettings::ProjectSettings() {
