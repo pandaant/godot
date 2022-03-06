@@ -339,6 +339,7 @@ class DisplayServerWindows : public DisplayServer {
 		bool always_on_top = false;
 		bool no_focus = false;
 		bool window_has_focus = false;
+		bool exclusive = false;
 
 		// Used to transfer data between events using timer.
 		WPARAM saved_wparam;
@@ -386,9 +387,15 @@ class DisplayServerWindows : public DisplayServer {
 
 		WindowID transient_parent = INVALID_WINDOW_ID;
 		Set<WindowID> transient_children;
+
+		bool is_popup = false;
+		Rect2i parent_safe_rect;
 	};
 
 	JoypadWindows *joypad;
+	HHOOK mouse_monitor = nullptr;
+	List<WindowID> popup_list;
+	uint64_t time_since_popup = 0;
 
 	WindowID _create_window(WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Rect2i &p_rect);
 	WindowID window_id_counter = MAIN_WINDOW_ID;
@@ -439,6 +446,10 @@ class DisplayServerWindows : public DisplayServer {
 
 public:
 	LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT MouseProc(int code, WPARAM wParam, LPARAM lParam);
+
+	void popup_open(WindowID p_window);
+	void popup_close(WindowID p_window);
 
 	virtual bool has_feature(Feature p_feature) const override;
 	virtual String get_name() const override;
@@ -473,6 +484,10 @@ public:
 	virtual void show_window(WindowID p_window) override;
 	virtual void delete_sub_window(WindowID p_window) override;
 
+	virtual WindowID window_get_active_popup() const override;
+	virtual void window_set_popup_safe_rect(WindowID p_window, const Rect2i &p_rect) override;
+	virtual Rect2i window_get_popup_safe_rect(WindowID p_window) const override;
+
 	virtual int64_t window_get_native_handle(HandleType p_handle_type, WindowID p_window = MAIN_WINDOW_ID) const override;
 
 	virtual WindowID get_window_at_screen_position(const Point2i &p_position) const override;
@@ -499,6 +514,7 @@ public:
 	virtual void window_set_position(const Point2i &p_position, WindowID p_window = MAIN_WINDOW_ID) override;
 
 	virtual void window_set_transient(WindowID p_window, WindowID p_parent) override;
+	virtual void window_set_exclusive(WindowID p_window, bool p_exclusive) override;
 
 	virtual void window_set_max_size(const Size2i p_size, WindowID p_window = MAIN_WINDOW_ID) override;
 	virtual Size2i window_get_max_size(WindowID p_window = MAIN_WINDOW_ID) const override;

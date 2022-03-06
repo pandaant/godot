@@ -44,9 +44,10 @@
 #include "core/object/script_language.h"
 #include "core/version.h"
 #include "editor/editor_file_system.h"
+#include "editor/editor_node.h"
+#include "editor/editor_paths.h"
+#include "editor/editor_settings.h"
 #include "editor/plugins/script_editor_plugin.h"
-#include "editor_node.h"
-#include "editor_settings.h"
 #include "scene/resources/resource_format_text.h"
 
 static int _get_pad(int p_alignment, int p_n) {
@@ -1543,6 +1544,7 @@ void EditorExport::_notification(int p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			load_config();
 		} break;
+
 		case NOTIFICATION_PROCESS: {
 			update_export_presets();
 		} break;

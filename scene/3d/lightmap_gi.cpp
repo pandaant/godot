@@ -982,7 +982,7 @@ LightmapGI::BakeError LightmapGI::bake(Node *p_from_node, String p_image_data_pa
 		}
 
 		config->set_value("remap", "importer", "2d_array_texture");
-		config->set_value("remap", "type", "StreamTexture2DArray");
+		config->set_value("remap", "type", "CompressedTexture2DArray");
 		if (!config->has_section_key("params", "compress/mode")) {
 			config->set_value("params", "compress/mode", 2); //user may want another compression, so leave it be
 		}
@@ -1176,16 +1176,18 @@ LightmapGI::BakeError LightmapGI::bake(Node *p_from_node, String p_image_data_pa
 }
 
 void LightmapGI::_notification(int p_what) {
-	if (p_what == NOTIFICATION_POST_ENTER_TREE) {
-		if (light_data.is_valid()) {
-			_assign_lightmaps();
-		}
-	}
+	switch (p_what) {
+		case NOTIFICATION_POST_ENTER_TREE: {
+			if (light_data.is_valid()) {
+				_assign_lightmaps();
+			}
+		} break;
 
-	if (p_what == NOTIFICATION_EXIT_TREE) {
-		if (light_data.is_valid()) {
-			_clear_lightmaps();
-		}
+		case NOTIFICATION_EXIT_TREE: {
+			if (light_data.is_valid()) {
+				_clear_lightmaps();
+			}
+		} break;
 	}
 }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="ParticlesMaterial" inherits="Material" version="4.0">
+<class name="ParticlesMaterial" inherits="Material" version="4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
 		Particle properties for [GPUParticles3D] and [GPUParticles2D] nodes.
 	</brief_description>
@@ -114,7 +114,7 @@
 			True if the interaction with particle attractors is enabled.
 		</member>
 		<member name="collision_bounce" type="float" setter="set_collision_bounce" getter="get_collision_bounce" default="0.0">
-			Collision bouncyness.
+			Collision bounciness.
 		</member>
 		<member name="collision_enabled" type="bool" setter="set_collision_enabled" getter="is_collision_enabled" default="false">
 			True if collisions are enabled for this particle system.

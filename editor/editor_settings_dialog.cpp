@@ -34,11 +34,11 @@
 #include "core/input/input_map.h"
 #include "core/os/keyboard.h"
 #include "editor/debugger/editor_debugger_node.h"
-#include "editor_file_system.h"
-#include "editor_log.h"
-#include "editor_node.h"
-#include "editor_scale.h"
-#include "editor_settings.h"
+#include "editor/editor_file_system.h"
+#include "editor/editor_log.h"
+#include "editor/editor_node.h"
+#include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
 #include "scene/gui/margin_container.h"
 
 void EditorSettingsDialog::ok_pressed() {
@@ -121,19 +121,26 @@ void EditorSettingsDialog::_notification(int p_what) {
 				set_process_unhandled_input(false);
 			}
 		} break;
+
 		case NOTIFICATION_READY: {
 			undo_redo->set_method_notify_callback(EditorDebuggerNode::_method_changeds, nullptr);
 			undo_redo->set_property_notify_callback(EditorDebuggerNode::_property_changeds, nullptr);
 			undo_redo->set_commit_notify_callback(_undo_redo_callback, this);
 		} break;
+
 		case NOTIFICATION_ENTER_TREE: {
 			_update_icons();
 		} break;
+
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
 			_update_icons();
-			// Update theme colors.
-			inspector->update_category_list();
-			_update_shortcuts();
+
+			bool update_shortcuts_tab =
+					EditorSettings::get_singleton()->check_changed_settings_in_group("shortcuts") ||
+					EditorSettings::get_singleton()->check_changed_settings_in_group("builtin_action_overrides");
+			if (update_shortcuts_tab) {
+				_update_shortcuts();
+			}
 		} break;
 	}
 }
@@ -212,6 +219,8 @@ void EditorSettingsDialog::_update_builtin_action(const String &p_name, const Ar
 	Array old_input_array = EditorSettings::get_singleton()->get_builtin_action_overrides(p_name);
 
 	undo_redo->create_action(TTR("Edit Built-in Action") + " '" + p_name + "'");
+	undo_redo->add_do_method(EditorSettings::get_singleton(), "mark_setting_changed", "builtin_action_overrides");
+	undo_redo->add_undo_method(EditorSettings::get_singleton(), "mark_setting_changed", "builtin_action_overrides");
 	undo_redo->add_do_method(EditorSettings::get_singleton(), "set_builtin_action_override", p_name, p_events);
 	undo_redo->add_undo_method(EditorSettings::get_singleton(), "set_builtin_action_override", p_name, old_input_array);
 	undo_redo->add_do_method(this, "_settings_changed");
@@ -227,6 +236,8 @@ void EditorSettingsDialog::_update_shortcut_events(const String &p_path, const A
 	undo_redo->create_action(TTR("Edit Shortcut") + " '" + p_path + "'");
 	undo_redo->add_do_method(current_sc.ptr(), "set_events", p_events);
 	undo_redo->add_undo_method(current_sc.ptr(), "set_events", current_sc->get_events());
+	undo_redo->add_do_method(EditorSettings::get_singleton(), "mark_setting_changed", "shortcuts");
+	undo_redo->add_undo_method(EditorSettings::get_singleton(), "mark_setting_changed", "shortcuts");
 	undo_redo->add_do_method(this, "_update_shortcuts");
 	undo_redo->add_undo_method(this, "_update_shortcuts");
 	undo_redo->add_do_method(this, "_settings_changed");
@@ -272,15 +283,15 @@ void EditorSettingsDialog::_create_shortcut_treeitem(TreeItem *p_parent, const S
 	shortcut_item->set_text(1, sc_text);
 	if (sc_text == "None") {
 		// Fade out unassigned shortcut labels for easier visual grepping.
-		shortcut_item->set_custom_color(1, shortcuts->get_theme_color("font_color", "Label") * Color(1, 1, 1, 0.5));
+		shortcut_item->set_custom_color(1, shortcuts->get_theme_color(SNAME("font_color"), SNAME("Label")) * Color(1, 1, 1, 0.5));
 	}
 
 	if (p_allow_revert) {
-		shortcut_item->add_button(1, shortcuts->get_theme_icon("Reload", "EditorIcons"), SHORTCUT_REVERT);
+		shortcut_item->add_button(1, shortcuts->get_theme_icon(SNAME("Reload"), SNAME("EditorIcons")), SHORTCUT_REVERT);
 	}
 
-	shortcut_item->add_button(1, shortcuts->get_theme_icon("Add", "EditorIcons"), SHORTCUT_ADD);
-	shortcut_item->add_button(1, shortcuts->get_theme_icon("Close", "EditorIcons"), SHORTCUT_ERASE);
+	shortcut_item->add_button(1, shortcuts->get_theme_icon(SNAME("Add"), SNAME("EditorIcons")), SHORTCUT_ADD);
+	shortcut_item->add_button(1, shortcuts->get_theme_icon(SNAME("Close"), SNAME("EditorIcons")), SHORTCUT_ERASE);
 
 	shortcut_item->set_meta("is_action", p_is_action);
 	shortcut_item->set_meta("type", "shortcut");
@@ -299,11 +310,11 @@ void EditorSettingsDialog::_create_shortcut_treeitem(TreeItem *p_parent, const S
 		event_item->set_text(0, shortcut_item->get_child_count() == 1 ? "Primary" : "");
 		event_item->set_text(1, ie->as_text());
 
-		event_item->add_button(1, shortcuts->get_theme_icon("Edit", "EditorIcons"), SHORTCUT_EDIT);
-		event_item->add_button(1, shortcuts->get_theme_icon("Close", "EditorIcons"), SHORTCUT_ERASE);
+		event_item->add_button(1, shortcuts->get_theme_icon(SNAME("Edit"), SNAME("EditorIcons")), SHORTCUT_EDIT);
+		event_item->add_button(1, shortcuts->get_theme_icon(SNAME("Close"), SNAME("EditorIcons")), SHORTCUT_ERASE);
 
-		event_item->set_custom_bg_color(0, shortcuts->get_theme_color("dark_color_3", "Editor"));
-		event_item->set_custom_bg_color(1, shortcuts->get_theme_color("dark_color_3", "Editor"));
+		event_item->set_custom_bg_color(0, shortcuts->get_theme_color(SNAME("dark_color_3"), SNAME("Editor")));
+		event_item->set_custom_bg_color(1, shortcuts->get_theme_color(SNAME("dark_color_3"), SNAME("Editor")));
 
 		event_item->set_meta("is_action", p_is_action);
 		event_item->set_meta("type", "event");
@@ -365,6 +376,11 @@ void EditorSettingsDialog::_update_shortcuts() {
 
 		Array events; // Need to get the list of events into an array so it can be set as metadata on the item.
 		Vector<String> event_strings;
+
+		// Skip non-builtin actions.
+		if (!InputMap::get_singleton()->get_builtins_with_feature_overrides_applied().has(action_name)) {
+			continue;
+		}
 
 		List<Ref<InputEvent>> all_default_events = InputMap::get_singleton()->get_builtins_with_feature_overrides_applied().find(action_name).value();
 		List<Ref<InputEventKey>> key_default_events;
@@ -654,7 +670,7 @@ EditorSettingsDialog::EditorSettingsDialog() {
 	undo_redo = memnew(UndoRedo);
 
 	tabs = memnew(TabContainer);
-	tabs->set_tab_alignment(TabContainer::ALIGNMENT_LEFT);
+	tabs->set_tab_alignment(TabBar::ALIGNMENT_LEFT);
 	tabs->connect("tab_changed", callable_mp(this, &EditorSettingsDialog::_tabs_tab_changed));
 	add_child(tabs);
 

@@ -31,15 +31,13 @@
 #ifndef EDITOR_SETTINGS_H
 #define EDITOR_SETTINGS_H
 
-#include "core/input/shortcut.h"
 #include "core/io/config_file.h"
 #include "core/io/resource.h"
-#include "core/object/class_db.h"
 #include "core/os/thread_safe.h"
-#include "core/string/translation.h"
-#include "editor/editor_paths.h"
 
 class EditorPlugin;
+class InputEvent;
+class Shortcut;
 
 class EditorSettings : public Resource {
 	GDCLASS(EditorSettings, Resource);
@@ -78,6 +76,8 @@ private:
 	};
 
 	static Ref<EditorSettings> singleton;
+
+	Set<String> changed_settings;
 
 	HashMap<String, PropertyInfo> hints;
 	HashMap<String, VariantContainer> props;
@@ -142,6 +142,9 @@ public:
 	bool property_can_revert(const String &p_setting);
 	Variant property_get_revert(const String &p_setting);
 	void add_property_hint(const PropertyInfo &p_hint);
+	Array get_changed_settings() const;
+	bool check_changed_settings_in_group(const String &p_setting_prefix) const;
+	void mark_setting_changed(const String &p_setting);
 
 	void set_resource_clipboard(const Ref<Resource> &p_resource) { clipboard = p_resource; }
 	Ref<Resource> get_resource_clipboard() const { return clipboard; }
@@ -161,7 +164,7 @@ public:
 	Vector<String> get_favorites() const;
 	void set_recent_dirs(const Vector<String> &p_recent_dirs);
 	Vector<String> get_recent_dirs() const;
-	void load_favorites();
+	void load_favorites_and_recent_dirs();
 
 	bool is_dark_theme();
 

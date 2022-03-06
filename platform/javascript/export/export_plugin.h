@@ -31,6 +31,7 @@
 #ifndef JAVASCRIPT_EXPORT_PLUGIN_H
 #define JAVASCRIPT_EXPORT_PLUGIN_H
 
+#include "core/config/project_settings.h"
 #include "core/io/image_loader.h"
 #include "core/io/stream_peer_ssl.h"
 #include "core/io/tcp_server.h"

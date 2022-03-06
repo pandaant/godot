@@ -4432,9 +4432,13 @@ void TileSetAtlasSource::_update_padded_texture() {
 
 	Ref<Image> src = texture->get_image();
 
+	if (!src.is_valid()) {
+		return;
+	}
+
 	Ref<Image> image;
 	image.instantiate();
-	image->create(size.x, size.y, false, Image::FORMAT_RGBA8);
+	image->create(size.x, size.y, false, src->get_format());
 
 	for (KeyValue<Vector2i, TileAlternativesData> kv : tiles) {
 		for (int frame = 0; frame < (int)kv.value.animation_frames_durations.size(); frame++) {

@@ -260,9 +260,9 @@
 static Ref<ResourceFormatSaverText> resource_saver_text;
 static Ref<ResourceFormatLoaderText> resource_loader_text;
 
-static Ref<ResourceFormatLoaderStreamTexture2D> resource_loader_stream_texture;
-static Ref<ResourceFormatLoaderStreamTextureLayered> resource_loader_texture_layered;
-static Ref<ResourceFormatLoaderStreamTexture3D> resource_loader_texture_3d;
+static Ref<ResourceFormatLoaderCompressedTexture2D> resource_loader_stream_texture;
+static Ref<ResourceFormatLoaderCompressedTextureLayered> resource_loader_texture_layered;
+static Ref<ResourceFormatLoaderCompressedTexture3D> resource_loader_texture_3d;
 
 static Ref<ResourceFormatSaverShader> resource_saver_shader;
 static Ref<ResourceFormatLoaderShader> resource_loader_shader;
@@ -470,7 +470,12 @@ void register_scene_types() {
 	GDREGISTER_CLASS(XROrigin3D);
 	GDREGISTER_CLASS(MeshInstance3D);
 	GDREGISTER_CLASS(OccluderInstance3D);
-	GDREGISTER_CLASS(Occluder3D);
+	GDREGISTER_VIRTUAL_CLASS(Occluder3D);
+	GDREGISTER_CLASS(ArrayOccluder3D);
+	GDREGISTER_CLASS(QuadOccluder3D);
+	GDREGISTER_CLASS(BoxOccluder3D);
+	GDREGISTER_CLASS(SphereOccluder3D);
+	GDREGISTER_CLASS(PolygonOccluder3D);
 	GDREGISTER_VIRTUAL_CLASS(SpriteBase3D);
 	GDREGISTER_CLASS(Sprite3D);
 	GDREGISTER_CLASS(AnimatedSprite3D);
@@ -800,7 +805,7 @@ void register_scene_types() {
 	GDREGISTER_VIRTUAL_CLASS(Texture);
 	GDREGISTER_VIRTUAL_CLASS(Texture2D);
 	GDREGISTER_CLASS(Sky);
-	GDREGISTER_CLASS(StreamTexture2D);
+	GDREGISTER_CLASS(CompressedTexture2D);
 	GDREGISTER_CLASS(ImageTexture);
 	GDREGISTER_CLASS(AtlasTexture);
 	GDREGISTER_CLASS(MeshTexture);
@@ -815,14 +820,14 @@ void register_scene_types() {
 	GDREGISTER_VIRTUAL_CLASS(ImageTextureLayered);
 	GDREGISTER_VIRTUAL_CLASS(Texture3D);
 	GDREGISTER_CLASS(ImageTexture3D);
-	GDREGISTER_CLASS(StreamTexture3D);
+	GDREGISTER_CLASS(CompressedTexture3D);
 	GDREGISTER_CLASS(Cubemap);
 	GDREGISTER_CLASS(CubemapArray);
 	GDREGISTER_CLASS(Texture2DArray);
-	GDREGISTER_VIRTUAL_CLASS(StreamTextureLayered);
-	GDREGISTER_CLASS(StreamCubemap);
-	GDREGISTER_CLASS(StreamCubemapArray);
-	GDREGISTER_CLASS(StreamTexture2DArray);
+	GDREGISTER_VIRTUAL_CLASS(CompressedTextureLayered);
+	GDREGISTER_CLASS(CompressedCubemap);
+	GDREGISTER_CLASS(CompressedCubemapArray);
+	GDREGISTER_CLASS(CompressedTexture2DArray);
 
 	GDREGISTER_CLASS(Animation);
 	GDREGISTER_CLASS(FontData);
@@ -1008,7 +1013,7 @@ void register_scene_types() {
 	ClassDB::add_compatibility_class("SpringArm", "SpringArm3D");
 	ClassDB::add_compatibility_class("Sprite", "Sprite2D");
 	ClassDB::add_compatibility_class("StaticBody", "StaticBody3D");
-	ClassDB::add_compatibility_class("StreamTexture", "StreamTexture2D");
+	ClassDB::add_compatibility_class("CompressedTexture", "CompressedTexture2D");
 	ClassDB::add_compatibility_class("TextureProgress", "TextureProgressBar");
 	ClassDB::add_compatibility_class("VehicleBody", "VehicleBody3D");
 	ClassDB::add_compatibility_class("VehicleWheel", "VehicleWheel3D");
@@ -1070,10 +1075,21 @@ void initialize_theme() {
 	// Allow creating the default theme at a different scale to suit higher/lower base resolutions.
 	float default_theme_scale = GLOBAL_DEF("gui/theme/default_theme_scale", 1.0);
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/default_theme_scale", PropertyInfo(Variant::FLOAT, "gui/theme/default_theme_scale", PROPERTY_HINT_RANGE, "0.5,8,0.01", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+
 	String theme_path = GLOBAL_DEF_RST("gui/theme/custom", "");
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/custom", PropertyInfo(Variant::STRING, "gui/theme/custom", PROPERTY_HINT_FILE, "*.tres,*.res,*.theme", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+
 	String font_path = GLOBAL_DEF_RST("gui/theme/custom_font", "");
 	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/custom_font", PropertyInfo(Variant::STRING, "gui/theme/custom_font", PROPERTY_HINT_FILE, "*.tres,*.res,*.font", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+
+	bool font_antialiased = (bool)GLOBAL_DEF_RST("gui/theme/default_font_antialiased", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/default_font_antialiased", PropertyInfo(Variant::BOOL, "gui/theme/default_font_antialiased", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+
+	TextServer::Hinting font_hinting = (TextServer::Hinting)(int)GLOBAL_DEF_RST("gui/theme/default_font_hinting", TextServer::HINTING_LIGHT);
+	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/default_font_hinting", PropertyInfo(Variant::INT, "gui/theme/default_font_hinting", PROPERTY_HINT_ENUM, "None,Light,Normal", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+
+	TextServer::SubpixelPositioning font_subpixel_positioning = (TextServer::SubpixelPositioning)(int)GLOBAL_DEF_RST("gui/theme/default_font_subpixel_positioning", TextServer::SUBPIXEL_POSITIONING_AUTO);
+	ProjectSettings::get_singleton()->set_custom_property_info("gui/theme/default_font_subpixel_positioning", PropertyInfo(Variant::INT, "gui/theme/default_font_subpixel_positioning", PROPERTY_HINT_ENUM, "Disabled,Auto,One half of a pixel,One quarter of a pixel", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
 
 	Ref<Font> font;
 	if (!font_path.is_empty()) {
@@ -1085,7 +1101,7 @@ void initialize_theme() {
 
 	// Always make the default theme to avoid invalid default font/icon/style in the given theme.
 	if (RenderingServer::get_singleton()) {
-		make_default_theme(default_theme_scale, font);
+		make_default_theme(default_theme_scale, font, font_subpixel_positioning, font_hinting, font_antialiased);
 	}
 
 	if (!theme_path.is_empty()) {

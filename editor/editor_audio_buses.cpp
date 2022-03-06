@@ -30,11 +30,13 @@
 
 #include "editor_audio_buses.h"
 
+#include "core/config/project_settings.h"
 #include "core/input/input.h"
 #include "core/io/resource_saver.h"
 #include "core/os/keyboard.h"
-#include "editor_node.h"
-#include "editor_scale.h"
+#include "editor/editor_file_dialog.h"
+#include "editor/editor_node.h"
+#include "editor/editor_scale.h"
 #include "filesystem_dock.h"
 #include "scene/resources/font.h"
 #include "servers/audio_server.h"
@@ -90,12 +92,19 @@ void EditorAudioBus::_notification(int p_what) {
 			audio_value_preview_label->add_theme_color_override("font_color", get_theme_color(SNAME("font_color"), SNAME("TooltipLabel")));
 			audio_value_preview_label->add_theme_color_override("font_shadow_color", get_theme_color(SNAME("font_shadow_color"), SNAME("TooltipLabel")));
 			audio_value_preview_box->add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("TooltipPanel")));
+
+			for (int i = 0; i < effect_options->get_item_count(); i++) {
+				String class_name = effect_options->get_item_metadata(i);
+				Ref<Texture> icon = EditorNode::get_singleton()->get_class_icon(class_name);
+				effect_options->set_item_icon(i, icon);
+			}
 		} break;
 
 		case NOTIFICATION_READY: {
 			update_bus();
 			set_process(true);
 		} break;
+
 		case NOTIFICATION_DRAW: {
 			if (is_master) {
 				draw_style_box(get_theme_stylebox(SNAME("disabled"), SNAME("Button")), Rect2(Vector2(), get_size()));
@@ -111,6 +120,7 @@ void EditorAudioBus::_notification(int p_what) {
 				draw_rect(Rect2(Point2(), get_size()), accent, false);
 			}
 		} break;
+
 		case NOTIFICATION_PROCESS: {
 			if (cc != AudioServer::get_singleton()->get_bus_channels(get_index())) {
 				cc = AudioServer::get_singleton()->get_bus_channels(get_index());
@@ -155,6 +165,7 @@ void EditorAudioBus::_notification(int p_what) {
 				}
 			}
 		} break;
+
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			for (int i = 0; i < CHANNELS_MAX; i++) {
 				channel[i].peak_l = -100;
@@ -912,11 +923,9 @@ EditorAudioBus::EditorAudioBus(EditorAudioBuses *p_buses, bool p_is_master) {
 			continue;
 		}
 
-		Ref<Texture2D> icon = EditorNode::get_singleton()->get_class_icon(E);
 		String name = E.operator String().replace("AudioEffect", "");
 		effect_options->add_item(name);
 		effect_options->set_item_metadata(effect_options->get_item_count() - 1, E);
-		effect_options->set_item_icon(effect_options->get_item_count() - 1, icon);
 	}
 
 	bus_options = memnew(MenuButton);
@@ -950,12 +959,14 @@ void EditorAudioBusDrop::_notification(int p_what) {
 				draw_rect(Rect2(Point2(), get_size()), accent, false);
 			}
 		} break;
+
 		case NOTIFICATION_MOUSE_ENTER: {
 			if (!hovering_drop) {
 				hovering_drop = true;
 				update();
 			}
 		} break;
+
 		case NOTIFICATION_MOUSE_EXIT:
 		case NOTIFICATION_DRAG_END: {
 			if (hovering_drop) {
@@ -1015,15 +1026,18 @@ void EditorAudioBuses::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			bus_scroll->add_theme_style_override("bg", get_theme_stylebox(SNAME("bg"), SNAME("Tree")));
 		} break;
+
 		case NOTIFICATION_READY: {
 			_update_buses();
 		} break;
+
 		case NOTIFICATION_DRAG_END: {
 			if (drop_end) {
 				drop_end->queue_delete();
 				drop_end = nullptr;
 			}
 		} break;
+
 		case NOTIFICATION_PROCESS: {
 			// Check if anything was edited.
 			bool edited = AudioServer::get_singleton()->is_edited();
@@ -1318,7 +1332,7 @@ EditorAudioBuses::EditorAudioBuses() {
 	List<String> ext;
 	ResourceLoader::get_recognized_extensions_for_type("AudioBusLayout", &ext);
 	for (const String &E : ext) {
-		file_dialog->add_filter("*." + E + "; Audio Bus Layout");
+		file_dialog->add_filter(vformat("*.%s; %s", E, TTR("Audio Bus Layout")));
 	}
 	add_child(file_dialog);
 	file_dialog->connect("file_selected", callable_mp(this, &EditorAudioBuses::_file_dialog_callback));
@@ -1399,6 +1413,7 @@ void EditorAudioMeterNotches::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			notch_color = get_theme_color(SNAME("font_color"), SNAME("Editor"));
 		} break;
+
 		case NOTIFICATION_DRAW: {
 			_draw_audio_notches();
 		} break;

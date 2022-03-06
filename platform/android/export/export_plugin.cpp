@@ -30,6 +30,26 @@
 
 #include "export_plugin.h"
 
+#include "gradle_export_util.h"
+
+#include "core/config/project_settings.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
+#include "core/io/image_loader.h"
+#include "core/io/json.h"
+#include "core/io/marshalls.h"
+#include "core/version.h"
+#include "drivers/png/png_driver_common.h"
+#include "editor/editor_log.h"
+#include "editor/editor_node.h"
+#include "editor/editor_paths.h"
+#include "editor/editor_settings.h"
+#include "main/splash.gen.h"
+#include "platform/android/logo.gen.h"
+#include "platform/android/run_icon.gen.h"
+
+#include <string.h>
+
 static const char *android_perms[] = {
 	"ACCESS_CHECKIN_PROPERTIES",
 	"ACCESS_COARSE_LOCATION",
@@ -523,7 +543,7 @@ bool EditorExportPlatformAndroid::_should_compress_asset(const String &p_path, c
 		".webp", // Same reasoning as .png
 		".cfb", // Don't let small config files slow-down startup
 		".scn", // Binary scenes are usually already compressed
-		".stex", // Streamable textures are usually already compressed
+		".ctex", // Streamable textures are usually already compressed
 		// Trailer for easier processing
 		nullptr
 	};

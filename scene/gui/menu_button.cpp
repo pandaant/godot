@@ -136,11 +136,16 @@ int MenuButton::get_item_count() const {
 
 void MenuButton::_notification(int p_what) {
 	switch (p_what) {
+		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED: {
+			popup->set_layout_direction((Window::LayoutDirection)get_layout_direction());
+		} break;
+
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (!is_visible_in_tree()) {
 				popup->hide();
 			}
 		} break;
+
 		case NOTIFICATION_INTERNAL_PROCESS: {
 			Vector2i mouse_pos = DisplayServer::get_singleton()->mouse_get_position() - mouse_pos_adjusted;
 			MenuButton *menu_btn_other = Object::cast_to<MenuButton>(get_viewport()->gui_find_control(mouse_pos));
@@ -222,7 +227,8 @@ void MenuButton::set_disable_shortcuts(bool p_disabled) {
 	disable_shortcuts = p_disabled;
 }
 
-MenuButton::MenuButton() {
+MenuButton::MenuButton(const String &p_text) :
+		Button(p_text) {
 	set_flat(true);
 	set_toggle_mode(true);
 	set_disable_shortcuts(false);

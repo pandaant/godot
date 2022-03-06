@@ -33,10 +33,10 @@
 #include "core/error/error_macros.h"
 #include "core/io/resource_loader.h"
 #include "core/variant/dictionary.h"
-#include "editor_fonts.h"
-#include "editor_icons.gen.h"
-#include "editor_scale.h"
-#include "editor_settings.h"
+#include "editor/editor_fonts.h"
+#include "editor/editor_icons.gen.h"
+#include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
 
 #include "modules/modules_enabled.gen.h" // For svg.
 #ifdef MODULE_SVG_ENABLED
@@ -159,7 +159,7 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 
 		ADD_CONVERT_COLOR(dark_icon_color_dictionary, "#ffffff", "#414141"); // Pure white
 		ADD_CONVERT_COLOR(dark_icon_color_dictionary, "#000000", "#bfbfbf"); // Pure black
-		// Keep pure RGB colors as is, but list them for explicity.
+		// Keep pure RGB colors as is, but list them for explicitly.
 		ADD_CONVERT_COLOR(dark_icon_color_dictionary, "#ff0000", "#ff0000"); // Pure red
 		ADD_CONVERT_COLOR(dark_icon_color_dictionary, "#00ff00", "#00ff00"); // Pure green
 		ADD_CONVERT_COLOR(dark_icon_color_dictionary, "#0000ff", "#0000ff"); // Pure blue
@@ -277,6 +277,7 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 		exceptions.insert("StatusSuccess");
 		exceptions.insert("StatusWarning");
 		exceptions.insert("OverbrightIndicator");
+		exceptions.insert("GuiMiniCheckerboard");
 	}
 
 	// These ones should be converted even if we are using a dark theme.
@@ -410,9 +411,11 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	// Colors
 	bool dark_theme = EditorSettings::get_singleton()->is_dark_theme();
 
-	const Color dark_color_1 = base_color.lerp(Color(0, 0, 0, 1), contrast);
-	const Color dark_color_2 = base_color.lerp(Color(0, 0, 0, 1), contrast * 1.5);
-	const Color dark_color_3 = base_color.lerp(Color(0, 0, 0, 1), contrast * 2);
+	// Ensure base colors are in the 0..1 luminance range to avoid 8-bit integer overflow or text rendering issues.
+	// Some places in the editor use 8-bit integer colors.
+	const Color dark_color_1 = base_color.lerp(Color(0, 0, 0, 1), contrast).clamp();
+	const Color dark_color_2 = base_color.lerp(Color(0, 0, 0, 1), contrast * 1.5).clamp();
+	const Color dark_color_3 = base_color.lerp(Color(0, 0, 0, 1), contrast * 2).clamp();
 
 	const Color background_color = dark_color_2;
 
@@ -432,7 +435,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	const Color disabled_color = mono_color.inverted().lerp(base_color, 0.7);
 	const Color disabled_bg_color = mono_color.inverted().lerp(base_color, 0.9);
 
-	Color icon_hover_color = Color(1, 1, 1) * (dark_theme ? 1.15 : 1.45);
+	const Color icon_normal_color = Color(1, 1, 1);
+	Color icon_hover_color = icon_normal_color * (dark_theme ? 1.15 : 1.45);
 	icon_hover_color.a = 1.0;
 	Color icon_focus_color = icon_hover_color;
 	// Make the pressed icon color overbright because icons are not completely white on a dark theme.
@@ -463,9 +467,18 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("axis_y_color", "Editor", Color(0.53, 0.84, 0.01));
 	theme->set_color("axis_z_color", "Editor", Color(0.16, 0.55, 0.96));
 
+	const float prop_color_saturation = accent_color.get_s() * 0.75;
+	const float prop_color_value = accent_color.get_v();
+
+	theme->set_color("property_color_x", "Editor", Color().from_hsv(0.0 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
+	theme->set_color("property_color_y", "Editor", Color().from_hsv(1.0 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
+	theme->set_color("property_color_z", "Editor", Color().from_hsv(2.0 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
+	theme->set_color("property_color_w", "Editor", Color().from_hsv(1.5 / 3.0 + 0.05, prop_color_saturation, prop_color_value));
+
 	theme->set_color("font_color", "Editor", font_color);
 	theme->set_color("highlighted_font_color", "Editor", font_hover_color);
 	theme->set_color("disabled_font_color", "Editor", font_disabled_color);
+	theme->set_color("readonly_font_color", "Editor", font_readonly_color);
 
 	theme->set_color("mono_color", "Editor", mono_color);
 
@@ -684,6 +697,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("font_focus_color", "Button", font_focus_color);
 	theme->set_color("font_pressed_color", "Button", accent_color);
 	theme->set_color("font_disabled_color", "Button", font_disabled_color);
+	theme->set_color("icon_normal_color", "Button", icon_normal_color);
 	theme->set_color("icon_hover_color", "Button", icon_hover_color);
 	theme->set_color("icon_focus_color", "Button", icon_focus_color);
 	theme->set_color("icon_pressed_color", "Button", icon_pressed_color);
@@ -862,6 +876,10 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("sub_inspector_property_color", "Editor", dark_theme ? Color(1, 1, 1, 1) : Color(0, 0, 0, 1));
 	theme->set_constant("sub_inspector_font_offset", "Editor", 4 * EDSCALE);
 
+	// EditorSpinSlider.
+	theme->set_color("label_color", "EditorSpinSlider", font_color);
+	theme->set_color("read_only_label_color", "EditorSpinSlider", font_readonly_color);
+
 	Ref<StyleBoxFlat> style_property_bg = style_default->duplicate();
 	style_property_bg->set_bg_color(highlight_color);
 	style_property_bg->set_border_width_all(0);
@@ -875,8 +893,20 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("readonly_color", "EditorProperty", readonly_color);
 	theme->set_color("readonly_warning_color", "EditorProperty", readonly_warning_color);
 
+	Ref<StyleBoxFlat> style_property_group_note = style_default->duplicate();
+	Color property_group_note_color = accent_color;
+	property_group_note_color.a = 0.1;
+	style_property_group_note->set_bg_color(property_group_note_color);
+	theme->set_stylebox("bg_group_note", "EditorProperty", style_property_group_note);
+
 	Color inspector_section_color = font_color.lerp(Color(0.5, 0.5, 0.5), 0.35);
 	theme->set_color("font_color", "EditorInspectorSection", inspector_section_color);
+
+	Color inspector_indent_color = accent_color;
+	inspector_indent_color.a = 0.2;
+	Ref<StyleBoxFlat> inspector_indent_style = make_flat_stylebox(inspector_indent_color, 2.0 * EDSCALE, 0, 2.0 * EDSCALE, 0);
+	theme->set_stylebox("indent_box", "EditorInspectorSection", inspector_indent_style);
+	theme->set_constant("indent_size", "EditorInspectorSection", 6.0 * EDSCALE);
 
 	theme->set_constant("inspector_margin", "Editor", 12 * EDSCALE);
 
@@ -1279,7 +1309,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// Panel
 	theme->set_stylebox("panel", "Panel", make_flat_stylebox(dark_color_1, 6, 4, 6, 4, corner_width));
-	theme->set_stylebox("panel_fg", "Panel", style_default);
+	theme->set_stylebox("PanelForeground", "EditorStyles", style_default);
 
 	// Label
 	theme->set_stylebox("normal", "Label", style_empty);
@@ -1501,6 +1531,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	Ref<StyleBoxFlat> theme_preview_picker_label_sb = make_flat_stylebox(theme_preview_picker_label_bg_color, 4.0, 1.0, 4.0, 3.0);
 	theme->set_stylebox("preview_picker_label", "ThemeEditor", theme_preview_picker_label_sb);
 
+	// Dictionary editor add item.
+	theme->set_stylebox("DictionaryAddItem", "EditorStyles", make_flat_stylebox(prop_subsection_color, 4, 4, 4, 4, corner_radius));
+
 	// adaptive script theme constants
 	// for comments and elements with lower relevance
 	const Color dim_color = Color(font_color.r, font_color.g, font_color.b, 0.5);
@@ -1527,7 +1560,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	const Color completion_background_color = dark_theme ? base_color : background_color;
 	const Color completion_selected_color = alpha1;
 	const Color completion_existing_color = alpha2;
-	const Color completion_scroll_color = alpha1;
+	// Same opacity as the scroll grabber editor icon.
+	const Color completion_scroll_color = Color(mono_value, mono_value, mono_value, 0.29);
 	const Color completion_font_color = font_color;
 	const Color text_color = font_color;
 	const Color line_number_color = dim_color;

@@ -44,6 +44,7 @@
 #include "editor/create_dialog.h"
 #include "editor/dictionary_property_edit.h"
 #include "editor/editor_export.h"
+#include "editor/editor_file_dialog.h"
 #include "editor/editor_file_system.h"
 #include "editor/editor_help.h"
 #include "editor/editor_node.h"
@@ -52,6 +53,7 @@
 #include "editor/filesystem_dock.h"
 #include "editor/multi_node_edit.h"
 #include "editor/property_selector.h"
+#include "editor/scene_tree_dock.h"
 #include "scene/gui/label.h"
 #include "scene/main/window.h"
 #include "scene/resources/font.h"
@@ -92,8 +94,10 @@ Ref<Resource> EditorResourceConversionPlugin::convert(const Ref<Resource> &p_res
 }
 
 void CustomPropertyEditor::_notification(int p_what) {
-	if (p_what == NOTIFICATION_WM_CLOSE_REQUEST) {
-		hide();
+	switch (p_what) {
+		case NOTIFICATION_WM_CLOSE_REQUEST: {
+			hide();
+		} break;
 	}
 }
 
@@ -224,7 +228,7 @@ void CustomPropertyEditor::_menu_option(int p_which) {
 					file_system_dock->navigate_to_path(r->get_path());
 					// Ensure that the FileSystem dock is visible.
 					TabContainer *tab_container = (TabContainer *)file_system_dock->get_parent_control();
-					tab_container->set_current_tab(file_system_dock->get_index());
+					tab_container->set_current_tab(tab_container->get_tab_idx_from_control(file_system_dock));
 				} break;
 				default: {
 					if (p_which >= CONVERT_BASE_ID) {
@@ -269,7 +273,9 @@ void CustomPropertyEditor::_menu_option(int p_which) {
 						res->call("set_instance_base_type", owner->get_class());
 					}
 
+					EditorNode::get_editor_data().instantiate_object_properties(obj);
 					v = obj;
+
 					emit_signal(SNAME("variant_changed"));
 
 				} break;
@@ -1092,7 +1098,9 @@ void CustomPropertyEditor::_type_create_selected(int p_idx) {
 		ERR_FAIL_COND(!obj);
 		ERR_FAIL_COND(!Object::cast_to<Resource>(obj));
 
+		EditorNode::get_editor_data().instantiate_object_properties(obj);
 		v = obj;
+
 		emit_signal(SNAME("variant_changed"));
 		hide();
 	}
@@ -1283,7 +1291,9 @@ void CustomPropertyEditor::_action_pressed(int p_which) {
 					ERR_BREAK(!obj);
 					ERR_BREAK(!Object::cast_to<Resource>(obj));
 
+					EditorNode::get_editor_data().instantiate_object_properties(obj);
 					v = obj;
+
 					emit_signal(SNAME("variant_changed"));
 					hide();
 				}

@@ -147,6 +147,11 @@ Error SceneReplicationInterface::_send_raw(const uint8_t *p_buffer, int p_size, 
 	ERR_FAIL_COND_V(!p_buffer || p_size < 1, ERR_INVALID_PARAMETER);
 	ERR_FAIL_COND_V(!multiplayer, ERR_UNCONFIGURED);
 	ERR_FAIL_COND_V(!multiplayer->has_multiplayer_peer(), ERR_UNCONFIGURED);
+
+#ifdef DEBUG_ENABLED
+	multiplayer->profile_bandwidth("out", p_size);
+#endif
+
 	Ref<MultiplayerPeer> peer = multiplayer->get_multiplayer_peer();
 	peer->set_target_peer(p_peer);
 	peer->set_transfer_channel(0);
@@ -345,11 +350,12 @@ void SceneReplicationInterface::_send_sync(int p_peer, uint64_t p_msec) {
 		}
 		if (size) {
 			uint32_t net_id = rep_state->get_net_id(oid);
-			if (net_id == 0) {
+			if (net_id == 0 || (net_id & 0x80000000)) {
 				// First time path based ID.
 				NodePath rel_path = multiplayer->get_root_path().rel_path_to(sync->get_path());
 				int path_id = 0;
 				multiplayer->send_object_cache(sync, rel_path, p_peer, path_id);
+				ERR_CONTINUE_MSG(net_id && net_id != (uint32_t(path_id) | 0x80000000), "This should never happen!");
 				net_id = path_id;
 				rep_state->set_net_id(oid, net_id | 0x80000000);
 			}

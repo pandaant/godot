@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "shader_language.h"
+
 #include "core/os/os.h"
 #include "core/string/print_string.h"
 #include "servers/rendering_server.h"
@@ -632,7 +633,7 @@ ShaderLanguage::Token ShaderLanguage::_get_token() {
 
 					char32_t last_char = str[str.length() - 1];
 
-					if (hexa_found) { // Integer(hex)
+					if (hexa_found) { // Integer (hex).
 						if (str.size() > 11 || !str.is_valid_hex_number(true)) { // > 0xFFFFFFFF
 							return _make_token(TK_ERROR, "Invalid (hexadecimal) numeric constant");
 						}
@@ -7871,7 +7872,7 @@ Error ShaderLanguage::_parse_shader(const Map<StringName, FunctionInfo> &p_funct
 
 					if (is_sampler_type(type)) {
 						if (uniform_scope == ShaderNode::Uniform::SCOPE_INSTANCE) {
-							_set_error(vformat(RTR("Uniforms with '%s' qualifiers can't be of sampler type.", "instance")));
+							_set_error(vformat(RTR("The '%s' qualifier is not supported for sampler types."), "SCOPE_INSTANCE"));
 							return ERR_PARSE_ERROR;
 						}
 						uniform2.texture_order = texture_uniforms++;
@@ -7887,7 +7888,7 @@ Error ShaderLanguage::_parse_shader(const Map<StringName, FunctionInfo> &p_funct
 						}
 					} else {
 						if (uniform_scope == ShaderNode::Uniform::SCOPE_INSTANCE && (type == TYPE_MAT2 || type == TYPE_MAT3 || type == TYPE_MAT4)) {
-							_set_error(vformat(RTR("Uniforms with '%s' qualifier can't be of matrix type.", "instance")));
+							_set_error(vformat(RTR("The '%s' qualifier is not supported for matrix types."), "SCOPE_INSTANCE"));
 							return ERR_PARSE_ERROR;
 						}
 						uniform2.texture_order = -1;

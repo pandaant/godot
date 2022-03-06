@@ -1818,11 +1818,14 @@ void RendererSceneRenderRD::_free_render_buffer_data(RenderBuffers *rb) {
 			if (rb->blur[i].mipmaps[m].fb.is_valid()) {
 				RD::get_singleton()->free(rb->blur[i].mipmaps[m].fb);
 			}
-			if (rb->blur[i].mipmaps[m].half_fb.is_valid()) {
-				RD::get_singleton()->free(rb->blur[i].mipmaps[m].half_fb);
-			}
-			if (rb->blur[i].mipmaps[m].half_texture.is_valid()) {
-				RD::get_singleton()->free(rb->blur[i].mipmaps[m].half_texture);
+			// texture and framebuffer in both blur mipmaps are shared, so only free from the first one
+			if (i == 0) {
+				if (rb->blur[i].mipmaps[m].half_fb.is_valid()) {
+					RD::get_singleton()->free(rb->blur[i].mipmaps[m].half_fb);
+				}
+				if (rb->blur[i].mipmaps[m].half_texture.is_valid()) {
+					RD::get_singleton()->free(rb->blur[i].mipmaps[m].half_texture);
+				}
 			}
 		}
 		rb->blur[i].mipmaps.clear();
@@ -1977,7 +1980,7 @@ void RendererSceneRenderRD::_process_ssr(RID p_render_buffers, RID p_dest_frameb
 		rb->ssr.normal_scaled = RD::get_singleton()->texture_create(tf, RD::TextureView());
 	}
 
-	if (ssr_roughness_quality != RS::ENV_SSR_ROUGNESS_QUALITY_DISABLED && !rb->ssr.blur_radius[0].is_valid()) {
+	if (ssr_roughness_quality != RS::ENV_SSR_ROUGHNESS_QUALITY_DISABLED && !rb->ssr.blur_radius[0].is_valid()) {
 		RD::TextureFormat tf;
 		tf.format = RD::DATA_FORMAT_R8_UNORM;
 		tf.width = rb->internal_width / 2;
@@ -3263,7 +3266,6 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 
 	r_directional_light_count = 0;
 	r_positional_light_count = 0;
-	sky.sky_scene_state.ubo.directional_light_count = 0;
 
 	Plane camera_plane(-p_camera_transform.basis.get_axis(Vector3::AXIS_Z).normalized(), p_camera_transform.origin);
 
@@ -3284,42 +3286,6 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 		RS::LightType type = storage->light_get_type(base);
 		switch (type) {
 			case RS::LIGHT_DIRECTIONAL: {
-				//	Copy to SkyDirectionalLightData
-				if (r_directional_light_count < sky.sky_scene_state.max_directional_lights) {
-					RendererSceneSkyRD::SkyDirectionalLightData &sky_light_data = sky.sky_scene_state.directional_lights[r_directional_light_count];
-					Transform3D light_transform = li->transform;
-					Vector3 world_direction = light_transform.basis.xform(Vector3(0, 0, 1)).normalized();
-
-					sky_light_data.direction[0] = world_direction.x;
-					sky_light_data.direction[1] = world_direction.y;
-					sky_light_data.direction[2] = -world_direction.z;
-
-					float sign = storage->light_is_negative(base) ? -1 : 1;
-					sky_light_data.energy = sign * storage->light_get_param(base, RS::LIGHT_PARAM_ENERGY);
-
-					Color linear_col = storage->light_get_color(base).to_linear();
-					sky_light_data.color[0] = linear_col.r;
-					sky_light_data.color[1] = linear_col.g;
-					sky_light_data.color[2] = linear_col.b;
-
-					sky_light_data.enabled = true;
-
-					float angular_diameter = storage->light_get_param(base, RS::LIGHT_PARAM_SIZE);
-					if (angular_diameter > 0.0) {
-						// I know tan(0) is 0, but let's not risk it with numerical precision.
-						// technically this will keep expanding until reaching the sun, but all we care
-						// is expand until we reach the radius of the near plane (there can't be more occluders than that)
-						angular_diameter = Math::tan(Math::deg2rad(angular_diameter));
-						if (storage->light_has_shadow(base)) {
-							r_directional_light_soft_shadows = true;
-						}
-					} else {
-						angular_diameter = 0.0;
-					}
-					sky_light_data.size = angular_diameter;
-					sky.sky_scene_state.ubo.directional_light_count++;
-				}
-
 				if (r_directional_light_count >= cluster.max_directional_lights || storage->light_directional_is_sky_only(base)) {
 					continue;
 				}
@@ -3397,6 +3363,9 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 					// technically this will keep expanding until reaching the sun, but all we care
 					// is expand until we reach the radius of the near plane (there can't be more occluders than that)
 					angular_diameter = Math::tan(Math::deg2rad(angular_diameter));
+					if (storage->light_has_shadow(base)) {
+						r_directional_light_soft_shadows = true;
+					}
 				} else {
 					angular_diameter = 0.0;
 				}
@@ -3471,8 +3440,22 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 					continue;
 				}
 
+				const real_t distance = camera_plane.distance_to(li->transform.origin);
+
+				if (storage->light_is_distance_fade_enabled(li->light)) {
+					const float fade_begin = storage->light_get_distance_fade_begin(li->light);
+					const float fade_length = storage->light_get_distance_fade_length(li->light);
+
+					if (distance > fade_begin) {
+						if (distance > fade_begin + fade_length) {
+							// Out of range, don't draw this light to improve performance.
+							continue;
+						}
+					}
+				}
+
 				cluster.omni_light_sort[cluster.omni_light_count].instance = li;
-				cluster.omni_light_sort[cluster.omni_light_count].depth = camera_plane.distance_to(li->transform.origin);
+				cluster.omni_light_sort[cluster.omni_light_count].depth = distance;
 				cluster.omni_light_count++;
 			} break;
 			case RS::LIGHT_SPOT: {
@@ -3480,8 +3463,22 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 					continue;
 				}
 
+				const real_t distance = camera_plane.distance_to(li->transform.origin);
+
+				if (storage->light_is_distance_fade_enabled(li->light)) {
+					const float fade_begin = storage->light_get_distance_fade_begin(li->light);
+					const float fade_length = storage->light_get_distance_fade_length(li->light);
+
+					if (distance > fade_begin) {
+						if (distance > fade_begin + fade_length) {
+							// Out of range, don't draw this light to improve performance.
+							continue;
+						}
+					}
+				}
+
 				cluster.spot_light_sort[cluster.spot_light_count].instance = li;
-				cluster.spot_light_sort[cluster.spot_light_count].depth = camera_plane.distance_to(li->transform.origin);
+				cluster.spot_light_sort[cluster.spot_light_count].depth = distance;
 				cluster.spot_light_count++;
 			} break;
 		}
@@ -3525,7 +3522,24 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 
 		light_data.attenuation = storage->light_get_param(base, RS::LIGHT_PARAM_ATTENUATION);
 
-		float energy = sign * storage->light_get_param(base, RS::LIGHT_PARAM_ENERGY) * Math_PI;
+		// Reuse fade begin, fade length and distance for shadow LOD determination later.
+		float fade_begin = 0.0;
+		float fade_length = 0.0;
+		real_t distance = 0.0;
+
+		float fade = 1.0;
+		if (storage->light_is_distance_fade_enabled(li->light)) {
+			fade_begin = storage->light_get_distance_fade_begin(li->light);
+			fade_length = storage->light_get_distance_fade_length(li->light);
+			distance = camera_plane.distance_to(li->transform.origin);
+
+			if (distance > fade_begin) {
+				// Use `smoothstep()` to make opacity changes more gradual and less noticeable to the player.
+				fade = Math::smoothstep(0.0f, 1.0f, 1.0f - float(distance - fade_begin) / fade_length);
+			}
+		}
+
+		float energy = sign * storage->light_get_param(base, RS::LIGHT_PARAM_ENERGY) * Math_PI * fade;
 
 		light_data.color[0] = linear_col.r * energy;
 		light_data.color[1] = linear_col.g * energy;
@@ -3586,7 +3600,17 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 			light_data.projector_rect[3] = 0;
 		}
 
-		if (shadow_atlas && shadow_atlas->shadow_owners.has(li->self)) {
+		const bool needs_shadow = shadow_atlas && shadow_atlas->shadow_owners.has(li->self);
+
+		bool in_shadow_range = true;
+		if (needs_shadow && storage->light_is_distance_fade_enabled(li->light)) {
+			if (distance > storage->light_get_distance_fade_shadow(li->light)) {
+				// Out of range, don't draw shadows to improve performance.
+				in_shadow_range = false;
+			}
+		}
+
+		if (needs_shadow && in_shadow_range) {
 			// fill in the shadow information
 
 			light_data.shadow_enabled = true;
@@ -4095,7 +4119,7 @@ void RendererSceneRenderRD::_update_volumetric_fog(RID p_render_buffers, RID p_e
 		return;
 	}
 
-	RENDER_TIMESTAMP(">Volumetric Fog");
+	RENDER_TIMESTAMP("> Volumetric Fog");
 	RD::get_singleton()->draw_command_begin_label("Volumetric Fog");
 
 	if (env && env->volumetric_fog_enabled && !rb->volumetric_fog) {
@@ -4167,7 +4191,7 @@ void RendererSceneRenderRD::_update_volumetric_fog(RID p_render_buffers, RID p_e
 	if (p_fog_volumes.size() > 0) {
 		RD::get_singleton()->draw_command_begin_label("Render Volumetric Fog Volumes");
 
-		RENDER_TIMESTAMP("Render Fog Volumes");
+		RENDER_TIMESTAMP("Render FogVolumes");
 
 		VolumetricFogShader::VolumeUBO params;
 
@@ -4761,7 +4785,7 @@ void RendererSceneRenderRD::_update_volumetric_fog(RID p_render_buffers, RID p_e
 
 	RD::get_singleton()->compute_list_end(RD::BARRIER_MASK_RASTER);
 
-	RENDER_TIMESTAMP("<Volumetric Fog");
+	RENDER_TIMESTAMP("< Volumetric Fog");
 	RD::get_singleton()->draw_command_end_label();
 	RD::get_singleton()->draw_command_end_label();
 
@@ -4850,7 +4874,7 @@ void RendererSceneRenderRD::_pre_opaque_render(RenderDataRD *p_render_data, bool
 	bool render_gi = p_render_data->render_buffers.is_valid() && p_use_gi;
 
 	if (render_shadows && render_gi) {
-		RENDER_TIMESTAMP("Render GI + Render Shadows (parallel)");
+		RENDER_TIMESTAMP("Render GI + Render Shadows (Parallel)");
 	} else if (render_shadows) {
 		RENDER_TIMESTAMP("Render Shadows");
 	} else if (render_gi) {

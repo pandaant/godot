@@ -2843,8 +2843,7 @@ String VisualShaderNodeColorFunc::generate_code(Shader::Mode p_mode, VisualShade
 			code += "		vec3 c = " + p_input_vars[0] + ";\n";
 			code += "		float max1 = max(c.r, c.g);\n";
 			code += "		float max2 = max(max1, c.b);\n";
-			code += "		float max3 = max(max1, max2);\n";
-			code += "		" + p_output_vars[0] + " = vec3(max3, max3, max3);\n";
+			code += "		" + p_output_vars[0] + " = vec3(max2, max2, max2);\n";
 			code += "	}\n";
 			break;
 		case FUNC_SEPIA:
@@ -5694,7 +5693,7 @@ String VisualShaderNodeTextureUniformTriplanar::get_input_port_name(int p_port) 
 	return "";
 }
 
-String VisualShaderNodeTextureUniformTriplanar::generate_global_per_node(Shader::Mode p_mode, VisualShader::Type p_type, int p_id) const {
+String VisualShaderNodeTextureUniformTriplanar::generate_global_per_node(Shader::Mode p_mode, int p_id) const {
 	String code;
 
 	code += "// TRIPLANAR FUNCTION GLOBAL CODE\n";

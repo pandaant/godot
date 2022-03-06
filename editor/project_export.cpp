@@ -39,10 +39,10 @@
 #include "core/os/os.h"
 #include "core/string/optimized_translation.h"
 #include "core/version_generated.gen.h"
-#include "editor_data.h"
-#include "editor_node.h"
-#include "editor_scale.h"
-#include "editor_settings.h"
+#include "editor/editor_file_dialog.h"
+#include "editor/editor_node.h"
+#include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/margin_container.h"
 #include "scene/gui/scroll_container.h"
@@ -61,6 +61,7 @@ void ProjectExportDialog::_notification(int p_what) {
 				EditorSettings::get_singleton()->set_project_metadata("dialog_bounds", "export", Rect2(get_position(), get_size()));
 			}
 		} break;
+
 		case NOTIFICATION_READY: {
 			duplicate_preset->set_icon(presets->get_theme_icon(SNAME("Duplicate"), SNAME("EditorIcons")));
 			delete_preset->set_icon(presets->get_theme_icon(SNAME("Remove"), SNAME("EditorIcons")));
@@ -882,7 +883,8 @@ void ProjectExportDialog::_export_project() {
 
 	List<String> extension_list = platform->get_binary_extensions(current);
 	for (int i = 0; i < extension_list.size(); i++) {
-		export_project->add_filter("*." + extension_list[i] + " ; " + platform->get_name() + " Export");
+		// TRANSLATORS: This is the name of a project export file format. %s will be replaced by the platform name.
+		export_project->add_filter(vformat("*.%s; %s", extension_list[i], vformat(TTR("%s Export"), platform->get_name())));
 	}
 
 	if (!current->get_export_path().is_empty()) {
@@ -1054,7 +1056,7 @@ ProjectExportDialog::ProjectExportDialog() {
 	// Subsections.
 
 	sections = memnew(TabContainer);
-	sections->set_tab_alignment(TabContainer::ALIGNMENT_LEFT);
+	sections->set_tab_alignment(TabBar::ALIGNMENT_LEFT);
 	sections->set_use_hidden_tabs_for_min_size(true);
 	settings_vb->add_child(sections);
 	sections->set_v_size_flags(Control::SIZE_EXPAND_FILL);
@@ -1274,8 +1276,6 @@ ProjectExportDialog::ProjectExportDialog() {
 	export_pck_zip->get_vbox()->add_child(export_pck_zip_debug);
 
 	set_hide_on_ok(false);
-
-	editor_icons = "EditorIcons";
 
 	default_filename = EditorSettings::get_singleton()->get_project_metadata("export_options", "default_filename", "");
 	// If no default set, use project name

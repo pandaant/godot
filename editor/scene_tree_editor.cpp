@@ -32,11 +32,13 @@
 
 #include "core/object/message_queue.h"
 #include "core/string/print_string.h"
+#include "editor/editor_file_system.h"
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
 #include "editor/node_dock.h"
 #include "editor/plugins/animation_player_editor_plugin.h"
 #include "editor/plugins/canvas_item_editor_plugin.h"
+#include "editor/plugins/script_editor_plugin.h"
 #include "scene/gui/label.h"
 #include "scene/main/window.h"
 #include "scene/resources/packed_scene.h"
@@ -133,7 +135,8 @@ void SceneTreeEditor::_cell_button_pressed(Object *p_item, int p_column, int p_i
 
 		set_selected(n);
 
-		NodeDock::get_singleton()->get_parent()->call("set_current_tab", NodeDock::get_singleton()->get_index());
+		TabContainer *tab_container = Object::cast_to<TabContainer>(NodeDock::get_singleton()->get_parent());
+		NodeDock::get_singleton()->get_parent()->call("set_current_tab", tab_container->get_tab_idx_from_control(NodeDock::get_singleton()));
 		NodeDock::get_singleton()->show_connections();
 
 	} else if (p_id == BUTTON_GROUPS) {
@@ -142,7 +145,8 @@ void SceneTreeEditor::_cell_button_pressed(Object *p_item, int p_column, int p_i
 
 		set_selected(n);
 
-		NodeDock::get_singleton()->get_parent()->call("set_current_tab", NodeDock::get_singleton()->get_index());
+		TabContainer *tab_container = Object::cast_to<TabContainer>(NodeDock::get_singleton()->get_parent());
+		NodeDock::get_singleton()->get_parent()->call("set_current_tab", tab_container->get_tab_idx_from_control(NodeDock::get_singleton()));
 		NodeDock::get_singleton()->show_groups();
 	}
 }
@@ -698,6 +702,7 @@ void SceneTreeEditor::_notification(int p_what) {
 
 			_update_tree();
 		} break;
+
 		case NOTIFICATION_EXIT_TREE: {
 			get_tree()->disconnect("tree_changed", callable_mp(this, &SceneTreeEditor::_tree_changed));
 			get_tree()->disconnect("tree_process_mode_changed", callable_mp(this, &SceneTreeEditor::_tree_process_mode_changed));
@@ -706,6 +711,7 @@ void SceneTreeEditor::_notification(int p_what) {
 			tree->disconnect("item_collapsed", callable_mp(this, &SceneTreeEditor::_cell_collapsed));
 			get_tree()->disconnect("node_configuration_warning_changed", callable_mp(this, &SceneTreeEditor::_warning_changed));
 		} break;
+
 		case NOTIFICATION_THEME_CHANGED: {
 			_update_tree();
 		} break;
@@ -1281,13 +1287,16 @@ void SceneTreeDialog::_notification(int p_what) {
 				tree->update_tree();
 			}
 		} break;
+
 		case NOTIFICATION_ENTER_TREE: {
 			connect("confirmed", callable_mp(this, &SceneTreeDialog::_select));
 			_update_theme();
 		} break;
+
 		case NOTIFICATION_THEME_CHANGED: {
 			_update_theme();
 		} break;
+
 		case NOTIFICATION_EXIT_TREE: {
 			disconnect("confirmed", callable_mp(this, &SceneTreeDialog::_select));
 		} break;

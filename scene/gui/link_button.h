@@ -32,7 +32,6 @@
 #define LINKBUTTON_H
 
 #include "scene/gui/base_button.h"
-#include "scene/resources/bit_map.h"
 #include "scene/resources/text_line.h"
 
 class LinkButton : public BaseButton {
@@ -91,7 +90,7 @@ public:
 	void set_underline_mode(UnderlineMode p_underline_mode);
 	UnderlineMode get_underline_mode() const;
 
-	LinkButton();
+	LinkButton(const String &p_text = String());
 };
 
 VARIANT_ENUM_CAST(LinkButton::UnderlineMode);

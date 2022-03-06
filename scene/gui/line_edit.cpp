@@ -656,31 +656,37 @@ void LineEdit::_notification(int p_what) {
 			}
 		} break;
 #endif
+
 		case NOTIFICATION_RESIZED: {
 			_fit_to_width();
 			scroll_offset = 0;
 			set_caret_column(get_caret_column());
 		} break;
+
 		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED:
 		case NOTIFICATION_THEME_CHANGED: {
 			_shape();
 			update();
 		} break;
+
 		case NOTIFICATION_TRANSLATION_CHANGED: {
 			placeholder_translated = atr(placeholder);
 			_shape();
 			update();
 		} break;
+
 		case NOTIFICATION_WM_WINDOW_FOCUS_IN: {
 			window_has_focus = true;
 			draw_caret = true;
 			update();
 		} break;
+
 		case NOTIFICATION_WM_WINDOW_FOCUS_OUT: {
 			window_has_focus = false;
 			draw_caret = false;
 			update();
 		} break;
+
 		case NOTIFICATION_DRAW: {
 			if ((!has_focus() && !(menu && menu->has_focus()) && !caret_force_displayed) || !window_has_focus) {
 				draw_caret = false;
@@ -841,7 +847,8 @@ void LineEdit::_notification(int p_what) {
 			// Draw carets.
 			ofs.x = x_ofs + scroll_offset;
 			if (draw_caret || drag_caret_force_displayed) {
-				const int caret_width = get_theme_constant(SNAME("caret_width")) * get_theme_default_base_scale();
+				// Prevent carets from disappearing at theme scales below 1.0 (if the caret width is 1).
+				const int caret_width = get_theme_constant(SNAME("caret_width")) * MAX(1, get_theme_default_base_scale());
 
 				if (ime_text.length() == 0) {
 					// Normal caret.
@@ -923,6 +930,7 @@ void LineEdit::_notification(int p_what) {
 				}
 			}
 		} break;
+
 		case NOTIFICATION_FOCUS_ENTER: {
 			if (!caret_force_displayed) {
 				if (caret_blink_enabled) {
@@ -942,6 +950,7 @@ void LineEdit::_notification(int p_what) {
 
 			show_virtual_keyboard();
 		} break;
+
 		case NOTIFICATION_FOCUS_EXIT: {
 			if (caret_blink_enabled && !caret_force_displayed) {
 				caret_blink_timer->stop();
@@ -964,6 +973,7 @@ void LineEdit::_notification(int p_what) {
 				deselect();
 			}
 		} break;
+
 		case MainLoop::NOTIFICATION_OS_IME_UPDATE: {
 			if (has_focus()) {
 				ime_text = DisplayServer::get_singleton()->ime_get_text();
@@ -974,10 +984,12 @@ void LineEdit::_notification(int p_what) {
 				update();
 			}
 		} break;
-		case Control::NOTIFICATION_DRAG_BEGIN: {
+
+		case NOTIFICATION_DRAG_BEGIN: {
 			drag_action = true;
 		} break;
-		case Control::NOTIFICATION_DRAG_END: {
+
+		case NOTIFICATION_DRAG_END: {
 			if (is_drag_successful()) {
 				if (selection.drag_attempt) {
 					selection.drag_attempt = false;
@@ -1606,7 +1618,7 @@ Size2 LineEdit::get_minimum_size() const {
 	Size2 min_size;
 
 	// Minimum size of text.
-	int em_space_size = font->get_char_size('M', 0, font_size).x;
+	float em_space_size = font->get_char_size('M', 0, font_size).x;
 	min_size.width = get_theme_constant(SNAME("minimum_character_width")) * em_space_size;
 
 	if (expand_to_text_length) {
@@ -2425,7 +2437,7 @@ void LineEdit::_ensure_menu() {
 	}
 }
 
-LineEdit::LineEdit() {
+LineEdit::LineEdit(const String &p_placeholder) {
 	text_rid = TS->create_shaped_text();
 	_create_undo_state();
 
@@ -2439,6 +2451,8 @@ LineEdit::LineEdit() {
 	caret_blink_timer->set_wait_time(0.65);
 	caret_blink_timer->connect("timeout", callable_mp(this, &LineEdit::_toggle_draw_caret));
 	set_caret_blink_enabled(false);
+
+	set_placeholder(p_placeholder);
 
 	set_editable(true); // Initialise to opposite first, so we get past the early-out in set_editable.
 }

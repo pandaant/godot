@@ -30,6 +30,7 @@
 
 #include "grid_map_editor_plugin.h"
 #include "core/input/input.h"
+#include "editor/editor_node.h"
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/plugins/node_3d_editor_plugin.h"
@@ -62,17 +63,6 @@ void GridMapEditor::_menu_option(int p_option) {
 			floor->set_value(floor->get_value() + 1);
 		} break;
 
-		case MENU_OPTION_CLIP_DISABLED:
-		case MENU_OPTION_CLIP_ABOVE:
-		case MENU_OPTION_CLIP_BELOW: {
-			clip_mode = ClipMode(p_option - MENU_OPTION_CLIP_DISABLED);
-			for (int i = 0; i < 3; i++) {
-				int index = options->get_popup()->get_item_index(MENU_OPTION_CLIP_DISABLED + i);
-				options->get_popup()->set_item_checked(index, i == clip_mode);
-			}
-
-			_update_clip();
-		} break;
 		case MENU_OPTION_X_AXIS:
 		case MENU_OPTION_Y_AXIS:
 		case MENU_OPTION_Z_AXIS: {
@@ -97,7 +87,6 @@ void GridMapEditor::_menu_option(int p_option) {
 			}
 			edit_axis = Vector3::Axis(new_axis);
 			update_grid();
-			_update_clip();
 
 		} break;
 		case MENU_OPTION_CURSOR_ROTATE_Y: {
@@ -923,7 +912,7 @@ void GridMapEditor::edit(GridMap *p_gridmap) {
 	_update_selection_transform();
 	_update_paste_indicator();
 
-	spatial_editor = Object::cast_to<Node3DEditorPlugin>(editor->get_editor_plugin_screen());
+	spatial_editor = Object::cast_to<Node3DEditorPlugin>(EditorNode::get_singleton()->get_editor_plugin_screen());
 
 	if (!node) {
 		set_process(false);
@@ -942,22 +931,10 @@ void GridMapEditor::edit(GridMap *p_gridmap) {
 
 	set_process(true);
 
-	clip_mode = p_gridmap->has_meta("_editor_clip_") ? ClipMode(p_gridmap->get_meta("_editor_clip_").operator int()) : CLIP_DISABLED;
-
 	_draw_grids(node->get_cell_size());
 	update_grid();
-	_update_clip();
 
 	node->connect("cell_size_changed", callable_mp(this, &GridMapEditor::_draw_grids));
-}
-
-void GridMapEditor::_update_clip() {
-	node->set_meta("_editor_clip_", clip_mode);
-	if (clip_mode == CLIP_DISABLED) {
-		node->set_clip(false);
-	} else {
-		node->set_clip(true, clip_mode == CLIP_ABOVE, edit_floor[edit_axis], edit_axis);
-	}
 }
 
 void GridMapEditor::update_grid() {
@@ -1146,7 +1123,6 @@ void GridMapEditor::_floor_changed(float p_value) {
 	edit_floor[edit_axis] = p_value;
 	node->set_meta("_editor_floor_", Vector3(edit_floor[0], edit_floor[1], edit_floor[2]));
 	update_grid();
-	_update_clip();
 	_update_selection_transform();
 }
 
@@ -1159,9 +1135,8 @@ void GridMapEditor::_bind_methods() {
 	ClassDB::bind_method("_set_selection", &GridMapEditor::_set_selection);
 }
 
-GridMapEditor::GridMapEditor(EditorNode *p_editor) {
-	editor = p_editor;
-	undo_redo = p_editor->get_undo_redo();
+GridMapEditor::GridMapEditor() {
+	undo_redo = EditorNode::get_singleton()->get_undo_redo();
 
 	int mw = EDITOR_DEF("editors/grid_map/palette_min_width", 230);
 	Control *ec = memnew(Control);
@@ -1197,11 +1172,6 @@ GridMapEditor::GridMapEditor(EditorNode *p_editor) {
 	options->set_text(TTR("Grid Map"));
 	options->get_popup()->add_item(TTR("Previous Floor"), MENU_OPTION_PREV_LEVEL, Key::Q);
 	options->get_popup()->add_item(TTR("Next Floor"), MENU_OPTION_NEXT_LEVEL, Key::E);
-	options->get_popup()->add_separator();
-	options->get_popup()->add_radio_check_item(TTR("Clip Disabled"), MENU_OPTION_CLIP_DISABLED);
-	options->get_popup()->set_item_checked(options->get_popup()->get_item_index(MENU_OPTION_CLIP_DISABLED), true);
-	options->get_popup()->add_radio_check_item(TTR("Clip Above"), MENU_OPTION_CLIP_ABOVE);
-	options->get_popup()->add_radio_check_item(TTR("Clip Below"), MENU_OPTION_CLIP_BELOW);
 	options->get_popup()->add_separator();
 	options->get_popup()->add_radio_check_item(TTR("Edit X Axis"), MENU_OPTION_X_AXIS, Key::Z);
 	options->get_popup()->add_radio_check_item(TTR("Edit Y Axis"), MENU_OPTION_Y_AXIS, Key::X);
@@ -1456,15 +1426,17 @@ GridMapEditor::~GridMapEditor() {
 }
 
 void GridMapEditorPlugin::_notification(int p_what) {
-	if (p_what == EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED) {
-		switch ((int)EditorSettings::get_singleton()->get("editors/grid_map/editor_side")) {
-			case 0: { // Left.
-				Node3DEditor::get_singleton()->move_control_to_left_panel(grid_map_editor);
-			} break;
-			case 1: { // Right.
-				Node3DEditor::get_singleton()->move_control_to_right_panel(grid_map_editor);
-			} break;
-		}
+	switch (p_what) {
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			switch ((int)EditorSettings::get_singleton()->get("editors/grid_map/editor_side")) {
+				case 0: { // Left.
+					Node3DEditor::get_singleton()->move_control_to_left_panel(grid_map_editor);
+				} break;
+				case 1: { // Right.
+					Node3DEditor::get_singleton()->move_control_to_right_panel(grid_map_editor);
+				} break;
+			}
+		} break;
 	}
 }
 
@@ -1489,13 +1461,11 @@ void GridMapEditorPlugin::make_visible(bool p_visible) {
 	}
 }
 
-GridMapEditorPlugin::GridMapEditorPlugin(EditorNode *p_node) {
-	editor = p_node;
-
+GridMapEditorPlugin::GridMapEditorPlugin() {
 	EDITOR_DEF("editors/grid_map/editor_side", 1);
 	EditorSettings::get_singleton()->add_property_hint(PropertyInfo(Variant::INT, "editors/grid_map/editor_side", PROPERTY_HINT_ENUM, "Left,Right"));
 
-	grid_map_editor = memnew(GridMapEditor(editor));
+	grid_map_editor = memnew(GridMapEditor);
 	switch ((int)EditorSettings::get_singleton()->get("editors/grid_map/editor_side")) {
 		case 0: { // Left.
 			Node3DEditor::get_singleton()->add_control_to_left_panel(grid_map_editor);

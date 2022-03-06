@@ -31,9 +31,11 @@
 #ifndef GRID_MAP_EDITOR_PLUGIN_H
 #define GRID_MAP_EDITOR_PLUGIN_H
 
-#include "editor/editor_node.h"
 #include "editor/editor_plugin.h"
 #include "grid_map.h"
+#include "scene/gui/item_list.h"
+#include "scene/gui/slider.h"
+#include "scene/gui/spin_box.h"
 
 class Node3DEditorPlugin;
 
@@ -51,12 +53,6 @@ class GridMapEditor : public VBoxContainer {
 		INPUT_PICK,
 		INPUT_SELECT,
 		INPUT_PASTE,
-	};
-
-	enum ClipMode {
-		CLIP_DISABLED,
-		CLIP_ABOVE,
-		CLIP_BELOW
 	};
 
 	enum DisplayMode {
@@ -92,7 +88,6 @@ class GridMapEditor : public VBoxContainer {
 
 	GridMap *node = nullptr;
 	MeshLibrary *last_mesh_library;
-	ClipMode clip_mode = CLIP_DISABLED;
 
 	Transform3D grid_xform;
 	Transform3D edit_grid_xform;
@@ -157,9 +152,6 @@ class GridMapEditor : public VBoxContainer {
 		MENU_OPTION_NEXT_LEVEL,
 		MENU_OPTION_PREV_LEVEL,
 		MENU_OPTION_LOCK_VIEW,
-		MENU_OPTION_CLIP_DISABLED,
-		MENU_OPTION_CLIP_ABOVE,
-		MENU_OPTION_CLIP_BELOW,
 		MENU_OPTION_X_AXIS,
 		MENU_OPTION_Y_AXIS,
 		MENU_OPTION_Z_AXIS,
@@ -189,8 +181,6 @@ class GridMapEditor : public VBoxContainer {
 	ItemList *mesh_library_palette;
 	Label *info_message;
 
-	EditorNode *editor;
-
 	void update_grid(); // Change which and where the grid is displayed
 	void _draw_grids(const Vector3 &cell_size);
 	void _configure();
@@ -200,7 +190,6 @@ class GridMapEditor : public VBoxContainer {
 	void _item_selected_cbk(int idx);
 	void _update_cursor_transform();
 	void _update_cursor_instance();
-	void _update_clip();
 	void _update_theme();
 
 	void _text_changed(const String &p_text);
@@ -236,8 +225,7 @@ public:
 	EditorPlugin::AfterGUIInput forward_spatial_input_event(Camera3D *p_camera, const Ref<InputEvent> &p_event);
 
 	void edit(GridMap *p_gridmap);
-	GridMapEditor() {}
-	GridMapEditor(EditorNode *p_editor);
+	GridMapEditor();
 	~GridMapEditor();
 };
 
@@ -245,7 +233,6 @@ class GridMapEditorPlugin : public EditorPlugin {
 	GDCLASS(GridMapEditorPlugin, EditorPlugin);
 
 	GridMapEditor *grid_map_editor;
-	EditorNode *editor;
 
 protected:
 	void _notification(int p_what);
@@ -258,7 +245,7 @@ public:
 	virtual bool handles(Object *p_object) const override;
 	virtual void make_visible(bool p_visible) override;
 
-	GridMapEditorPlugin(EditorNode *p_node);
+	GridMapEditorPlugin();
 	~GridMapEditorPlugin();
 };
 

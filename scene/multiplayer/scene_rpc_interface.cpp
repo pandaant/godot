@@ -46,12 +46,11 @@ void SceneRPCInterface::make_default() {
 
 #ifdef DEBUG_ENABLED
 _FORCE_INLINE_ void SceneRPCInterface::_profile_node_data(const String &p_what, ObjectID p_id) {
-	if (EngineDebugger::is_profiling("multiplayer")) {
+	if (EngineDebugger::is_profiling("rpc")) {
 		Array values;
-		values.push_back("node");
 		values.push_back(p_id);
 		values.push_back(p_what);
-		EngineDebugger::profiler_add_frame_data("multiplayer", values);
+		EngineDebugger::profiler_add_frame_data("rpc", values);
 	}
 }
 #else
@@ -268,7 +267,7 @@ void SceneRPCInterface::_process_rpc(Node *p_node, const uint16_t p_rpc_method_i
 	argp.resize(argc);
 
 #ifdef DEBUG_ENABLED
-	_profile_node_data("in_rpc", p_node->get_instance_id());
+	_profile_node_data("rpc_in", p_node->get_instance_id());
 #endif
 
 	int out;
@@ -460,7 +459,7 @@ void SceneRPCInterface::rpcp(Object *p_obj, int p_peer_id, const StringName &p_m
 	uint16_t rpc_id = UINT16_MAX;
 	const Multiplayer::RPCConfig config = _get_rpc_config(node, p_method, rpc_id);
 	ERR_FAIL_COND_MSG(config.name == StringName(),
-			vformat("Unable to get the RPC configuration for the function \"%s\" at path: \"%s\". This happens when the method is not marked for RPCs.", p_method, node->get_path()));
+			vformat("Unable to get the RPC configuration for the function \"%s\" at path: \"%s\". This happens when the method is missing or not marked for RPCs in the local script.", p_method, node->get_path()));
 	if (p_peer_id == 0 || p_peer_id == node_id || (p_peer_id < 0 && p_peer_id != -node_id)) {
 		if (rpc_id & (1 << 15)) {
 			call_local_native = config.call_local;
@@ -471,7 +470,7 @@ void SceneRPCInterface::rpcp(Object *p_obj, int p_peer_id, const StringName &p_m
 
 	if (p_peer_id != node_id) {
 #ifdef DEBUG_ENABLED
-		_profile_node_data("out_rpc", node->get_instance_id());
+		_profile_node_data("rpc_out", node->get_instance_id());
 #endif
 
 		_send_rpc(node, p_peer_id, rpc_id, config, p_method, p_arg, p_argcount);

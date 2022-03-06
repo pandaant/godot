@@ -32,7 +32,6 @@
 
 #include "core/object/message_queue.h"
 #include "core/string/translation.h"
-
 #include "scene/gui/box_container.h"
 #include "scene/gui/label.h"
 #include "scene/gui/texture_rect.h"
@@ -313,6 +312,7 @@ void TabBar::_notification(int p_what) {
 		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED: {
 			update();
 		} break;
+
 		case NOTIFICATION_THEME_CHANGED:
 		case NOTIFICATION_TRANSLATION_CHANGED: {
 			for (int i = 0; i < tabs.size(); ++i) {
@@ -332,6 +332,7 @@ void TabBar::_notification(int p_what) {
 				ensure_tab_visible(current);
 			}
 		} break;
+
 		case NOTIFICATION_DRAW: {
 			if (tabs.is_empty()) {
 				return;
@@ -524,13 +525,14 @@ void TabBar::set_tab_count(int p_count) {
 		offset = MIN(offset, p_count - 1);
 		max_drawn_tab = MIN(max_drawn_tab, p_count - 1);
 		current = MIN(current, p_count - 1);
+
+		_update_cache();
+		_ensure_no_over_offset();
+		if (scroll_to_selected) {
+			ensure_tab_visible(current);
+		}
 	}
 
-	_update_cache();
-	_ensure_no_over_offset();
-	if (scroll_to_selected) {
-		ensure_tab_visible(current);
-	}
 	update();
 	update_minimum_size();
 	notify_property_list_changed();
@@ -549,10 +551,6 @@ void TabBar::set_current_tab(int p_current) {
 	if (current == previous) {
 		emit_signal(SNAME("tab_selected"), current);
 		return;
-	}
-	// Triggered by dragging a tab from another TabBar to the selected index, to ensure that tab_changed is emitted.
-	if (previous == -1) {
-		previous = current;
 	}
 
 	emit_signal(SNAME("tab_selected"), current);
@@ -761,6 +759,8 @@ void TabBar::_update_hover() {
 		return;
 	}
 
+	ERR_FAIL_COND(tabs.is_empty());
+
 	const Point2 &pos = get_local_mouse_position();
 	// Test hovering to display right or close button.
 	int hover_now = -1;
@@ -950,16 +950,23 @@ void TabBar::add_tab(const String &p_str, const Ref<Texture2D> &p_icon) {
 	}
 	update();
 	update_minimum_size();
+
+	if (tabs.size() == 1 && is_inside_tree()) {
+		emit_signal(SNAME("tab_changed"), 0);
+	}
 }
 
 void TabBar::clear_tabs() {
+	if (tabs.is_empty()) {
+		return;
+	}
+
 	tabs.clear();
 	offset = 0;
 	max_drawn_tab = 0;
 	current = 0;
 	previous = 0;
 
-	_update_cache();
 	update();
 	update_minimum_size();
 	notify_property_list_changed();
@@ -968,35 +975,43 @@ void TabBar::clear_tabs() {
 void TabBar::remove_tab(int p_idx) {
 	ERR_FAIL_INDEX(p_idx, tabs.size());
 	tabs.remove_at(p_idx);
-	if (current >= p_idx) {
+
+	bool is_tab_changing = current == p_idx && !tabs.is_empty();
+
+	if (current >= p_idx && current > 0) {
 		current--;
 	}
 
-	if (current < 0) {
-		current = 0;
+	if (tabs.is_empty()) {
+		offset = 0;
+		max_drawn_tab = 0;
 		previous = 0;
-	}
-	if (current >= tabs.size()) {
-		current = tabs.size() - 1;
+	} else {
+		offset = MIN(offset, tabs.size() - 1);
+		max_drawn_tab = MIN(max_drawn_tab, tabs.size() - 1);
+
+		_update_cache();
+		_ensure_no_over_offset();
+		if (scroll_to_selected) {
+			ensure_tab_visible(current);
+		}
 	}
 
-	_update_cache();
-	_ensure_no_over_offset();
-	if (scroll_to_selected && !tabs.is_empty()) {
-		ensure_tab_visible(current);
-	}
 	update();
 	update_minimum_size();
 	notify_property_list_changed();
+
+	if (is_tab_changing && is_inside_tree()) {
+		emit_signal(SNAME("tab_changed"), current);
+	}
 }
 
 Variant TabBar::get_drag_data(const Point2 &p_point) {
 	if (!drag_to_rearrange_enabled) {
-		return Variant();
+		return Control::get_drag_data(p_point); // Allow stuff like TabContainer to override it.
 	}
 
 	int tab_over = get_tab_idx_at_point(p_point);
-
 	if (tab_over < 0) {
 		return Variant();
 	}
@@ -1019,12 +1034,13 @@ Variant TabBar::get_drag_data(const Point2 &p_point) {
 	drag_data["type"] = "tab_element";
 	drag_data["tab_element"] = tab_over;
 	drag_data["from_path"] = get_path();
+
 	return drag_data;
 }
 
 bool TabBar::can_drop_data(const Point2 &p_point, const Variant &p_data) const {
 	if (!drag_to_rearrange_enabled) {
-		return false;
+		return Control::can_drop_data(p_point, p_data); // Allow stuff like TabContainer to override it.
 	}
 
 	Dictionary d = p_data;
@@ -1046,15 +1062,15 @@ bool TabBar::can_drop_data(const Point2 &p_point, const Variant &p_data) const {
 			}
 		}
 	}
+
 	return false;
 }
 
 void TabBar::drop_data(const Point2 &p_point, const Variant &p_data) {
 	if (!drag_to_rearrange_enabled) {
+		Control::drop_data(p_point, p_data); // Allow stuff like TabContainer to override it.
 		return;
 	}
-
-	int hover_now = get_tab_idx_at_point(p_point);
 
 	Dictionary d = p_data;
 	if (!d.has("type")) {
@@ -1063,6 +1079,7 @@ void TabBar::drop_data(const Point2 &p_point, const Variant &p_data) {
 
 	if (String(d["type"]) == "tab_element") {
 		int tab_from_id = d["tab_element"];
+		int hover_now = get_tab_idx_at_point(p_point);
 		NodePath from_path = d["from_path"];
 		NodePath to_path = get_path();
 
@@ -1090,15 +1107,25 @@ void TabBar::drop_data(const Point2 &p_point, const Variant &p_data) {
 					hover_now = get_tab_count();
 				}
 
-				// Workaround to ensure that tab_changed is emitted.
-				if (current == hover_now) {
-					current = -1;
+				from_tabs->remove_tab(tab_from_id);
+				tabs.insert(hover_now, moving_tab);
+
+				if (tabs.size() > 1) {
+					if (current >= hover_now) {
+						current++;
+					}
+					if (previous >= hover_now) {
+						previous++;
+					}
 				}
 
-				tabs.insert(hover_now, moving_tab);
-				from_tabs->remove_tab(tab_from_id);
 				set_current_tab(hover_now);
 				update_minimum_size();
+
+				if (tabs.size() == 1) {
+					emit_signal(SNAME("tab_selected"), 0);
+					emit_signal(SNAME("tab_changed"), 0);
+				}
 			}
 		}
 	}
@@ -1151,17 +1178,33 @@ bool TabBar::get_clip_tabs() const {
 	return clip_tabs;
 }
 
-void TabBar::move_tab(int from, int to) {
-	if (from == to) {
+void TabBar::move_tab(int p_from, int p_to) {
+	if (p_from == p_to) {
 		return;
 	}
 
-	ERR_FAIL_INDEX(from, tabs.size());
-	ERR_FAIL_INDEX(to, tabs.size());
+	ERR_FAIL_INDEX(p_from, tabs.size());
+	ERR_FAIL_INDEX(p_to, tabs.size());
 
-	Tab tab_from = tabs[from];
-	tabs.remove_at(from);
-	tabs.insert(to, tab_from);
+	Tab tab_from = tabs[p_from];
+	tabs.remove_at(p_from);
+	tabs.insert(p_to, tab_from);
+
+	if (current == p_from) {
+		current = p_to;
+	} else if (current > p_from && current <= p_to) {
+		current--;
+	} else if (current < p_from && current >= p_to) {
+		current++;
+	}
+
+	if (previous == p_from) {
+		previous = p_to;
+	} else if (previous > p_from && previous >= p_to) {
+		previous--;
+	} else if (previous < p_from && previous <= p_to) {
+		previous++;
+	}
 
 	_update_cache();
 	_ensure_no_over_offset();
@@ -1436,7 +1479,6 @@ void TabBar::_get_property_list(List<PropertyInfo> *p_list) const {
 }
 
 void TabBar::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("_update_hover"), &TabBar::_update_hover);
 	ClassDB::bind_method(D_METHOD("set_tab_count", "count"), &TabBar::set_tab_count);
 	ClassDB::bind_method(D_METHOD("get_tab_count"), &TabBar::get_tab_count);
 	ClassDB::bind_method(D_METHOD("set_current_tab", "tab_idx"), &TabBar::set_current_tab);
@@ -1461,6 +1503,7 @@ void TabBar::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_tab_hidden", "tab_idx"), &TabBar::is_tab_hidden);
 	ClassDB::bind_method(D_METHOD("remove_tab", "tab_idx"), &TabBar::remove_tab);
 	ClassDB::bind_method(D_METHOD("add_tab", "title", "icon"), &TabBar::add_tab, DEFVAL(""), DEFVAL(Ref<Texture2D>()));
+	ClassDB::bind_method(D_METHOD("get_tab_idx_at_point", "point"), &TabBar::get_tab_idx_at_point);
 	ClassDB::bind_method(D_METHOD("set_tab_alignment", "alignment"), &TabBar::set_tab_alignment);
 	ClassDB::bind_method(D_METHOD("get_tab_alignment"), &TabBar::get_tab_alignment);
 	ClassDB::bind_method(D_METHOD("set_clip_tabs", "clip_tabs"), &TabBar::set_clip_tabs);
@@ -1498,6 +1541,7 @@ void TabBar::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "tab_close_display_policy", PROPERTY_HINT_ENUM, "Show Never,Show Active Only,Show Always"), "set_tab_close_display_policy", "get_tab_close_display_policy");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scrolling_enabled"), "set_scrolling_enabled", "get_scrolling_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "drag_to_rearrange_enabled"), "set_drag_to_rearrange_enabled", "get_drag_to_rearrange_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "tabs_rearrange_group"), "set_tabs_rearrange_group", "get_tabs_rearrange_group");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_to_selected"), "set_scroll_to_selected", "get_scroll_to_selected");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "select_with_rmb"), "set_select_with_rmb", "get_select_with_rmb");
 

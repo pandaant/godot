@@ -60,10 +60,10 @@ struct _NO_DISCARD_ Vector2 {
 	};
 
 	_FORCE_INLINE_ real_t &operator[](int p_idx) {
-		return p_idx ? y : x;
+		return coord[p_idx];
 	}
 	_FORCE_INLINE_ const real_t &operator[](int p_idx) const {
-		return p_idx ? y : x;
+		return coord[p_idx];
 	}
 
 	_FORCE_INLINE_ void set_all(const real_t p_value) {
@@ -248,7 +248,7 @@ Vector2 Vector2::lerp(const Vector2 &p_to, const real_t p_weight) const {
 Vector2 Vector2::slerp(const Vector2 &p_to, const real_t p_weight) const {
 	real_t start_length_sq = length_squared();
 	real_t end_length_sq = p_to.length_squared();
-	if (unlikely(start_length_sq == 0.0 || end_length_sq == 0.0)) {
+	if (unlikely(start_length_sq == 0.0f || end_length_sq == 0.0f)) {
 		// Zero length vectors have no angle, so the best we can do is either lerp or throw an error.
 		return lerp(p_to, p_weight);
 	}
