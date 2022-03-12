@@ -396,12 +396,25 @@ void FileSystemDock::_notification(int p_what) {
 					}
 				} else if ((String(dd["type"]) == "files") || (String(dd["type"]) == "files_and_dirs") || (String(dd["type"]) == "resource")) {
 					tree->set_drop_mode_flags(Tree::DROP_MODE_ON_ITEM | Tree::DROP_MODE_INBETWEEN);
+				} else if ((String(dd["type"]) == "nodes")) {
+					holding_branch = true;
+					TreeItem *item = tree->get_next_selected(tree->get_root());
+					while (item) {
+						tree_items_selected_on_drag_begin.push_back(item);
+						item = tree->get_next_selected(item);
+					}
+					list_items_selected_on_drag_begin = files->get_selected_items();
 				}
 			}
 		} break;
 
 		case NOTIFICATION_DRAG_END: {
 			tree->set_drop_mode_flags(0);
+
+			if (holding_branch) {
+				holding_branch = false;
+				_reselect_items_selected_on_drag_begin(true);
+			}
 		} break;
 
 		case NOTIFICATION_THEME_CHANGED: {
@@ -512,16 +525,14 @@ void FileSystemDock::_navigate_to_path(const String &p_path, bool p_select_in_fa
 		if (target_path.ends_with("/")) {
 			target_path = target_path.substr(0, target_path.length() - 1);
 		}
-		DirAccess *dirAccess = DirAccess::open("res://");
-		if (dirAccess->file_exists(p_path)) {
+		DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+		if (da->file_exists(p_path)) {
 			path = target_path;
-		} else if (dirAccess->dir_exists(p_path)) {
+		} else if (da->dir_exists(p_path)) {
 			path = target_path + "/";
 		} else {
-			memdelete(dirAccess);
 			ERR_FAIL_MSG(vformat("Cannot navigate to '%s' as it has not been found in the file system!", p_path));
 		}
-		memdelete(dirAccess);
 	}
 
 	_set_current_path_text(path);
@@ -1158,7 +1169,7 @@ void FileSystemDock::_try_move_item(const FileOrFolder &p_item, const String &p_
 		_get_all_items_in_dir(EditorFileSystem::get_singleton()->get_filesystem_path(old_path), file_changed_paths, folder_changed_paths);
 	}
 
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	print_verbose("Moving " + old_path + " -> " + new_path);
 	Error err = da->rename(old_path, new_path);
 	if (err == OK) {
@@ -1198,7 +1209,6 @@ void FileSystemDock::_try_move_item(const FileOrFolder &p_item, const String &p_
 	} else {
 		EditorNode::get_singleton()->add_io_error(TTR("Error moving:") + "\n" + old_path + "\n");
 	}
-	memdelete(da);
 }
 
 void FileSystemDock::_try_duplicate_item(const FileOrFolder &p_item, const String &p_new_path) const {
@@ -1217,7 +1227,7 @@ void FileSystemDock::_try_duplicate_item(const FileOrFolder &p_item, const Strin
 		return;
 	}
 
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	print_verbose("Duplicating " + old_path + " -> " + new_path);
 	Error err = p_item.is_file ? da->copy(old_path, new_path) : da->copy_dir(old_path, new_path);
 	if (err == OK) {
@@ -1255,7 +1265,6 @@ void FileSystemDock::_try_duplicate_item(const FileOrFolder &p_item, const Strin
 	} else {
 		EditorNode::get_singleton()->add_io_error(TTR("Error duplicating:") + "\n" + old_path + "\n");
 	}
-	memdelete(da);
 }
 
 void FileSystemDock::_update_resource_paths_after_move(const Map<String, String> &p_renames) const {
@@ -1405,12 +1414,11 @@ void FileSystemDock::_make_dir_confirm() {
 		directory = directory.get_base_dir();
 	}
 	print_verbose("Making folder " + dir_name + " in " + directory);
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	Error err = da->change_dir(directory);
 	if (err == OK) {
 		err = da->make_dir(dir_name);
 	}
-	memdelete(da);
 
 	if (err == OK) {
 		print_verbose("FileSystem: calling rescan.");
@@ -1451,13 +1459,11 @@ void FileSystemDock::_make_scene_confirm() {
 
 	scene_name = directory.plus_file(scene_name);
 
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	if (da->file_exists(scene_name)) {
 		EditorNode::get_singleton()->show_warning(TTR("A file or folder with this name already exists."));
-		memdelete(da);
 		return;
 	}
-	memdelete(da);
 
 	int idx = EditorNode::get_singleton()->new_scene();
 	EditorNode::get_singleton()->get_editor_data().set_scene_path(idx, scene_name);
@@ -1520,7 +1526,7 @@ void FileSystemDock::_rename_operation_confirm() {
 	}
 
 	// Present a more user friendly warning for name conflict.
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 #if defined(WINDOWS_ENABLED) || defined(UWP_ENABLED)
 	// Workaround case insensitivity on Windows.
 	if ((da->file_exists(new_path) || da->dir_exists(new_path)) && new_path.to_lower() != old_path.to_lower()) {
@@ -1528,10 +1534,8 @@ void FileSystemDock::_rename_operation_confirm() {
 	if (da->file_exists(new_path) || da->dir_exists(new_path)) {
 #endif
 		EditorNode::get_singleton()->show_warning(TTR("A file or folder with this name already exists."));
-		memdelete(da);
 		return;
 	}
-	memdelete(da);
 
 	Map<String, String> file_renames;
 	Map<String, String> folder_renames;
@@ -1575,13 +1579,11 @@ void FileSystemDock::_duplicate_operation_confirm() {
 	String new_path = base_dir.plus_file(new_name);
 
 	// Present a more user friendly warning for name conflict
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	DirAccessRef da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	if (da->file_exists(new_path) || da->dir_exists(new_path)) {
 		EditorNode::get_singleton()->show_warning(TTR("A file or folder with this name already exists."));
-		memdelete(da);
 		return;
 	}
-	memdelete(da);
 
 	_try_duplicate_item(to_duplicate, new_path);
 
@@ -2647,8 +2649,79 @@ void FileSystemDock::_file_multi_selected(int p_index, bool p_selected) {
 	call_deferred(SNAME("_update_import_dock"));
 }
 
+void FileSystemDock::_tree_mouse_exited() {
+	if (holding_branch) {
+		_reselect_items_selected_on_drag_begin();
+	}
+}
+
+void FileSystemDock::_reselect_items_selected_on_drag_begin(bool reset) {
+	TreeItem *selected_item = tree->get_next_selected(tree->get_root());
+	if (selected_item) {
+		selected_item->deselect(0);
+	}
+	if (!tree_items_selected_on_drag_begin.is_empty()) {
+		bool reselected = false;
+		for (TreeItem *item : tree_items_selected_on_drag_begin) {
+			if (item->get_tree()) {
+				item->select(0);
+				reselected = true;
+			}
+		}
+
+		if (reset) {
+			tree_items_selected_on_drag_begin.clear();
+		}
+
+		if (!reselected) {
+			// If couldn't reselect the items selected on drag begin, select the "res://" item.
+			tree->get_root()->get_child(1)->select(0);
+		}
+	}
+
+	files->deselect_all();
+	if (!list_items_selected_on_drag_begin.is_empty()) {
+		for (const int idx : list_items_selected_on_drag_begin) {
+			files->select(idx, false);
+		}
+
+		if (reset) {
+			list_items_selected_on_drag_begin.clear();
+		}
+	}
+}
+
 void FileSystemDock::_tree_gui_input(Ref<InputEvent> p_event) {
 	Ref<InputEventKey> key = p_event;
+
+	Ref<InputEventMouseMotion> mm = p_event;
+	if (mm.is_valid()) {
+		TreeItem *item = tree->get_item_at_position(mm->get_position());
+		if (item && holding_branch) {
+			String fpath = item->get_metadata(0);
+			while (!fpath.ends_with("/") && fpath != "res://" && item->get_parent()) { // Find the parent folder tree item.
+				item = item->get_parent();
+				fpath = item->get_metadata(0);
+			}
+
+			TreeItem *deselect_item = tree->get_next_selected(tree->get_root());
+			while (deselect_item) {
+				deselect_item->deselect(0);
+				deselect_item = tree->get_next_selected(deselect_item);
+			}
+			item->select(0);
+
+			if (display_mode == DisplayMode::DISPLAY_MODE_SPLIT) {
+				files->deselect_all();
+				// Try to select the corresponding file list item.
+				const int files_item_idx = files->find_metadata(fpath);
+				if (files_item_idx != -1) {
+					files->select(files_item_idx);
+				}
+			}
+		}
+	}
+
 	if (key.is_valid() && key->is_pressed() && !key->is_echo()) {
 		if (ED_IS_SHORTCUT("filesystem_dock/duplicate", p_event)) {
 			_tree_rmb_option(FILE_DUPLICATE);
@@ -2669,6 +2742,43 @@ void FileSystemDock::_tree_gui_input(Ref<InputEvent> p_event) {
 }
 
 void FileSystemDock::_file_list_gui_input(Ref<InputEvent> p_event) {
+	Ref<InputEventMouseMotion> mm = p_event;
+	if (mm.is_valid() && holding_branch) {
+		const int item_idx = files->get_item_at_position(mm->get_position());
+		if (item_idx != -1) {
+			files->deselect_all();
+			String fpath = files->get_item_metadata(item_idx);
+			if (fpath.ends_with("/") || fpath == "res://") {
+				files->select(item_idx);
+			}
+
+			TreeItem *deselect_item = tree->get_next_selected(tree->get_root());
+			while (deselect_item) {
+				deselect_item->deselect(0);
+				deselect_item = tree->get_next_selected(deselect_item);
+			}
+
+			// Try to select the corresponding tree item.
+			TreeItem *tree_item = tree->get_item_with_text(files->get_item_text(item_idx));
+			if (tree_item) {
+				tree_item->select(0);
+			} else {
+				// Find parent folder.
+				fpath = fpath.substr(0, fpath.rfind("/") + 1);
+				if (fpath.size() > String("res://").size()) {
+					fpath = fpath.left(fpath.size() - 2); // Remove last '/'.
+					const int slash_idx = fpath.rfind("/");
+					fpath = fpath.substr(slash_idx + 1, fpath.size() - slash_idx - 1);
+				}
+
+				tree_item = tree->get_item_with_text(fpath);
+				if (tree_item) {
+					tree_item->select(0);
+				}
+			}
+		}
+	}
+
 	Ref<InputEventKey> key = p_event;
 	if (key.is_valid() && key->is_pressed() && !key->is_echo()) {
 		if (ED_IS_SHORTCUT("filesystem_dock/duplicate", p_event)) {
@@ -2697,7 +2807,7 @@ void FileSystemDock::_get_imported_files(const String &p_path, Vector<String> &f
 		return;
 	}
 
-	DirAccess *da = DirAccess::open(p_path);
+	DirAccessRef da = DirAccess::open(p_path);
 	da->list_dir_begin();
 	String n = da->get_next();
 	while (!n.is_empty()) {
@@ -2932,6 +3042,7 @@ FileSystemDock::FileSystemDock() {
 	tree->connect("empty_rmb", callable_mp(this, &FileSystemDock::_tree_rmb_empty));
 	tree->connect("nothing_selected", callable_mp(this, &FileSystemDock::_tree_empty_selected));
 	tree->connect("gui_input", callable_mp(this, &FileSystemDock::_tree_gui_input));
+	tree->connect("mouse_exited", callable_mp(this, &FileSystemDock::_tree_mouse_exited));
 
 	file_list_vb = memnew(VBoxContainer);
 	file_list_vb->set_v_size_flags(SIZE_EXPAND_FILL);

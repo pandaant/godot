@@ -371,11 +371,6 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  --no-docbase                                 Disallow dumping the base types (used with --doctool).\n");
 	OS::get_singleton()->print("  --build-solutions                            Build the scripting solutions (e.g. for C# projects). Implies --editor and requires a valid project to edit.\n");
 	OS::get_singleton()->print("  --dump-extension-api                         Generate JSON dump of the Godot API for GDExtension bindings named 'extension_api.json' in the current folder.\n");
-#ifdef DEBUG_METHODS_ENABLED
-	// TODO: Should be removed together with nativescript eventually.
-	OS::get_singleton()->print("  --gdnative-generate-json-api <path>          Generate JSON dump of the Godot API for GDNative bindings and save it on the file specified in <path>.\n");
-	OS::get_singleton()->print("  --gdnative-generate-json-builtin-api <path>  Generate JSON dump of the Godot API of the builtin Variant types and utility functions for GDNative bindings and save it on the file specified in <path>.\n");
-#endif
 #ifdef TESTS_ENABLED
 	OS::get_singleton()->print("  --test [--help]                              Run unit tests. Use --test --help for more information.\n");
 #endif
@@ -946,15 +941,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			auto_build_solutions = true;
 			editor = true;
 			cmdline_tool = true;
-#ifdef DEBUG_METHODS_ENABLED
-		} else if (I->get() == "--gdnative-generate-json-api" || I->get() == "--gdnative-generate-json-builtin-api") {
-			// Register as an editor instance to use low-end fallback if relevant.
-			editor = true;
-			cmdline_tool = true;
-			// We still pass it to the main arguments since the argument handling itself is not done in this function,
-			// it's done in nativescript init code.
-			main_args.push_back(I->get());
-#endif
 		} else if (I->get() == "--dump-extension-api") {
 			// Register as an editor instance to use low-end fallback if relevant.
 			editor = true;
@@ -2113,9 +2099,8 @@ bool Main::start() {
 				checked_paths.insert(path);
 
 				// Create the module documentation directory if it doesn't exist
-				DirAccess *da = DirAccess::create_for_path(path);
+				DirAccessRef da = DirAccess::create_for_path(path);
 				err = da->make_dir_recursive(path);
-				memdelete(da);
 				ERR_FAIL_COND_V_MSG(err != OK, false, "Error: Can't create directory: " + path + ": " + itos(err));
 
 				print_line("Loading docs from: " + path);
@@ -2126,9 +2111,8 @@ bool Main::start() {
 
 		String index_path = doc_tool_path.plus_file("doc/classes");
 		// Create the main documentation directory if it doesn't exist
-		DirAccess *da = DirAccess::create_for_path(index_path);
+		DirAccessRef da = DirAccess::create_for_path(index_path);
 		err = da->make_dir_recursive(index_path);
-		memdelete(da);
 		ERR_FAIL_COND_V_MSG(err != OK, false, "Error: Can't create index directory: " + index_path + ": " + itos(err));
 
 		print_line("Loading classes from: " + index_path);
@@ -2466,15 +2450,13 @@ bool Main::start() {
 						int sep = local_game_path.rfind("/");
 
 						if (sep == -1) {
-							DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+							DirAccessRef da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 							local_game_path = da->get_current_dir().plus_file(local_game_path);
-							memdelete(da);
 						} else {
-							DirAccess *da = DirAccess::open(local_game_path.substr(0, sep));
+							DirAccessRef da = DirAccess::open(local_game_path.substr(0, sep));
 							if (da) {
 								local_game_path = da->get_current_dir().plus_file(
 										local_game_path.substr(sep + 1, local_game_path.length()));
-								memdelete(da);
 							}
 						}
 					}

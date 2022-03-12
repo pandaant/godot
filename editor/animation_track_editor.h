@@ -121,6 +121,8 @@ public:
 
 	void set_hscroll(HScrollBar *p_hscroll);
 
+	virtual CursorShape get_cursor_shape(const Point2 &p_pos) const override;
+
 	AnimationTimelineEdit();
 };
 
@@ -181,6 +183,8 @@ class AnimationTrackEdit : public Control {
 	void _path_submitted(const String &p_text);
 	void _play_position_draw();
 	bool _is_value_key_valid(const Variant &p_key_value, Variant::Type &r_valid_type) const;
+
+	Ref<Texture2D> _get_key_type_icon() const;
 
 	mutable int dropping_at;
 	float insert_at_pos;

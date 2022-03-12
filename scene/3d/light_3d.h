@@ -70,7 +70,6 @@ public:
 private:
 	Color color;
 	real_t param[PARAM_MAX] = {};
-	Color shadow_color;
 	bool shadow = false;
 	bool negative = false;
 	bool reverse_cull = false;
@@ -129,9 +128,6 @@ public:
 	void set_color(const Color &p_color);
 	Color get_color() const;
 
-	void set_shadow_color(const Color &p_shadow_color);
-	Color get_shadow_color() const;
-
 	void set_shadow_reverse_cull_face(bool p_enable);
 	bool get_shadow_reverse_cull_face() const;
 
@@ -142,7 +138,6 @@ public:
 	Ref<Texture2D> get_projector() const;
 
 	virtual AABB get_aabb() const override;
-	virtual Vector<Face3> get_faces(uint32_t p_usage_flags) const override;
 
 	Light3D();
 	~Light3D();

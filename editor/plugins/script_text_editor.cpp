@@ -521,7 +521,7 @@ void ScriptTextEditor::_update_errors() {
 	errors_panel->pop(); // Table
 
 	CodeEdit *te = code_editor->get_text_editor();
-	bool highlight_safe = EDITOR_DEF("text_editor/appearance/gutters/highlight_type_safe_lines", true);
+	bool highlight_safe = EDITOR_GET("text_editor/appearance/gutters/highlight_type_safe_lines");
 	bool last_is_safe = false;
 	for (int i = 0; i < te->get_line_count(); i++) {
 		if (errors.is_empty()) {
@@ -1335,6 +1335,9 @@ void ScriptTextEditor::_change_syntax_highlighter(int p_idx) {
 void ScriptTextEditor::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED:
+			if (!editor_enabled) {
+				break;
+			}
 			if (is_visible_in_tree()) {
 				_update_warnings();
 				_update_errors();
