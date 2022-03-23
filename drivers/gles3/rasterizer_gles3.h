@@ -37,6 +37,11 @@
 #include "rasterizer_scene_gles3.h"
 #include "rasterizer_storage_gles3.h"
 #include "servers/rendering/renderer_compositor.h"
+#include "storage/canvas_texture_storage.h"
+#include "storage/config.h"
+#include "storage/decal_atlas_storage.h"
+#include "storage/render_target_storage.h"
+#include "storage/texture_storage.h"
 
 class RasterizerGLES3 : public RendererCompositor {
 private:
@@ -46,6 +51,10 @@ private:
 	double time_total = 0.0;
 
 protected:
+	GLES3::Config config;
+	GLES3::CanvasTextureStorage canvas_texture_storage;
+	GLES3::TextureStorage texture_storage;
+	GLES3::DecalAtlasStorage decal_atlas_storage;
 	RasterizerStorageGLES3 storage;
 	RasterizerCanvasGLES3 canvas;
 	RasterizerSceneGLES3 scene;
@@ -53,6 +62,9 @@ protected:
 	void _blit_render_target_to_screen(RID p_render_target, DisplayServer::WindowID p_screen, const Rect2 &p_screen_rect);
 
 public:
+	RendererCanvasTextureStorage *get_canvas_texture_storage() { return &canvas_texture_storage; }
+	RendererTextureStorage *get_texture_storage() { return &texture_storage; }
+	RendererDecalAtlasStorage *get_decal_atlas_storage() { return &decal_atlas_storage; }
 	RendererStorage *get_storage() { return &storage; }
 	RendererCanvasRender *get_canvas() { return &canvas; }
 	RendererSceneRender *get_scene() { return &scene; }

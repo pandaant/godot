@@ -227,7 +227,7 @@ void register_core_types() {
 
 	GDREGISTER_CLASS(PackedDataContainer);
 	GDREGISTER_ABSTRACT_CLASS(PackedDataContainerRef);
-	GDREGISTER_CLASS(AStar);
+	GDREGISTER_CLASS(AStar3D);
 	GDREGISTER_CLASS(AStar2D);
 	GDREGISTER_CLASS(EncodedObjectAsID);
 	GDREGISTER_CLASS(RandomNumberGenerator);
@@ -261,6 +261,8 @@ void register_core_types() {
 	_classdb = memnew(core_bind::special::ClassDB);
 	_marshalls = memnew(core_bind::Marshalls);
 	_engine_debugger = memnew(core_bind::EngineDebugger);
+
+	GDREGISTER_NATIVE_STRUCT(AudioFrame, "float left;float right");
 }
 
 void register_core_settings() {

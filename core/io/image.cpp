@@ -1465,8 +1465,8 @@ template <class Component, int CC, bool renormalize,
 		void (*renormalize_func)(Component *)>
 static void _generate_po2_mipmap(const Component *p_src, Component *p_dst, uint32_t p_width, uint32_t p_height) {
 	//fast power of 2 mipmap generation
-	uint32_t dst_w = MAX(p_width >> 1, 1);
-	uint32_t dst_h = MAX(p_height >> 1, 1);
+	uint32_t dst_w = MAX(p_width >> 1, 1u);
+	uint32_t dst_h = MAX(p_height >> 1, 1u);
 
 	int right_step = (p_width == 1) ? 0 : CC;
 	int down_step = (p_height == 1) ? 0 : (p_width * CC);
@@ -3112,8 +3112,8 @@ void Image::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("generate_mipmaps", "renormalize"), &Image::generate_mipmaps, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("clear_mipmaps"), &Image::clear_mipmaps);
 
-	ClassDB::bind_method(D_METHOD("create", "width", "height", "use_mipmaps", "format"), &Image::_create_empty);
-	ClassDB::bind_method(D_METHOD("create_from_data", "width", "height", "use_mipmaps", "format", "data"), &Image::_create_from_data);
+	ClassDB::bind_method(D_METHOD("create", "width", "height", "use_mipmaps", "format"), &Image::create_empty);
+	ClassDB::bind_method(D_METHOD("create_from_data", "width", "height", "use_mipmaps", "format", "data"), &Image::create_from_data);
 
 	ClassDB::bind_method(D_METHOD("is_empty"), &Image::is_empty);
 

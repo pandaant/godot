@@ -43,6 +43,20 @@
 #include "scene/property_utils.h"
 #include "scene/resources/packed_scene.h"
 
+static bool _property_path_matches(const String &p_property_path, const String &p_filter) {
+	if (p_property_path.findn(p_filter) != -1) {
+		return true;
+	}
+
+	const Vector<String> sections = p_property_path.split("/");
+	for (int i = 0; i < sections.size(); i++) {
+		if (p_filter.is_subsequence_ofn(EditorPropertyNameProcessor::get_singleton()->process_name(sections[i]))) {
+			return true;
+		}
+	}
+	return false;
+}
+
 Size2 EditorProperty::get_minimum_size() const {
 	Size2 ms;
 	Ref<Font> font = get_theme_font(SNAME("font"), SNAME("Tree"));
@@ -882,7 +896,7 @@ void EditorProperty::menu_option(int p_option) {
 			emit_changed(property, InspectorDock::get_inspector_singleton()->get_property_clipboard());
 		} break;
 		case MENU_COPY_PROPERTY_PATH: {
-			DisplayServer::get_singleton()->clipboard_set(property);
+			DisplayServer::get_singleton()->clipboard_set(property_path);
 		} break;
 		case MENU_PIN_VALUE: {
 			emit_signal(SNAME("property_pinned"), property, !pinned);
@@ -948,31 +962,13 @@ void EditorProperty::_bind_methods() {
 }
 
 EditorProperty::EditorProperty() {
-	draw_top_bg = true;
 	object = nullptr;
 	split_ratio = 0.5;
-	selectable = true;
 	text_size = 0;
-	read_only = false;
-	checkable = false;
-	checked = false;
-	draw_warning = false;
-	keying = false;
-	deletable = false;
-	keying_hover = false;
-	revert_hover = false;
-	check_hover = false;
-	can_revert = false;
-	can_pin = false;
-	pin_hidden = false;
-	pinned = false;
-	use_folding = false;
 	property_usage = 0;
-	selected = false;
 	selected_focusable = -1;
 	label_reference = nullptr;
 	bottom_editor = nullptr;
-	delete_hover = false;
 	menu = nullptr;
 	set_process_unhandled_key_input(true);
 }
@@ -2332,6 +2328,7 @@ void EditorInspector::_parse_added_editors(VBoxContainer *current_vbox, Ref<Edit
 				if (F.properties.size() == 1) {
 					//since it's one, associate:
 					ep->property = F.properties[0];
+					ep->property_path = property_prefix + F.properties[0];
 					ep->property_usage = 0;
 				}
 
@@ -2674,15 +2671,14 @@ void EditorInspector::update_tree() {
 		}
 
 		// Get the property label's string.
-		String property_label_string = (path.contains("/")) ? path.substr(path.rfind("/") + 1) : path;
+		String name_override = (path.contains("/")) ? path.substr(path.rfind("/") + 1) : path;
+		String property_label_string = name_override;
 		if (capitalize_paths) {
 			// Capitalize paths.
 			int dot = property_label_string.find(".");
 			if (dot != -1) {
-				String ov = property_label_string.substr(dot);
-				property_label_string = property_label_string.substr(0, dot);
-				property_label_string = EditorPropertyNameProcessor::get_singleton()->process_name(property_label_string);
-				property_label_string += ov;
+				name_override = name_override.substr(0, dot);
+				property_label_string = EditorPropertyNameProcessor::get_singleton()->process_name(name_override) + property_label_string.substr(dot);
 			} else {
 				property_label_string = EditorPropertyNameProcessor::get_singleton()->process_name(property_label_string);
 			}
@@ -2698,7 +2694,8 @@ void EditorInspector::update_tree() {
 
 		// Ignore properties that do not fit the filter.
 		if (use_filter && !filter.is_empty()) {
-			if (!filter.is_subsequence_ofn(path) && !filter.is_subsequence_ofn(property_label_string) && !property_prefix.to_lower().contains(filter.to_lower())) {
+			const String property_path = property_prefix + (path.is_empty() ? "" : path + "/") + name_override;
+			if (!_property_path_matches(property_path, filter)) {
 				continue;
 			}
 		}
@@ -2892,6 +2889,7 @@ void EditorInspector::update_tree() {
 						if (F.properties.size() == 1) {
 							//since it's one, associate:
 							ep->property = F.properties[0];
+							ep->property_path = property_prefix + F.properties[0];
 							ep->property_usage = p.usage;
 							//and set label?
 						}
@@ -3675,25 +3673,11 @@ EditorInspector::EditorInspector() {
 	add_child(main_vbox);
 	set_horizontal_scroll_mode(SCROLL_MODE_DISABLED);
 
-	wide_editors = false;
-	show_categories = false;
-	hide_script = true;
-	use_doc_hints = false;
-	capitalize_paths = true;
-	use_filter = false;
-	autoclear = false;
 	changing = 0;
-	use_folding = false;
-	update_all_pending = false;
-	update_tree_pending = false;
-	read_only = false;
 	search_box = nullptr;
-	keying = false;
 	_prop_edited = "property_edited";
 	set_process(false);
 	property_focusable = -1;
-	sub_inspector = false;
-	deletable_properties = false;
 	property_clipboard = Variant();
 
 	get_v_scroll_bar()->connect("value_changed", callable_mp(this, &EditorInspector::_vscroll_changed));

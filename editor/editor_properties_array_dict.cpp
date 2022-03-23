@@ -253,6 +253,7 @@ void EditorPropertyArray::update_property() {
 		if (vbox) {
 			set_bottom_editor(nullptr);
 			memdelete(vbox);
+			button_add_item = nullptr;
 			vbox = nullptr;
 		}
 		return;
@@ -408,6 +409,7 @@ void EditorPropertyArray::update_property() {
 		if (vbox) {
 			set_bottom_editor(nullptr);
 			memdelete(vbox);
+			button_add_item = nullptr;
 			vbox = nullptr;
 		}
 	}
@@ -714,7 +716,6 @@ EditorPropertyArray::EditorPropertyArray() {
 	size_slider = nullptr;
 	button_add_item = nullptr;
 	paginator = nullptr;
-	updating = false;
 	change_type = memnew(PopupMenu);
 	add_child(change_type);
 	change_type->connect("id_pressed", callable_mp(this, &EditorPropertyArray::_change_type_menu));
@@ -723,8 +724,6 @@ EditorPropertyArray::EditorPropertyArray() {
 	subtype = Variant::NIL;
 	subtype_hint = PROPERTY_HINT_NONE;
 	subtype_hint_string = "";
-
-	dropping = false;
 }
 
 ///////////////////// DICTIONARY ///////////////////////////
@@ -819,6 +818,7 @@ void EditorPropertyDictionary::update_property() {
 		if (vbox) {
 			set_bottom_editor(nullptr);
 			memdelete(vbox);
+			button_add_item = nullptr;
 			vbox = nullptr;
 		}
 		return;
@@ -1211,7 +1211,6 @@ EditorPropertyDictionary::EditorPropertyDictionary() {
 	vbox = nullptr;
 	button_add_item = nullptr;
 	paginator = nullptr;
-	updating = false;
 	change_type = memnew(PopupMenu);
 	add_child(change_type);
 	change_type->connect("id_pressed", callable_mp(this, &EditorPropertyDictionary::_change_type_menu));
@@ -1274,6 +1273,7 @@ void EditorPropertyLocalizableString::update_property() {
 		if (vbox) {
 			set_bottom_editor(nullptr);
 			memdelete(vbox);
+			button_add_item = nullptr;
 			vbox = nullptr;
 		}
 		return;

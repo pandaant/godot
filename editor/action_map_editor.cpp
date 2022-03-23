@@ -611,7 +611,6 @@ InputEventConfigurationDialog::InputEventConfigurationDialog() {
 	add_child(main_vbox);
 
 	tab_container = memnew(TabContainer);
-	tab_container->set_tab_alignment(TabBar::ALIGNMENT_LEFT);
 	tab_container->set_use_hidden_tabs_for_min_size(true);
 	tab_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tab_container->connect("tab_selected", callable_mp(this, &InputEventConfigurationDialog::_tab_selected));
@@ -1122,8 +1121,6 @@ void ActionMapEditor::use_external_search_box(LineEdit *p_searchbox) {
 }
 
 ActionMapEditor::ActionMapEditor() {
-	show_builtin_actions = false;
-
 	// Main Vbox Container
 	VBoxContainer *main_vbox = memnew(VBoxContainer);
 	main_vbox->set_anchors_and_offsets_preset(PRESET_WIDE);
