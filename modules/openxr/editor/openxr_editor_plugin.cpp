@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  test_physics_2d.h                                                    */
+/*  openxr_editor_plugin.cpp                                             */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,14 +28,31 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef TEST_PHYSICS_2D_H
-#define TEST_PHYSICS_2D_H
+#include "openxr_editor_plugin.h"
 
-class MainLoop;
+#include "../action_map/openxr_action_map.h"
+#include "editor/editor_node.h"
 
-namespace TestPhysics2D {
-
-MainLoop *test();
+void OpenXREditorPlugin::edit(Object *p_node) {
+	if (Object::cast_to<OpenXRActionMap>(p_node)) {
+		String path = Object::cast_to<OpenXRActionMap>(p_node)->get_path();
+		if (path.is_resource_file()) {
+			action_map_editor->open_action_map(path);
+		}
+	}
 }
 
-#endif // TEST_PHYSICS_2D_H
+bool OpenXREditorPlugin::handles(Object *p_node) const {
+	return (Object::cast_to<OpenXRActionMap>(p_node) != nullptr);
+}
+
+void OpenXREditorPlugin::make_visible(bool p_visible) {
+}
+
+OpenXREditorPlugin::OpenXREditorPlugin() {
+	action_map_editor = memnew(OpenXRActionMapEditor);
+	EditorNode::get_singleton()->add_bottom_panel_item(TTR("OpenXR Action Map"), action_map_editor);
+}
+
+OpenXREditorPlugin::~OpenXREditorPlugin() {
+}

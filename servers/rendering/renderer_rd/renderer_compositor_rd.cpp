@@ -156,6 +156,7 @@ void RendererCompositorRD::finalize() {
 	memdelete(canvas);
 	memdelete(storage);
 	memdelete(decal_atlas_storage);
+	memdelete(mesh_storage);
 	memdelete(material_storage);
 	memdelete(texture_storage);
 	memdelete(canvas_texture_storage);
@@ -252,8 +253,8 @@ RendererCompositorRD::RendererCompositorRD() {
 		if (shader_cache_dir.is_empty()) {
 			shader_cache_dir = "user://";
 		}
-		DirAccessRef da = DirAccess::open(shader_cache_dir);
-		if (!da) {
+		Ref<DirAccess> da = DirAccess::open(shader_cache_dir);
+		if (da.is_null()) {
 			ERR_PRINT("Can't create shader cache folder, no shader caching will happen: " + shader_cache_dir);
 		} else {
 			Error err = da->change_dir("shader_cache");
@@ -291,6 +292,7 @@ RendererCompositorRD::RendererCompositorRD() {
 	texture_storage = memnew(RendererRD::TextureStorage);
 	decal_atlas_storage = memnew(RendererRD::DecalAtlasStorage);
 	material_storage = memnew(RendererRD::MaterialStorage);
+	mesh_storage = memnew(RendererRD::MeshStorage);
 	storage = memnew(RendererStorageRD);
 	canvas = memnew(RendererCanvasRenderRD(storage));
 

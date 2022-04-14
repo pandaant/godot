@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  test_oa_hash_map.h                                                   */
+/*  openxr_select_interaction_profile_dialog.h                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,14 +28,39 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef TEST_OA_HASH_MAP_H
-#define TEST_OA_HASH_MAP_H
+#ifndef OPENXR_SELECT_INTERACTION_PROFILE_DIALOG_H
+#define OPENXR_SELECT_INTERACTION_PROFILE_DIALOG_H
 
-class MainLoop;
+#include "../action_map/openxr_defs.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/button.h"
+#include "scene/gui/dialogs.h"
+#include "scene/gui/label.h"
+#include "scene/gui/line_edit.h"
+#include "scene/gui/scroll_container.h"
+#include "scene/gui/separator.h"
+#include "scene/gui/text_edit.h"
 
-namespace TestOAHashMap {
+class OpenXRSelectInteractionProfileDialog : public ConfirmationDialog {
+	GDCLASS(OpenXRSelectInteractionProfileDialog, ConfirmationDialog);
 
-MainLoop *test();
-}
+private:
+	String selected_interaction_profile;
+	Dictionary ip_buttons;
 
-#endif // TEST_OA_HASH_MAP_H
+	VBoxContainer *main_vb = nullptr;
+	ScrollContainer *scroll = nullptr;
+
+protected:
+	static void _bind_methods();
+	void _notification(int p_what);
+
+public:
+	void _on_select_interaction_profile(const String p_interaction_profile);
+	void open(PackedStringArray p_do_not_include);
+	virtual void ok_pressed() override;
+
+	OpenXRSelectInteractionProfileDialog();
+};
+
+#endif // !OPENXR_SELECT_INTERACTION_PROFILE_DIALOG_H

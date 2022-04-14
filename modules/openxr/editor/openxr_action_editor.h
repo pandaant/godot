@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  test_gui.h                                                           */
+/*  openxr_action_editor.h                                               */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,14 +28,40 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef TEST_GUI_H
-#define TEST_GUI_H
+#ifndef OPENXR_ACTION_EDITOR_H
+#define OPENXR_ACTION_EDITOR_H
 
-class MainLoop;
+#include "../action_map/openxr_action.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/button.h"
+#include "scene/gui/line_edit.h"
+#include "scene/gui/option_button.h"
+#include "scene/gui/text_edit.h"
 
-namespace TestGUI {
+class OpenXRActionEditor : public HBoxContainer {
+	GDCLASS(OpenXRActionEditor, HBoxContainer);
 
-MainLoop *test();
-}
+private:
+	Ref<OpenXRAction> action;
 
-#endif
+	LineEdit *action_name = nullptr;
+	LineEdit *action_localized_name = nullptr;
+	OptionButton *action_type = nullptr;
+	Button *rem_action = nullptr;
+
+	void _theme_changed();
+	void _on_action_name_changed(const String p_new_text);
+	void _on_action_localized_name_changed(const String p_new_text);
+	void _on_item_selected(int p_idx);
+	void _on_remove_action();
+
+protected:
+	static void _bind_methods();
+	void _notification(int p_what);
+
+public:
+	Ref<OpenXRAction> get_action() { return action; };
+	OpenXRActionEditor(Ref<OpenXRAction> p_action);
+};
+
+#endif // !OPENXR_ACTION_EDITOR_H

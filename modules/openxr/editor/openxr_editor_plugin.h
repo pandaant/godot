@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  test_math.h                                                          */
+/*  openxr_editor_plugin.h                                               */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,14 +28,26 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef TEST_MATH_H
-#define TEST_MATH_H
+#ifndef OPENXR_EDITOR_PLUGIN_H
+#define OPENXR_EDITOR_PLUGIN_H
 
-class MainLoop;
+#include "editor/editor_plugin.h"
+#include "openxr_action_map_editor.h"
 
-namespace TestMath {
+class OpenXREditorPlugin : public EditorPlugin {
+	GDCLASS(OpenXREditorPlugin, EditorPlugin);
 
-MainLoop *test();
-}
+	OpenXRActionMapEditor *action_map_editor = nullptr;
 
-#endif
+public:
+	virtual String get_name() const override { return "OpenXRPlugin"; }
+	bool has_main_screen() const override { return false; }
+	virtual void edit(Object *p_node) override;
+	virtual bool handles(Object *p_node) const override;
+	virtual void make_visible(bool p_visible) override;
+
+	OpenXREditorPlugin();
+	~OpenXREditorPlugin();
+};
+
+#endif // !OPENXR_EDITOR_PLUGIN_H

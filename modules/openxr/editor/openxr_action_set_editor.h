@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  test_physics_3d.h                                                    */
+/*  openxr_action_set_editor.h                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,14 +28,61 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef TEST_PHYSICS_H
-#define TEST_PHYSICS_H
+#ifndef OPENXR_ACTION_SET_EDITOR_H
+#define OPENXR_ACTION_SET_EDITOR_H
 
-class MainLoop;
+#include "../action_map/openxr_action_map.h"
+#include "../action_map/openxr_action_set.h"
+#include "openxr_action_editor.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/button.h"
+#include "scene/gui/line_edit.h"
+#include "scene/gui/panel_container.h"
+#include "scene/gui/text_edit.h"
 
-namespace TestPhysics3D {
+class OpenXRActionSetEditor : public HBoxContainer {
+	GDCLASS(OpenXRActionSetEditor, HBoxContainer);
 
-MainLoop *test();
-}
+private:
+	Ref<OpenXRActionMap> action_map;
+	Ref<OpenXRActionSet> action_set;
 
-#endif
+	bool is_expanded = true;
+
+	PanelContainer *panel = nullptr;
+	Button *fold_btn = nullptr;
+	VBoxContainer *main_vb = nullptr;
+	HBoxContainer *action_set_hb = nullptr;
+	LineEdit *action_set_name = nullptr;
+	LineEdit *action_set_localized_name = nullptr;
+	TextEdit *action_set_priority = nullptr;
+	Button *add_action = nullptr;
+	Button *rem_action_set = nullptr;
+	VBoxContainer *actions_vb = nullptr;
+
+	void _set_fold_icon();
+	void _theme_changed();
+	OpenXRActionEditor *_add_action_editor(Ref<OpenXRAction> p_action);
+	void _update_actions();
+
+	void _on_toggle_expand();
+	void _on_action_set_name_changed(const String p_new_text);
+	void _on_action_set_localized_name_changed(const String p_new_text);
+	void _on_action_set_priority_changed(const String p_new_text);
+	void _on_add_action();
+	void _on_remove_action_set();
+
+	void _on_remove_action(Object *p_action_editor);
+
+protected:
+	static void _bind_methods();
+	void _notification(int p_what);
+
+public:
+	Ref<OpenXRActionSet> get_action_set() { return action_set; };
+	void set_focus_on_entry();
+
+	OpenXRActionSetEditor(Ref<OpenXRActionMap> p_action_map, Ref<OpenXRActionSet> p_action_set);
+};
+
+#endif // !OPENXR_ACTION_SET_EDITOR_H

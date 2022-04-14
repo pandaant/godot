@@ -75,6 +75,12 @@ private:
 	Vector<OpenXRExtensionWrapper *> registered_extension_wrappers;
 	Vector<const char *> enabled_extensions;
 
+	bool ext_hp_mixed_reality_available = false;
+	bool ext_samsung_odyssey_available = false;
+	bool ext_vive_cosmos_available = false;
+	bool ext_vive_focus3_available = false;
+	bool ext_huawei_controller_available = false;
+
 	// composition layer providers
 	Vector<OpenXRCompositionLayerProvider *> composition_layer_providers;
 
@@ -222,7 +228,7 @@ protected:
 	void parse_velocities(const XrSpaceVelocity &p_velocity, Vector3 &r_linear_velocity, Vector3 r_angular_velocity);
 
 public:
-	static bool openxr_is_enabled();
+	static bool openxr_is_enabled(bool p_check_run_in_editor = true);
 	static OpenXRAPI *get_singleton();
 
 	String get_error_string(XrResult result);
