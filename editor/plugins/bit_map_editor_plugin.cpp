@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  decal_atlas_storage.h                                                */
+/*  bit_map_editor_plugin.cpp                                            */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,35 +28,59 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef DECAL_ATLAS_STORAGE_DUMMY_H
-#define DECAL_ATLAS_STORAGE_DUMMY_H
+#include "bit_map_editor_plugin.h"
 
-#include "servers/rendering/storage/decal_atlas_storage.h"
+#include "editor/editor_scale.h"
 
-namespace RendererDummy {
+void BitMapEditor::setup(const Ref<BitMap> &p_bitmap) {
+	Ref<ImageTexture> texture;
+	texture.instantiate();
+	texture->create_from_image(p_bitmap->convert_to_image());
+	texture_rect->set_texture(texture);
 
-class DecalAtlasStorage : public RendererDecalAtlasStorage {
-public:
-	virtual RID decal_allocate() override { return RID(); }
-	virtual void decal_initialize(RID p_rid) override {}
-	virtual void decal_free(RID p_rid) override{};
+	size_label->set_text(vformat(String::utf8("%s×%s"), p_bitmap->get_size().width, p_bitmap->get_size().height));
+}
 
-	virtual void decal_set_extents(RID p_decal, const Vector3 &p_extents) override {}
-	virtual void decal_set_texture(RID p_decal, RS::DecalTexture p_type, RID p_texture) override {}
-	virtual void decal_set_emission_energy(RID p_decal, float p_energy) override {}
-	virtual void decal_set_albedo_mix(RID p_decal, float p_mix) override {}
-	virtual void decal_set_modulate(RID p_decal, const Color &p_modulate) override {}
-	virtual void decal_set_cull_mask(RID p_decal, uint32_t p_layers) override {}
-	virtual void decal_set_distance_fade(RID p_decal, bool p_enabled, float p_begin, float p_length) override {}
-	virtual void decal_set_fade(RID p_decal, float p_above, float p_below) override {}
-	virtual void decal_set_normal_fade(RID p_decal, float p_fade) override {}
+BitMapEditor::BitMapEditor() {
+	texture_rect = memnew(TextureRect);
+	texture_rect->set_stretch_mode(TextureRect::STRETCH_KEEP_ASPECT_CENTERED);
+	texture_rect->set_texture_filter(TEXTURE_FILTER_NEAREST);
+	texture_rect->set_custom_minimum_size(Size2(0, 250) * EDSCALE);
+	add_child(texture_rect);
 
-	virtual AABB decal_get_aabb(RID p_decal) const override { return AABB(); }
+	size_label = memnew(Label);
+	size_label->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_RIGHT);
+	add_child(size_label);
 
-	virtual void texture_add_to_decal_atlas(RID p_texture, bool p_panorama_to_dp = false) override {}
-	virtual void texture_remove_from_decal_atlas(RID p_texture, bool p_panorama_to_dp = false) override {}
-};
+	// Reduce extra padding on top and bottom of size label.
+	Ref<StyleBoxEmpty> stylebox;
+	stylebox.instantiate();
+	stylebox->set_default_margin(SIDE_RIGHT, 4 * EDSCALE);
+	size_label->add_theme_style_override("normal", stylebox);
+}
 
-} // namespace RendererDummy
+///////////////////////
 
-#endif // !DECAL_ATLAS_STORAGE_DUMMY_H
+bool EditorInspectorPluginBitMap::can_handle(Object *p_object) {
+	return Object::cast_to<BitMap>(p_object) != nullptr;
+}
+
+void EditorInspectorPluginBitMap::parse_begin(Object *p_object) {
+	BitMap *bitmap = Object::cast_to<BitMap>(p_object);
+	if (!bitmap) {
+		return;
+	}
+	Ref<BitMap> bm(bitmap);
+
+	BitMapEditor *editor = memnew(BitMapEditor);
+	editor->setup(bm);
+	add_custom_control(editor);
+}
+
+///////////////////////
+
+BitMapEditorPlugin::BitMapEditorPlugin() {
+	Ref<EditorInspectorPluginBitMap> plugin;
+	plugin.instantiate();
+	add_inspector_plugin(plugin);
+}

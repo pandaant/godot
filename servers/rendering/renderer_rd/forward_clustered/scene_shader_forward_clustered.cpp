@@ -55,7 +55,7 @@ void SceneShaderForwardClustered::ShaderData::set_code(const String &p_code) {
 	int blend_mode = BLEND_MODE_MIX;
 	int depth_testi = DEPTH_TEST_ENABLED;
 	int alpha_antialiasing_mode = ALPHA_ANTIALIASING_OFF;
-	int cull = CULL_BACK;
+	int cull_modei = CULL_BACK;
 
 	uses_point_size = false;
 	uses_alpha = false;
@@ -101,9 +101,9 @@ void SceneShaderForwardClustered::ShaderData::set_code(const String &p_code) {
 
 	actions.render_mode_values["depth_test_disabled"] = Pair<int *, int>(&depth_testi, DEPTH_TEST_DISABLED);
 
-	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull, CULL_DISABLED);
-	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull, CULL_FRONT);
-	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull, CULL_BACK);
+	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull_modei, CULL_DISABLED);
+	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull_modei, CULL_FRONT);
+	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull_modei, CULL_BACK);
 
 	actions.render_mode_flags["unshaded"] = &unshaded;
 	actions.render_mode_flags["wireframe"] = &wireframe;
@@ -145,6 +145,7 @@ void SceneShaderForwardClustered::ShaderData::set_code(const String &p_code) {
 
 	depth_draw = DepthDraw(depth_drawi);
 	depth_test = DepthTest(depth_testi);
+	cull_mode = Cull(cull_modei);
 
 #if 0
 	print_line("**compiling shader:");
@@ -258,7 +259,7 @@ void SceneShaderForwardClustered::ShaderData::set_code(const String &p_code) {
 			{ RD::POLYGON_CULL_DISABLED, RD::POLYGON_CULL_DISABLED, RD::POLYGON_CULL_DISABLED }
 		};
 
-		RD::PolygonCullMode cull_mode_rd = cull_mode_rd_table[i][cull];
+		RD::PolygonCullMode cull_mode_rd = cull_mode_rd_table[i][cull_mode];
 
 		for (int j = 0; j < RS::PRIMITIVE_MAX; j++) {
 			RD::RenderPrimitive primitive_rd_table[RS::PRIMITIVE_MAX] = {
@@ -554,10 +555,21 @@ void SceneShaderForwardClustered::init(RendererStorageRD *p_storage, const Strin
 	}
 
 	valid_color_pass_pipelines.insert(0);
+
 	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_TRANSPARENT);
-	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_SEPARATE_SPECULAR);
-	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_MULTIVIEW);
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_TRANSPARENT | PIPELINE_COLOR_PASS_FLAG_LIGHTMAP);
 	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_TRANSPARENT | PIPELINE_COLOR_PASS_FLAG_MULTIVIEW);
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_TRANSPARENT | PIPELINE_COLOR_PASS_FLAG_MULTIVIEW | PIPELINE_COLOR_PASS_FLAG_LIGHTMAP);
+
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_SEPARATE_SPECULAR);
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_SEPARATE_SPECULAR | PIPELINE_COLOR_PASS_FLAG_LIGHTMAP);
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_SEPARATE_SPECULAR | PIPELINE_COLOR_PASS_FLAG_MULTIVIEW);
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_SEPARATE_SPECULAR | PIPELINE_COLOR_PASS_FLAG_MULTIVIEW | PIPELINE_COLOR_PASS_FLAG_LIGHTMAP);
+
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_LIGHTMAP);
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_LIGHTMAP | PIPELINE_COLOR_PASS_FLAG_MULTIVIEW);
+
+	valid_color_pass_pipelines.insert(PIPELINE_COLOR_PASS_FLAG_MULTIVIEW);
 
 	material_storage->shader_set_data_request_function(RendererRD::SHADER_TYPE_3D, _create_shader_funcs);
 	material_storage->material_set_data_request_function(RendererRD::SHADER_TYPE_3D, _create_material_funcs);

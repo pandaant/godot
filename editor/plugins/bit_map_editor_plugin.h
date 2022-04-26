@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  canvas_texture_storage.h                                             */
+/*  bit_map_editor_plugin.h                                              */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,60 +28,37 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef CANVAS_TEXTURE_STORAGE_GLES3_H
-#define CANVAS_TEXTURE_STORAGE_GLES3_H
+#ifndef BIT_MAP_PREVIEW_EDITOR_PLUGIN_H
+#define BIT_MAP_PREVIEW_EDITOR_PLUGIN_H
 
-#ifdef GLES3_ENABLED
+#include "editor/editor_plugin.h"
+#include "scene/resources/bit_map.h"
 
-#include "core/templates/rid_owner.h"
-#include "servers/rendering/storage/canvas_texture_storage.h"
+class BitMapEditor : public VBoxContainer {
+	GDCLASS(BitMapEditor, VBoxContainer);
 
-namespace GLES3 {
-
-struct CanvasTexture {
-	RID diffuse;
-	RID normal_map;
-	RID specular;
-	Color specular_color = Color(1, 1, 1, 1);
-	float shininess = 1.0;
-
-	RS::CanvasItemTextureFilter texture_filter = RS::CANVAS_ITEM_TEXTURE_FILTER_DEFAULT;
-	RS::CanvasItemTextureRepeat texture_repeat = RS::CANVAS_ITEM_TEXTURE_REPEAT_DEFAULT;
-
-	Size2i size_cache = Size2i(1, 1);
-	bool use_normal_cache = false;
-	bool use_specular_cache = false;
-	bool cleared_cache = true;
-};
-
-class CanvasTextureStorage : public RendererCanvasTextureStorage {
-private:
-	static CanvasTextureStorage *singleton;
-
-	RID_Owner<CanvasTexture, true> canvas_texture_owner;
+	TextureRect *texture_rect = nullptr;
+	Label *size_label = nullptr;
 
 public:
-	static CanvasTextureStorage *get_singleton();
+	void setup(const Ref<BitMap> &p_bitmap);
 
-	CanvasTextureStorage();
-	virtual ~CanvasTextureStorage();
-
-	CanvasTexture *get_canvas_texture(RID p_rid) { return canvas_texture_owner.get_or_null(p_rid); };
-	bool owns_canvas_texture(RID p_rid) { return canvas_texture_owner.owns(p_rid); };
-
-	virtual RID canvas_texture_allocate() override;
-	virtual void canvas_texture_initialize(RID p_rid) override;
-	virtual void canvas_texture_free(RID p_rid) override;
-
-	virtual void canvas_texture_set_channel(RID p_canvas_texture, RS::CanvasTextureChannel p_channel, RID p_texture) override;
-	virtual void canvas_texture_set_shading_parameters(RID p_canvas_texture, const Color &p_base_color, float p_shininess) override;
-
-	virtual void canvas_texture_set_texture_filter(RID p_item, RS::CanvasItemTextureFilter p_filter) override;
-	virtual void canvas_texture_set_texture_repeat(RID p_item, RS::CanvasItemTextureRepeat p_repeat) override;
+	BitMapEditor();
 };
 
-} // namespace GLES3
+class EditorInspectorPluginBitMap : public EditorInspectorPlugin {
+	GDCLASS(EditorInspectorPluginBitMap, EditorInspectorPlugin);
 
-#endif // !GLES3_ENABLED
+public:
+	virtual bool can_handle(Object *p_object) override;
+	virtual void parse_begin(Object *p_object) override;
+};
 
-#endif // !CANVAS_TEXTURE_STORAGE_GLES3_H
+class BitMapEditorPlugin : public EditorPlugin {
+	GDCLASS(BitMapEditorPlugin, EditorPlugin);
+
+public:
+	BitMapEditorPlugin();
+};
+
+#endif // BIT_MAP_PREVIEW_EDITOR_PLUGIN_H

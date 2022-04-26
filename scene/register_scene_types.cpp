@@ -226,6 +226,7 @@
 #include "scene/3d/gpu_particles_collision_3d.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
 #include "scene/3d/joint_3d.h"
+#include "scene/3d/label_3d.h"
 #include "scene/3d/light_3d.h"
 #include "scene/3d/lightmap_gi.h"
 #include "scene/3d/lightmap_probe.h"
@@ -480,6 +481,7 @@ void register_scene_types() {
 	GDREGISTER_ABSTRACT_CLASS(SpriteBase3D);
 	GDREGISTER_CLASS(Sprite3D);
 	GDREGISTER_CLASS(AnimatedSprite3D);
+	GDREGISTER_CLASS(Label3D);
 	GDREGISTER_ABSTRACT_CLASS(Light3D);
 	GDREGISTER_CLASS(DirectionalLight3D);
 	GDREGISTER_CLASS(OmniLight3D);
@@ -576,6 +578,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(VisualShaderNodeColorConstant);
 	GDREGISTER_CLASS(VisualShaderNodeVec2Constant);
 	GDREGISTER_CLASS(VisualShaderNodeVec3Constant);
+	GDREGISTER_CLASS(VisualShaderNodeVec4Constant);
 	GDREGISTER_CLASS(VisualShaderNodeTransformConstant);
 	GDREGISTER_CLASS(VisualShaderNodeFloatOp);
 	GDREGISTER_CLASS(VisualShaderNodeIntOp);
@@ -620,6 +623,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(VisualShaderNodeColorUniform);
 	GDREGISTER_CLASS(VisualShaderNodeVec2Uniform);
 	GDREGISTER_CLASS(VisualShaderNodeVec3Uniform);
+	GDREGISTER_CLASS(VisualShaderNodeVec4Uniform);
 	GDREGISTER_CLASS(VisualShaderNodeTransformUniform);
 	GDREGISTER_CLASS(VisualShaderNodeTextureUniform);
 	GDREGISTER_CLASS(VisualShaderNodeTextureUniformTriplanar);

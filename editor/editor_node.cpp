@@ -134,6 +134,7 @@
 #include "editor/plugins/asset_library_editor_plugin.h"
 #include "editor/plugins/audio_stream_editor_plugin.h"
 #include "editor/plugins/audio_stream_randomizer_editor_plugin.h"
+#include "editor/plugins/bit_map_editor_plugin.h"
 #include "editor/plugins/camera_3d_editor_plugin.h"
 #include "editor/plugins/canvas_item_editor_plugin.h"
 #include "editor/plugins/collision_polygon_2d_editor_plugin.h"
@@ -388,7 +389,7 @@ void EditorNode::_update_scene_tabs() {
 		}
 
 		Rect2 last_tab = scene_tabs->get_tab_rect(scene_tabs->get_tab_count() - 1);
-		int hsep = scene_tabs->get_theme_constant(SNAME("hseparation"));
+		int hsep = scene_tabs->get_theme_constant(SNAME("h_separation"));
 		if (scene_tabs->is_layout_rtl()) {
 			scene_tab_add->set_position(Point2(last_tab.position.x - scene_tab_add->get_size().x - hsep, last_tab.position.y));
 		} else {
@@ -787,12 +788,12 @@ void EditorNode::_notification(int p_what) {
 
 			PopupMenu *p = help_menu->get_popup();
 			p->set_item_icon(p->get_item_index(HELP_SEARCH), gui_base->get_theme_icon(SNAME("HelpSearch"), SNAME("EditorIcons")));
-			p->set_item_icon(p->get_item_index(HELP_DOCS), gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")));
-			p->set_item_icon(p->get_item_index(HELP_QA), gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")));
-			p->set_item_icon(p->get_item_index(HELP_REPORT_A_BUG), gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")));
-			p->set_item_icon(p->get_item_index(HELP_SUGGEST_A_FEATURE), gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")));
-			p->set_item_icon(p->get_item_index(HELP_SEND_DOCS_FEEDBACK), gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")));
-			p->set_item_icon(p->get_item_index(HELP_COMMUNITY), gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")));
+			p->set_item_icon(p->get_item_index(HELP_DOCS), gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")));
+			p->set_item_icon(p->get_item_index(HELP_QA), gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")));
+			p->set_item_icon(p->get_item_index(HELP_REPORT_A_BUG), gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")));
+			p->set_item_icon(p->get_item_index(HELP_SUGGEST_A_FEATURE), gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")));
+			p->set_item_icon(p->get_item_index(HELP_SEND_DOCS_FEEDBACK), gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")));
+			p->set_item_icon(p->get_item_index(HELP_COMMUNITY), gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")));
 			p->set_item_icon(p->get_item_index(HELP_ABOUT), gui_base->get_theme_icon(SNAME("Godot"), SNAME("EditorIcons")));
 			p->set_item_icon(p->get_item_index(HELP_SUPPORT_GODOT_DEVELOPMENT), gui_base->get_theme_icon(SNAME("Heart"), SNAME("EditorIcons")));
 
@@ -6583,12 +6584,12 @@ EditorNode::EditorNode() {
 	ED_SHORTCUT_OVERRIDE("editor/editor_help", "macos", KeyModifierMask::ALT | Key::SPACE);
 	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("HelpSearch"), SNAME("EditorIcons")), ED_GET_SHORTCUT("editor/editor_help"), HELP_SEARCH);
 	p->add_separator();
-	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/online_docs", TTR("Online Documentation")), HELP_DOCS);
-	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/q&a", TTR("Questions & Answers")), HELP_QA);
-	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/report_a_bug", TTR("Report a Bug")), HELP_REPORT_A_BUG);
-	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/suggest_a_feature", TTR("Suggest a Feature")), HELP_SUGGEST_A_FEATURE);
-	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/send_docs_feedback", TTR("Send Docs Feedback")), HELP_SEND_DOCS_FEEDBACK);
-	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Instance"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/community", TTR("Community")), HELP_COMMUNITY);
+	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/online_docs", TTR("Online Documentation")), HELP_DOCS);
+	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/q&a", TTR("Questions & Answers")), HELP_QA);
+	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/report_a_bug", TTR("Report a Bug")), HELP_REPORT_A_BUG);
+	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/suggest_a_feature", TTR("Suggest a Feature")), HELP_SUGGEST_A_FEATURE);
+	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/send_docs_feedback", TTR("Send Docs Feedback")), HELP_SEND_DOCS_FEEDBACK);
+	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("ExternalLink"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/community", TTR("Community")), HELP_COMMUNITY);
 	p->add_separator();
 	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Godot"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/about", TTR("About Godot")), HELP_ABOUT);
 	p->add_icon_shortcut(gui_base->get_theme_icon(SNAME("Heart"), SNAME("EditorIcons")), ED_SHORTCUT_AND_COMMAND("editor/support_development", TTR("Support Godot Development")), HELP_SUPPORT_GODOT_DEVELOPMENT);
@@ -7066,6 +7067,7 @@ EditorNode::EditorNode() {
 	add_editor_plugin(memnew(TextControlEditorPlugin));
 	add_editor_plugin(memnew(ControlEditorPlugin));
 	add_editor_plugin(memnew(GradientTexture2DEditorPlugin));
+	add_editor_plugin(memnew(BitMapEditorPlugin));
 
 	for (int i = 0; i < EditorPlugins::get_plugin_count(); i++) {
 		add_editor_plugin(EditorPlugins::create(i));
@@ -7084,6 +7086,7 @@ EditorNode::EditorNode() {
 	resource_preview->add_preview_generator(Ref<EditorMeshPreviewPlugin>(memnew(EditorMeshPreviewPlugin)));
 	resource_preview->add_preview_generator(Ref<EditorBitmapPreviewPlugin>(memnew(EditorBitmapPreviewPlugin)));
 	resource_preview->add_preview_generator(Ref<EditorFontPreviewPlugin>(memnew(EditorFontPreviewPlugin)));
+	resource_preview->add_preview_generator(Ref<EditorGradientPreviewPlugin>(memnew(EditorGradientPreviewPlugin)));
 
 	{
 		Ref<StandardMaterial3DConversionPlugin> spatial_mat_convert;

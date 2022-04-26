@@ -239,8 +239,8 @@ void Viewport::_sub_window_update(Window *p_window) {
 		int font_size = p_window->get_theme_font_size(SNAME("title_font_size"));
 		Color title_color = p_window->get_theme_color(SNAME("title_color"));
 		int title_height = p_window->get_theme_constant(SNAME("title_height"));
-		int close_h_ofs = p_window->get_theme_constant(SNAME("close_h_ofs"));
-		int close_v_ofs = p_window->get_theme_constant(SNAME("close_v_ofs"));
+		int close_h_ofs = p_window->get_theme_constant(SNAME("close_h_offset"));
+		int close_v_ofs = p_window->get_theme_constant(SNAME("close_v_offset"));
 
 		TextLine title_text = TextLine(p_window->atr(p_window->get_title()), title_font, font_size, Dictionary(), TranslationServer::get_singleton()->get_tool_locale());
 		title_text.set_width(r.size.width - panel->get_minimum_size().x - close_h_ofs);
@@ -2583,8 +2583,8 @@ bool Viewport::_sub_windows_forward_input(const Ref<InputEvent> &p_event) {
 				if (title_bar.has_point(mb->get_position())) {
 					click_on_window = true;
 
-					int close_h_ofs = sw.window->get_theme_constant(SNAME("close_h_ofs"));
-					int close_v_ofs = sw.window->get_theme_constant(SNAME("close_v_ofs"));
+					int close_h_ofs = sw.window->get_theme_constant(SNAME("close_h_offset"));
+					int close_v_ofs = sw.window->get_theme_constant(SNAME("close_v_offset"));
 					Ref<Texture2D> close_icon = sw.window->get_theme_icon(SNAME("close"));
 
 					Rect2 close_rect;
@@ -3726,7 +3726,6 @@ void Viewport::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "disable_3d"), "set_disable_3d", "is_3d_disabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_xr"), "set_use_xr", "is_using_xr");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "audio_listener_enable_3d"), "set_as_audio_listener_3d", "is_audio_listener_3d");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "own_world_3d"), "set_use_own_world_3d", "is_using_own_world_3d");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "world_3d", PROPERTY_HINT_RESOURCE_TYPE, "World3D"), "set_world_3d", "get_world_3d");
 #endif // _3D_DISABLED
@@ -3754,6 +3753,9 @@ void Viewport::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "canvas_item_default_texture_repeat", PROPERTY_HINT_ENUM, "Disabled,Enabled,Mirror"), "set_default_canvas_item_texture_repeat", "get_default_canvas_item_texture_repeat");
 	ADD_GROUP("Audio Listener", "audio_listener_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "audio_listener_enable_2d"), "set_as_audio_listener_2d", "is_audio_listener_2d");
+#ifndef _3D_DISABLED
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "audio_listener_enable_3d"), "set_as_audio_listener_3d", "is_audio_listener_3d");
+#endif
 	ADD_GROUP("Physics", "physics_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "physics_object_picking"), "set_physics_object_picking", "get_physics_object_picking");
 	ADD_GROUP("GUI", "gui_");
