@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  ios.h                                                                */
+/*  noise_editor_plugin.h                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,34 +28,22 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef IOS_H
-#define IOS_H
+#ifndef NOISE_EDITOR_PLUGIN_H
+#define NOISE_EDITOR_PLUGIN_H
 
-#include "core/object/class_db.h"
-#import <CoreHaptics/CoreHaptics.h>
+#ifdef TOOLS_ENABLED
 
-class iOS : public Object {
-	GDCLASS(iOS, Object);
+#include "editor/editor_plugin.h"
 
-	static void _bind_methods();
-
-private:
-	CHHapticEngine *haptic_engine API_AVAILABLE(ios(13)) = nullptr;
-
-	CHHapticEngine *get_haptic_engine_instance() API_AVAILABLE(ios(13));
-	void start_haptic_engine();
-	void stop_haptic_engine();
+class NoiseEditorPlugin : public EditorPlugin {
+	GDCLASS(NoiseEditorPlugin, EditorPlugin)
 
 public:
-	static void alert(const char *p_alert, const char *p_title);
+	String get_name() const override;
 
-	bool supports_haptic_engine();
-	void vibrate_haptic_engine(float p_duration_seconds);
-
-	String get_model() const;
-	String get_rate_url(int p_app_id) const;
-
-	iOS();
+	NoiseEditorPlugin();
 };
 
-#endif
+#endif // TOOLS_ENABLED
+
+#endif // NOISE_EDITOR_PLUGIN_H

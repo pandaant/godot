@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  ios.h                                                                */
+/*  ray_cast_2d_editor_plugin.h                                          */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,34 +28,52 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef IOS_H
-#define IOS_H
+#ifndef RAY_CAST_2D_EDITOR_PLUGIN_H
+#define RAY_CAST_2D_EDITOR_PLUGIN_H
 
-#include "core/object/class_db.h"
-#import <CoreHaptics/CoreHaptics.h>
+#include "editor/editor_plugin.h"
+#include "scene/2d/ray_cast_2d.h"
 
-class iOS : public Object {
-	GDCLASS(iOS, Object);
+class CanvasItemEditor;
 
-	static void _bind_methods();
+class RayCast2DEditor : public Control {
+	GDCLASS(RayCast2DEditor, Control);
 
-private:
-	CHHapticEngine *haptic_engine API_AVAILABLE(ios(13)) = nullptr;
+	UndoRedo *undo_redo = nullptr;
+	CanvasItemEditor *canvas_item_editor = nullptr;
+	RayCast2D *node;
 
-	CHHapticEngine *get_haptic_engine_instance() API_AVAILABLE(ios(13));
-	void start_haptic_engine();
-	void stop_haptic_engine();
+	bool pressed = false;
+	Point2 original_target_position;
+
+protected:
+	void _notification(int p_what);
+	void _node_removed(Node *p_node);
 
 public:
-	static void alert(const char *p_alert, const char *p_title);
+	bool forward_canvas_gui_input(const Ref<InputEvent> &p_event);
+	void forward_canvas_draw_over_viewport(Control *p_overlay);
+	void edit(Node *p_node);
 
-	bool supports_haptic_engine();
-	void vibrate_haptic_engine(float p_duration_seconds);
-
-	String get_model() const;
-	String get_rate_url(int p_app_id) const;
-
-	iOS();
+	RayCast2DEditor();
 };
 
-#endif
+class RayCast2DEditorPlugin : public EditorPlugin {
+	GDCLASS(RayCast2DEditorPlugin, EditorPlugin);
+
+	RayCast2DEditor *ray_cast_2d_editor = nullptr;
+
+public:
+	virtual bool forward_canvas_gui_input(const Ref<InputEvent> &p_event) override { return ray_cast_2d_editor->forward_canvas_gui_input(p_event); }
+	virtual void forward_canvas_draw_over_viewport(Control *p_overlay) override { ray_cast_2d_editor->forward_canvas_draw_over_viewport(p_overlay); }
+
+	virtual String get_name() const override { return "RayCast2D"; }
+	bool has_main_screen() const override { return false; }
+	virtual void edit(Object *p_object) override;
+	virtual bool handles(Object *p_object) const override;
+	virtual void make_visible(bool visible) override;
+
+	RayCast2DEditorPlugin();
+};
+
+#endif // RAY_CAST_2D_EDITOR_PLUGIN_H
