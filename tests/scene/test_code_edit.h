@@ -2179,7 +2179,23 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION(code_edit, "ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test: # string");
 			CHECK(code_edit->get_line(1) == "");
+			code_edit->remove_string_delimiter("#");
+
+			/* Non-whitespace prevents auto-indentation. */
+			code_edit->add_comment_delimiter("#", "");
+			code_edit->set_text("");
+			code_edit->insert_text_at_caret("test := 0 # comment");
+			SEND_GUI_ACTION(code_edit, "ui_text_newline");
+			CHECK(code_edit->get_line(0) == "test := 0 # comment");
+			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
+
+			/* Even when there's no comments. */
+			code_edit->set_text("");
+			code_edit->insert_text_at_caret("test := 0");
+			SEND_GUI_ACTION(code_edit, "ui_text_newline");
+			CHECK(code_edit->get_line(0) == "test := 0");
+			CHECK(code_edit->get_line(1) == "");
 
 			/* If between brace pairs an extra line is added. */
 			code_edit->set_text("");
@@ -2256,7 +2272,23 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION(code_edit, "ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test: # string");
 			CHECK(code_edit->get_line(1) == "");
+			code_edit->remove_string_delimiter("#");
+
+			/* Non-whitespace prevents auto-indentation. */
+			code_edit->add_comment_delimiter("#", "");
+			code_edit->set_text("");
+			code_edit->insert_text_at_caret("test := 0 # comment");
+			SEND_GUI_ACTION(code_edit, "ui_text_newline");
+			CHECK(code_edit->get_line(0) == "test := 0 # comment");
+			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
+
+			/* Even when there's no comments. */
+			code_edit->set_text("");
+			code_edit->insert_text_at_caret("test := 0");
+			SEND_GUI_ACTION(code_edit, "ui_text_newline");
+			CHECK(code_edit->get_line(0) == "test := 0");
+			CHECK(code_edit->get_line(1) == "");
 
 			/* If between brace pairs an extra line is added. */
 			code_edit->set_text("");
@@ -2929,7 +2961,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			/* also does not work on col 0                      */
 			code_edit->insert_text_at_caret("i");
 			code_edit->update_code_completion_options();
-			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "item_0.", "item_0", Color(1, 0, 0), RES(), Color(1, 0, 0));
+			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "item_0.", "item_0", Color(1, 0, 0), Ref<Resource>(), Color(1, 0, 0));
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_VARIABLE, "item_1.", "item_1");
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_VARIABLE, "item_2.", "item_2");
 
@@ -2957,7 +2989,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(option["display_text"] == "item_0.");
 			CHECK(option["insert_text"] == "item_0");
 			CHECK(option["font_color"] == Color(1, 0, 0));
-			CHECK(option["icon"] == RES());
+			CHECK(option["icon"] == Ref<Resource>());
 			CHECK(option["default_value"] == Color(1, 0, 0));
 
 			/* Set size for mouse input. */

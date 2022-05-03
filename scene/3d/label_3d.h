@@ -97,6 +97,9 @@ private:
 	int font_size = 16;
 	Ref<Font> font_override;
 	Color modulate = Color(1, 1, 1, 1);
+	Point2 lbl_offset;
+	int outline_render_priority = -1;
+	int render_priority = 0;
 
 	int outline_size = 0;
 	Color outline_modulate = Color(0, 0, 0, 1);
@@ -149,6 +152,12 @@ public:
 	void set_vertical_alignment(VerticalAlignment p_alignment);
 	VerticalAlignment get_vertical_alignment() const;
 
+	void set_render_priority(int p_priority);
+	int get_render_priority() const;
+
+	void set_outline_render_priority(int p_priority);
+	int get_outline_render_priority() const;
+
 	void set_text(const String &p_string);
 	String get_text() const;
 
@@ -198,6 +207,9 @@ public:
 
 	void set_pixel_size(real_t p_amount);
 	real_t get_pixel_size() const;
+
+	void set_offset(const Point2 &p_offset);
+	Point2 get_offset() const;
 
 	void set_draw_flag(DrawFlags p_flag, bool p_enable);
 	bool get_draw_flag(DrawFlags p_flag) const;

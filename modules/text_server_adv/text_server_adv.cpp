@@ -878,8 +878,8 @@ _FORCE_INLINE_ TextServerAdvanced::FontTexturePosition TextServerAdvanced::find_
 
 struct MSContext {
 	msdfgen::Point2 position;
-	msdfgen::Shape *shape;
-	msdfgen::Contour *contour;
+	msdfgen::Shape *shape = nullptr;
+	msdfgen::Contour *contour = nullptr;
 };
 
 class DistancePixelConversion {
@@ -1329,7 +1329,7 @@ _FORCE_INLINE_ bool TextServerAdvanced::_ensure_cache_for_size(FontDataAdvanced 
 		fd->underline_position = (-FT_MulFix(fd->face->underline_position, fd->face->size->metrics.y_scale) / 64.0) / fd->oversampling * fd->scale;
 		fd->underline_thickness = (FT_MulFix(fd->face->underline_thickness, fd->face->size->metrics.y_scale) / 64.0) / fd->oversampling * fd->scale;
 
-		hb_font_set_synthetic_slant(fd->hb_handle, p_font_data->transform.elements[0][1]);
+		hb_font_set_synthetic_slant(fd->hb_handle, p_font_data->transform.columns[0][1]);
 
 		if (!p_font_data->face_init) {
 			// Get style flags and name.
@@ -3254,6 +3254,19 @@ void TextServerAdvanced::font_set_global_oversampling(double p_oversampling) {
 /*************************************************************************/
 /* Shaped text buffer interface                                          */
 /*************************************************************************/
+
+int64_t TextServerAdvanced::_convert_pos(const String &p_utf32, const Char16String &p_utf16, int64_t p_pos) const {
+	int64_t limit = p_pos;
+	if (p_utf32.length() != p_utf16.length()) {
+		const UChar *data = p_utf16.ptr();
+		for (int i = 0; i < p_pos; i++) {
+			if (U16_IS_LEAD(data[i])) {
+				limit--;
+			}
+		}
+	}
+	return limit;
+}
 
 int64_t TextServerAdvanced::_convert_pos(const ShapedTextDataAdvanced *p_sd, int64_t p_pos) const {
 	int64_t limit = p_pos;
@@ -5553,6 +5566,53 @@ String TextServerAdvanced::string_to_lower(const String &p_string, const String 
 
 	// Convert back to UTF-32.
 	return String::utf16(lower.ptr(), len);
+}
+
+PackedInt32Array TextServerAdvanced::string_get_word_breaks(const String &p_string, const String &p_language) const {
+	// Convert to UTF-16.
+	Char16String utf16 = p_string.utf16();
+
+	Set<int> breaks;
+	UErrorCode err = U_ZERO_ERROR;
+	UBreakIterator *bi = ubrk_open(UBRK_LINE, p_language.ascii().get_data(), (const UChar *)utf16.ptr(), utf16.length(), &err);
+	if (U_FAILURE(err)) {
+		// No data loaded - use fallback.
+		for (int i = 0; i < p_string.length(); i++) {
+			char32_t c = p_string[i];
+			if (is_whitespace(c) || is_linebreak(c)) {
+				breaks.insert(i);
+			}
+		}
+	} else {
+		while (ubrk_next(bi) != UBRK_DONE) {
+			int pos = _convert_pos(p_string, utf16, ubrk_current(bi)) - 1;
+			if (pos != p_string.length() - 1) {
+				breaks.insert(pos);
+			}
+		}
+	}
+	ubrk_close(bi);
+
+	PackedInt32Array ret;
+	for (int i = 0; i < p_string.length(); i++) {
+		char32_t c = p_string[i];
+		if (c == 0xfffc) {
+			continue;
+		}
+		if (u_ispunct(c) && c != 0x005F) {
+			ret.push_back(i);
+			continue;
+		}
+		if (is_underscore(c)) {
+			ret.push_back(i);
+			continue;
+		}
+		if (breaks.has(i)) {
+			ret.push_back(i);
+			continue;
+		}
+	}
+	return ret;
 }
 
 TextServerAdvanced::TextServerAdvanced() {

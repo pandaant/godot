@@ -3675,7 +3675,7 @@ void CanvasItemEditor::_draw_viewport() {
 	// Update the transform
 	transform = Transform2D();
 	transform.scale_basis(Size2(zoom, zoom));
-	transform.elements[2] = -view_offset * zoom;
+	transform.columns[2] = -view_offset * zoom;
 	EditorNode::get_singleton()->get_scene_root()->set_global_canvas_transform(transform);
 
 	// hide/show buttons depending on the selection
@@ -4888,14 +4888,6 @@ CanvasItemEditor::CanvasItemEditor() {
 	view_offset = Point2(-150 - RULER_WIDTH, -95 - RULER_WIDTH);
 	previous_update_view_offset = view_offset; // Moves the view a little bit to the left so that (0,0) is visible. The values a relative to a 16/10 screen
 
-	grid_offset = Point2();
-	grid_step = Point2(8, 8); // A power-of-two value works better as a default
-	primary_grid_steps = 8; // A power-of-two value works better as a default
-	grid_step_multiplier = 0;
-
-	snap_rotation_offset = 0;
-	snap_rotation_step = Math::deg2rad(15.0);
-	snap_scale_step = 0.1f;
 	snap_target[0] = SNAP_TARGET_NONE;
 	snap_target[1] = SNAP_TARGET_NONE;
 
@@ -5401,7 +5393,7 @@ void CanvasItemEditorViewport::_create_preview(const Vector<String> &files) cons
 	bool add_preview = false;
 	for (int i = 0; i < files.size(); i++) {
 		String path = files[i];
-		RES res = ResourceLoader::load(path);
+		Ref<Resource> res = ResourceLoader::load(path);
 		ERR_FAIL_COND(res.is_null());
 		Ref<Texture2D> texture = Ref<Texture2D>(Object::cast_to<Texture2D>(*res));
 		Ref<PackedScene> scene = Ref<PackedScene>(Object::cast_to<PackedScene>(*res));
@@ -5596,7 +5588,7 @@ void CanvasItemEditorViewport::_perform_drop_data() {
 
 	for (int i = 0; i < selected_files.size(); i++) {
 		String path = selected_files[i];
-		RES res = ResourceLoader::load(path);
+		Ref<Resource> res = ResourceLoader::load(path);
 		if (res.is_null()) {
 			continue;
 		}
@@ -5651,7 +5643,7 @@ bool CanvasItemEditorViewport::can_drop_data(const Point2 &p_point, const Varian
 			for (int i = 0; i < files.size(); i++) {
 				// Check if dragged files with texture or scene extension can be created at least once.
 				if (texture_extensions.find(files[i].get_extension()) || scene_extensions.find(files[i].get_extension())) {
-					RES res = ResourceLoader::load(files[i]);
+					Ref<Resource> res = ResourceLoader::load(files[i]);
 					if (res.is_null()) {
 						continue;
 					}
