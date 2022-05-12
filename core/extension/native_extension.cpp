@@ -74,7 +74,7 @@ public:
 
 	virtual Variant call(Object *p_object, const Variant **p_args, int p_arg_count, Callable::CallError &r_error) override {
 		Variant ret;
-		GDExtensionClassInstancePtr extension_instance = p_object->_get_extension_instance();
+		GDExtensionClassInstancePtr extension_instance = is_static() ? nullptr : p_object->_get_extension_instance();
 		GDNativeCallError ce{ GDNATIVE_CALL_OK, 0, 0 };
 		call_func(method_userdata, extension_instance, (const GDNativeVariantPtr *)p_args, p_arg_count, (GDNativeVariantPtr)&ret, &ce);
 		r_error.error = Callable::CallError::Error(ce.error);
@@ -91,6 +91,7 @@ public:
 	virtual bool is_vararg() const override {
 		return false;
 	}
+
 	explicit NativeExtensionMethodBind(const GDNativeExtensionClassMethodInfo *p_method_info) {
 		method_userdata = p_method_info->method_userdata;
 		call_func = p_method_info->call_func;
@@ -100,14 +101,24 @@ public:
 		get_argument_metadata_func = p_method_info->get_argument_metadata_func;
 		set_name(p_method_info->name);
 
-		vararg = p_method_info->method_flags & GDNATIVE_EXTENSION_METHOD_FLAG_VARARG;
+		set_hint_flags(p_method_info->method_flags);
 
+		vararg = p_method_info->method_flags & GDNATIVE_EXTENSION_METHOD_FLAG_VARARG;
 		_set_returns(p_method_info->has_return_value);
 		_set_const(p_method_info->method_flags & GDNATIVE_EXTENSION_METHOD_FLAG_CONST);
+		_set_static(p_method_info->method_flags & GDNATIVE_EXTENSION_METHOD_FLAG_STATIC);
 #ifdef DEBUG_METHODS_ENABLED
 		_generate_argument_types(p_method_info->argument_count);
 #endif
 		set_argument_count(p_method_info->argument_count);
+
+		Vector<Variant> defargs;
+		defargs.resize(p_method_info->default_argument_count);
+		for (uint32_t i = 0; i < p_method_info->default_argument_count; i++) {
+			defargs.write[i] = *static_cast<Variant *>(p_method_info->default_arguments[i]);
+		}
+
+		set_default_arguments(defargs);
 	}
 };
 
@@ -334,7 +345,6 @@ void NativeExtension::_bind_methods() {
 	BIND_ENUM_CONSTANT(INITIALIZATION_LEVEL_CORE);
 	BIND_ENUM_CONSTANT(INITIALIZATION_LEVEL_SERVERS);
 	BIND_ENUM_CONSTANT(INITIALIZATION_LEVEL_SCENE);
-	BIND_ENUM_CONSTANT(INITIALIZATION_LEVEL_DRIVER);
 	BIND_ENUM_CONSTANT(INITIALIZATION_LEVEL_EDITOR);
 }
 
@@ -416,7 +426,7 @@ Ref<Resource> NativeExtensionResourceLoader::load(const String &p_path, const St
 		return Ref<Resource>();
 	}
 
-	if (!library_path.is_resource_file()) {
+	if (!library_path.is_resource_file() && !library_path.is_absolute_path()) {
 		library_path = p_path.get_base_dir().plus_file(library_path);
 	}
 

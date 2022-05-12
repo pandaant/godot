@@ -114,6 +114,7 @@ typedef enum {
 	GDNATIVE_VARIANT_OP_NEGATE,
 	GDNATIVE_VARIANT_OP_POSITIVE,
 	GDNATIVE_VARIANT_OP_MODULE,
+	GDNATIVE_VARIANT_OP_POWER,
 	/* bitwise */
 	GDNATIVE_VARIANT_OP_SHIFT_LEFT,
 	GDNATIVE_VARIANT_OP_SHIFT_RIGHT,
@@ -245,8 +246,6 @@ typedef struct {
 } GDNativeExtensionClassCreationInfo;
 
 typedef void *GDNativeExtensionClassLibraryPtr;
-
-typedef const GDNativePropertyInfo *(*GDNativeExtensionClassGetPropertyList)(GDExtensionClassInstancePtr p_instance, uint32_t *r_count);
 
 /* Method */
 
@@ -556,7 +555,6 @@ typedef enum {
 	GDNATIVE_INITIALIZATION_CORE,
 	GDNATIVE_INITIALIZATION_SERVERS,
 	GDNATIVE_INITIALIZATION_SCENE,
-	GDNATIVE_INITIALIZATION_DRIVER,
 	GDNATIVE_INITIALIZATION_EDITOR,
 	GDNATIVE_MAX_INITIALIZATION_LEVEL,
 } GDNativeInitializationLevel;

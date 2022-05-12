@@ -420,7 +420,7 @@ void ProjectSettingsEditor::_action_reordered(const String &p_action_name, const
 	Variant target_value = ps->get(target_name);
 
 	List<PropertyInfo> props;
-	OrderedHashMap<String, Variant> action_values;
+	HashMap<String, Variant> action_values;
 	ProjectSettings::get_singleton()->get_property_list(&props);
 
 	undo_redo->create_action(TTR("Update Input Action Order"));
@@ -437,9 +437,9 @@ void ProjectSettingsEditor::_action_reordered(const String &p_action_name, const
 		undo_redo->add_undo_method(ProjectSettings::get_singleton(), "clear", prop.name);
 	}
 
-	for (OrderedHashMap<String, Variant>::Element E = action_values.front(); E; E = E.next()) {
-		String name = E.key();
-		Variant value = E.get();
+	for (const KeyValue<String, Variant> &E : action_values) {
+		String name = E.key;
+		const Variant &value = E.value;
 
 		if (name == target_name) {
 			if (p_before) {
@@ -515,12 +515,12 @@ void ProjectSettingsEditor::_update_theme() {
 
 	type_box->clear();
 	for (int i = 0; i < Variant::VARIANT_MAX; i++) {
-		// There's no point in adding Nil types, and Object types
-		// can't be serialized correctly in the project settings.
-		if (i != Variant::NIL && i != Variant::OBJECT) {
-			String type = Variant::get_type_name(Variant::Type(i));
-			type_box->add_icon_item(get_theme_icon(type, SNAME("EditorIcons")), type, i);
+		if (i == Variant::NIL || i == Variant::OBJECT || i == Variant::CALLABLE || i == Variant::SIGNAL || i == Variant::RID) {
+			// These types can't be serialized properly, so skip them.
+			continue;
 		}
+		String type = Variant::get_type_name(Variant::Type(i));
+		type_box->add_icon_item(get_theme_icon(type, SNAME("EditorIcons")), type, i);
 	}
 }
 

@@ -1265,7 +1265,7 @@ void Node3DEditorViewport::_surface_focus_exit() {
 }
 
 bool Node3DEditorViewport ::_is_node_locked(const Node *p_node) {
-	return p_node->has_meta("_edit_lock_") && p_node->get_meta("_edit_lock_");
+	return p_node->get_meta("_edit_lock_", false);
 }
 
 void Node3DEditorViewport::_list_select(Ref<InputEventMouseButton> b) {
@@ -1888,7 +1888,7 @@ void Node3DEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 		}
 
 		if (EditorSettings::get_singleton()->get("editors/3d/navigation/emulate_numpad")) {
-			const Key code = k->get_keycode();
+			const Key code = k->get_physical_keycode();
 			if (code >= Key::KEY_0 && code <= Key::KEY_9) {
 				k->set_keycode(code - Key::KEY_0 + Key::KP_0);
 			}

@@ -236,7 +236,7 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent, bool p_scroll
 		}
 	} else if (part_of_subscene) {
 		if (valid_types.size() == 0) {
-			item->set_custom_color(0, get_theme_color(SNAME("disabled_font_color"), SNAME("Editor")));
+			item->set_custom_color(0, get_theme_color(SNAME("warning_color"), SNAME("Editor")));
 		}
 	} else if (marked.has(p_node)) {
 		String node_name = p_node->get_name();
@@ -279,15 +279,26 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent, bool p_scroll
 			Array arr;
 			arr.push_back(num_connections);
 			msg_temp += TTRN("Node has one connection.", "Node has {num} connections.", num_connections).format(arr, "{num}");
-			msg_temp += " ";
+			if (num_groups >= 1) {
+				msg_temp += "\n";
+			}
 		}
 		if (num_groups >= 1) {
-			Array arr;
-			arr.push_back(num_groups);
-			msg_temp += TTRN("Node is in one group.", "Node is in {num} groups.", num_groups).format(arr, "{num}");
+			msg_temp += TTRN("Node is in this group:", "Node is in the following groups:", num_groups) + "\n";
+
+			List<GroupInfo> groups;
+			p_node->get_groups(&groups);
+			for (const GroupInfo &E : groups) {
+				if (E.persistent) {
+					msg_temp += String::utf8("•  ") + String(E.name) + "\n";
+				}
+			}
 		}
 		if (num_connections >= 1 || num_groups >= 1) {
-			msg_temp += "\n" + TTR("Click to show signals dock.");
+			if (num_groups < 1) {
+				msg_temp += "\n";
+			}
+			msg_temp += TTR("Click to show signals dock.");
 		}
 
 		Ref<Texture2D> icon_temp;
@@ -355,13 +366,11 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent, bool p_scroll
 		}
 
 		if (p_node->is_class("CanvasItem")) {
-			bool is_locked = p_node->has_meta("_edit_lock_"); //_edit_group_
-			if (is_locked) {
+			if (p_node->has_meta("_edit_lock_")) {
 				item->add_button(0, get_theme_icon(SNAME("Lock"), SNAME("EditorIcons")), BUTTON_LOCK, false, TTR("Node is locked.\nClick to unlock it."));
 			}
 
-			bool is_grouped = p_node->has_meta("_edit_group_");
-			if (is_grouped) {
+			if (p_node->has_meta("_edit_group_")) {
 				item->add_button(0, get_theme_icon(SNAME("Group"), SNAME("EditorIcons")), BUTTON_GROUP, false, TTR("Children are not selectable.\nClick to make selectable."));
 			}
 
@@ -389,13 +398,11 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent, bool p_scroll
 				p_node->connect("visibility_changed", callable_mp(this, &SceneTreeEditor::_node_visibility_changed), varray(p_node));
 			}
 		} else if (p_node->is_class("Node3D")) {
-			bool is_locked = p_node->has_meta("_edit_lock_");
-			if (is_locked) {
+			if (p_node->has_meta("_edit_lock_")) {
 				item->add_button(0, get_theme_icon(SNAME("Lock"), SNAME("EditorIcons")), BUTTON_LOCK, false, TTR("Node is locked.\nClick to unlock it."));
 			}
 
-			bool is_grouped = p_node->has_meta("_edit_group_");
-			if (is_grouped) {
+			if (p_node->has_meta("_edit_group_")) {
 				item->add_button(0, get_theme_icon(SNAME("Group"), SNAME("EditorIcons")), BUTTON_GROUP, false, TTR("Children are not selectable.\nClick to make selectable."));
 			}
 

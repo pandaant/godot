@@ -35,6 +35,7 @@
 #include "core/crypto/crypto.h"
 #include "core/debugger/engine_debugger.h"
 #include "core/extension/extension_api_dump.h"
+#include "core/extension/native_extension_manager.h"
 #include "core/input/input.h"
 #include "core/input/input_map.h"
 #include "core/io/dir_access.h"
@@ -406,15 +407,18 @@ Error Main::test_setup() {
 		tsman->add_interface(ts);
 	}
 
+	// From `Main::setup2()`.
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	register_core_extensions();
 
-	// From `Main::setup2()`.
-	preregister_module_types();
 	preregister_server_types();
 
 	register_core_singletons();
 
+	/** INITIALIZE SERVERS **/
 	register_server_types();
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_SERVERS);
+	NativeExtensionManager::get_singleton()->initialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SERVERS);
 
 	translation_server->setup(); //register translations, load them, etc.
 	if (!locale.is_empty()) {
@@ -428,15 +432,19 @@ Error Main::test_setup() {
 	register_scene_types();
 	register_driver_types();
 
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_SCENE);
+	NativeExtensionManager::get_singleton()->initialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SCENE);
+
 #ifdef TOOLS_ENABLED
 	ClassDB::set_current_api(ClassDB::API_EDITOR);
 	EditorNode::register_editor_types();
 
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_EDITOR);
+	NativeExtensionManager::get_singleton()->initialize_extensions(NativeExtension::INITIALIZATION_LEVEL_EDITOR);
+
 	ClassDB::set_current_api(ClassDB::API_CORE);
 #endif
 	register_platform_apis();
-
-	register_module_types();
 
 	// Theme needs modules to be initialized so that sub-resources can be loaded.
 	initialize_theme();
@@ -479,13 +487,19 @@ void Main::test_cleanup() {
 	ResourceSaver::remove_custom_savers();
 
 #ifdef TOOLS_ENABLED
+	NativeExtensionManager::get_singleton()->deinitialize_extensions(NativeExtension::INITIALIZATION_LEVEL_EDITOR);
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_EDITOR);
 	EditorNode::unregister_editor_types();
 #endif
 
-	unregister_module_types();
+	NativeExtensionManager::get_singleton()->deinitialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SCENE);
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_SCENE);
 	unregister_platform_apis();
 	unregister_driver_types();
 	unregister_scene_types();
+
+	NativeExtensionManager::get_singleton()->deinitialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SERVERS);
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_SERVERS);
 	unregister_server_types();
 
 	OS::get_singleton()->finalize();
@@ -507,6 +521,7 @@ void Main::test_cleanup() {
 	}
 
 	unregister_core_driver_types();
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	unregister_core_extensions();
 	unregister_core_types();
 
@@ -983,6 +998,11 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "--doctool") {
 			// Actually handling is done in start().
 			cmdline_tool = true;
+
+			// `--doctool` implies `--headless` to avoid spawning an unnecessary window
+			// and speed up class reference generation.
+			audio_driver = "Dummy";
+			display_driver = "headless";
 			main_args.push_back(I->get());
 #endif
 		} else if (I->get() == "--path") { // set path of project to start or edit
@@ -1166,6 +1186,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	// Initialize user data dir.
 	OS::get_singleton()->ensure_user_data_dir();
 
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	register_core_extensions(); // core extensions must be registered after globals setup and before display
 
 	ResourceUID::get_singleton()->load_from_cache(); // load UUIDs from cache.
@@ -1306,35 +1327,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	// always convert to lower case for consistency in the code
 	rendering_driver = rendering_driver.to_lower();
-
-	GLOBAL_DEF_BASIC("display/window/size/viewport_width", 1024);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/viewport_width",
-			PropertyInfo(Variant::INT, "display/window/size/viewport_width",
-					PROPERTY_HINT_RANGE,
-					"0,7680,1,or_greater")); // 8K resolution
-
-	GLOBAL_DEF_BASIC("display/window/size/viewport_height", 600);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/viewport_height",
-			PropertyInfo(Variant::INT, "display/window/size/viewport_height",
-					PROPERTY_HINT_RANGE,
-					"0,4320,1,or_greater")); // 8K resolution
-
-	GLOBAL_DEF_BASIC("display/window/size/resizable", true);
-	GLOBAL_DEF_BASIC("display/window/size/borderless", false);
-	GLOBAL_DEF_BASIC("display/window/size/fullscreen", false);
-	GLOBAL_DEF("display/window/size/always_on_top", false);
-	GLOBAL_DEF("display/window/size/window_width_override", 0);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/window_width_override",
-			PropertyInfo(Variant::INT,
-					"display/window/size/window_width_override",
-					PROPERTY_HINT_RANGE,
-					"0,7680,1,or_greater")); // 8K resolution
-	GLOBAL_DEF("display/window/size/window_height_override", 0);
-	ProjectSettings::get_singleton()->set_custom_property_info("display/window/size/window_height_override",
-			PropertyInfo(Variant::INT,
-					"display/window/size/window_height_override",
-					PROPERTY_HINT_RANGE,
-					"0,4320,1,or_greater")); // 8K resolution
 
 	if (use_custom_res) {
 		if (!force_res) {
@@ -1584,7 +1576,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		tsman->add_interface(ts);
 	}
 
-	preregister_module_types();
 	preregister_server_types();
 
 	// Print engine name and version
@@ -1751,6 +1742,8 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	}
 
 	register_server_types();
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_SERVERS);
+	NativeExtensionManager::get_singleton()->initialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SERVERS);
 
 	MAIN_PRINT("Main: Load Boot Image");
 
@@ -1925,14 +1918,16 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	MAIN_PRINT("Main: Load Scene Types");
 
 	register_scene_types();
-
-	MAIN_PRINT("Main: Load Driver Types");
-
 	register_driver_types();
+
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_SCENE);
+	NativeExtensionManager::get_singleton()->initialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SCENE);
 
 #ifdef TOOLS_ENABLED
 	ClassDB::set_current_api(ClassDB::API_EDITOR);
 	EditorNode::register_editor_types();
+	initialize_modules(MODULE_INITIALIZATION_LEVEL_EDITOR);
+	NativeExtensionManager::get_singleton()->initialize_extensions(NativeExtension::INITIALIZATION_LEVEL_EDITOR);
 
 	ClassDB::set_current_api(ClassDB::API_CORE);
 
@@ -1941,7 +1936,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	MAIN_PRINT("Main: Load Modules");
 
 	register_platform_apis();
-	register_module_types();
 
 	// Theme needs modules to be initialized so that sub-resources can be loaded.
 	initialize_theme();
@@ -2306,11 +2300,11 @@ bool Main::start() {
 		if (!project_manager && !editor) { // game
 			if (!game_path.is_empty() || !script.is_empty()) {
 				//autoload
-				OrderedHashMap<StringName, ProjectSettings::AutoloadInfo> autoloads = ProjectSettings::get_singleton()->get_autoload_list();
+				HashMap<StringName, ProjectSettings::AutoloadInfo> autoloads = ProjectSettings::get_singleton()->get_autoload_list();
 
 				//first pass, add the constants so they exist before any script is loaded
-				for (OrderedHashMap<StringName, ProjectSettings::AutoloadInfo>::Element E = autoloads.front(); E; E = E.next()) {
-					const ProjectSettings::AutoloadInfo &info = E.get();
+				for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &E : autoloads) {
+					const ProjectSettings::AutoloadInfo &info = E.value;
 
 					if (info.is_singleton) {
 						for (int i = 0; i < ScriptServer::get_language_count(); i++) {
@@ -2321,8 +2315,8 @@ bool Main::start() {
 
 				//second pass, load into global constants
 				List<Node *> to_add;
-				for (OrderedHashMap<StringName, ProjectSettings::AutoloadInfo>::Element E = autoloads.front(); E; E = E.next()) {
-					const ProjectSettings::AutoloadInfo &info = E.get();
+				for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &E : autoloads) {
+					const ProjectSettings::AutoloadInfo &info = E.value;
 
 					Ref<Resource> res = ResourceLoader::load(info.path);
 					ERR_CONTINUE_MSG(res.is_null(), "Can't autoload: " + info.path);
@@ -2852,15 +2846,23 @@ void Main::cleanup(bool p_force) {
 	}
 
 #ifdef TOOLS_ENABLED
+	NativeExtensionManager::get_singleton()->deinitialize_extensions(NativeExtension::INITIALIZATION_LEVEL_EDITOR);
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_EDITOR);
 	EditorNode::unregister_editor_types();
+
 #endif
 
 	ImageLoader::cleanup();
 
-	unregister_module_types();
+	NativeExtensionManager::get_singleton()->deinitialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SCENE);
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_SCENE);
+
 	unregister_platform_apis();
 	unregister_driver_types();
 	unregister_scene_types();
+
+	NativeExtensionManager::get_singleton()->deinitialize_extensions(NativeExtension::INITIALIZATION_LEVEL_SERVERS);
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_SERVERS);
 	unregister_server_types();
 
 	EngineDebugger::deinitialize();
@@ -2929,6 +2931,7 @@ void Main::cleanup(bool p_force) {
 
 	unregister_core_driver_types();
 	unregister_core_extensions();
+	uninitialize_modules(MODULE_INITIALIZATION_LEVEL_CORE);
 	unregister_core_types();
 
 	OS::get_singleton()->finalize_core();

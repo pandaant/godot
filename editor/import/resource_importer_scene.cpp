@@ -715,13 +715,7 @@ Node *ResourceImporterScene::_post_fix_node(Node *p_node, Node *p_root, Map<Ref<
 
 	bool isroot = p_node == p_root;
 
-	String import_id;
-
-	if (p_node->has_meta("import_id")) {
-		import_id = p_node->get_meta("import_id");
-	} else {
-		import_id = "PATH:" + p_root->get_path_to(p_node);
-	}
+	String import_id = p_node->get_meta("import_id", "PATH:" + p_root->get_path_to(p_node));
 
 	Dictionary node_settings;
 	if (p_node_data.has(import_id)) {
@@ -763,12 +757,7 @@ Node *ResourceImporterScene::_post_fix_node(Node *p_node, Node *p_root, Map<Ref<
 				for (int i = 0; i < m->get_surface_count(); i++) {
 					Ref<Material> mat = m->get_surface_material(i);
 					if (mat.is_valid()) {
-						String mat_id;
-						if (mat->has_meta("import_id")) {
-							mat_id = mat->get_meta("import_id");
-						} else {
-							mat_id = mat->get_name();
-						}
+						String mat_id = mat->get_meta("import_id", mat->get_name());
 
 						if (!mat_id.is_empty() && p_material_data.has(mat_id)) {
 							Dictionary matdata = p_material_data[mat_id];
@@ -1542,7 +1531,7 @@ void ResourceImporterScene::get_import_options(const String &p_path, List<Import
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/generate_lods"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/create_shadow_meshes"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/light_baking", PROPERTY_HINT_ENUM, "Disabled,Static (VoxelGI/SDFGI),Static Lightmaps (VoxelGI/SDFGI/LightmapGI),Dynamic (VoxelGI only)", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), 1));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "meshes/lightmap_texel_size", PROPERTY_HINT_RANGE, "0.001,100,0.001"), 0.1));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "meshes/lightmap_texel_size", PROPERTY_HINT_RANGE, "0.001,100,0.001"), 0.2));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "skins/use_named_skins"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "animation/fps", PROPERTY_HINT_RANGE, "1,120,1"), 30));
@@ -1591,13 +1580,7 @@ void ResourceImporterScene::_generate_meshes(Node *p_node, const Dictionary &p_m
 				bool bake_lightmaps = p_light_bake_mode == LIGHT_BAKE_STATIC_LIGHTMAPS;
 				String save_to_file;
 
-				String mesh_id;
-
-				if (src_mesh_node->get_mesh()->has_meta("import_id")) {
-					mesh_id = src_mesh_node->get_mesh()->get_meta("import_id");
-				} else {
-					mesh_id = src_mesh_node->get_mesh()->get_name();
-				}
+				String mesh_id = src_mesh_node->get_mesh()->get_meta("import_id", src_mesh_node->get_mesh()->get_name());
 
 				if (!mesh_id.is_empty() && p_mesh_data.has(mesh_id)) {
 					Dictionary mesh_settings = p_mesh_data[mesh_id];
@@ -1754,7 +1737,7 @@ void ResourceImporterScene::_optimize_track_usage(AnimationPlayer *p_player, Ani
 	p_player->get_animation_list(&anims);
 	Node *parent = p_player->get_parent();
 	ERR_FAIL_COND(parent == nullptr);
-	OrderedHashMap<NodePath, uint32_t> used_tracks[TRACK_CHANNEL_MAX];
+	HashMap<NodePath, uint32_t> used_tracks[TRACK_CHANNEL_MAX];
 	bool tracks_to_add = false;
 	static const Animation::TrackType track_types[TRACK_CHANNEL_MAX] = { Animation::TYPE_POSITION_3D, Animation::TYPE_ROTATION_3D, Animation::TYPE_SCALE_3D, Animation::TYPE_BLEND_SHAPE };
 	for (const StringName &I : anims) {
@@ -1807,12 +1790,12 @@ void ResourceImporterScene::_optimize_track_usage(AnimationPlayer *p_player, Ani
 				used_tracks[j][path] = pass;
 			}
 
-			for (OrderedHashMap<NodePath, uint32_t>::Element J = used_tracks[j].front(); J; J = J.next()) {
-				if (J.get() == pass) {
+			for (const KeyValue<NodePath, uint32_t> &J : used_tracks[j]) {
+				if (J.value == pass) {
 					continue;
 				}
 
-				NodePath path = J.key();
+				NodePath path = J.key;
 				Node *n = parent->get_node(path);
 
 				if (j == TRACK_CHANNEL_BLEND_SHAPE) {

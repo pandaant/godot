@@ -1334,7 +1334,8 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path) {
 	EditorProgress ep("savezip", TTR("Packing"), 102, true);
 
-	zlib_filefunc_def io = zipio_create_io();
+	Ref<FileAccess> io_fa;
+	zlib_filefunc_def io = zipio_create_io(&io_fa);
 	zipFile zip = zipOpen2(p_path.utf8().get_data(), APPEND_STATUS_CREATE, nullptr, &io);
 
 	ZipData zd;
@@ -1820,7 +1821,11 @@ bool EditorExportPlatformPC::can_export(const Ref<EditorExportPreset> &p_preset,
 
 Error EditorExportPlatformPC::export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags) {
 	ExportNotifier notifier(*this, p_preset, p_debug, p_path, p_flags);
+
 	Error err = prepare_template(p_preset, p_debug, p_path, p_flags);
+	if (err == OK) {
+		err = modify_template(p_preset, p_debug, p_path, p_flags);
+	}
 	if (err == OK) {
 		err = export_project_data(p_preset, p_debug, p_path, p_flags);
 	}

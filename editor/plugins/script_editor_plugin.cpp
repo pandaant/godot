@@ -119,9 +119,9 @@ void EditorStandardSyntaxHighlighter::_update_cache() {
 	}
 
 	/* Autoloads. */
-	OrderedHashMap<StringName, ProjectSettings::AutoloadInfo> autoloads = ProjectSettings::get_singleton()->get_autoload_list();
-	for (OrderedHashMap<StringName, ProjectSettings::AutoloadInfo>::Element E = autoloads.front(); E; E = E.next()) {
-		const ProjectSettings::AutoloadInfo &info = E.value();
+	HashMap<StringName, ProjectSettings::AutoloadInfo> autoloads = ProjectSettings::get_singleton()->get_autoload_list();
+	for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &E : autoloads) {
+		const ProjectSettings::AutoloadInfo &info = E.value;
 		if (info.is_singleton) {
 			highlighter->add_keyword_color(info.name, usertype_color);
 		}
@@ -1950,11 +1950,11 @@ void ScriptEditor::_update_script_colors() {
 		script_list->set_item_custom_bg_color(i, Color(0, 0, 0, 0));
 
 		if (script_temperature_enabled) {
-			if (!n->has_meta("__editor_pass")) {
+			int pass = n->get_meta("__editor_pass", -1);
+			if (pass < 0) {
 				continue;
 			}
 
-			int pass = n->get_meta("__editor_pass");
 			int h = edit_pass - pass;
 			if (h > hist_size) {
 				continue;

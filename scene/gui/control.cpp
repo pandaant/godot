@@ -1501,14 +1501,15 @@ void Control::_set_layout_mode(LayoutMode p_mode) {
 	bool list_changed = false;
 
 	if (p_mode == LayoutMode::LAYOUT_MODE_POSITION || p_mode == LayoutMode::LAYOUT_MODE_ANCHORS) {
-		if (has_meta("_edit_layout_mode") && (int)get_meta("_edit_layout_mode") != (int)p_mode) {
+		if ((int)get_meta("_edit_layout_mode", p_mode) != (int)p_mode) {
 			list_changed = true;
 		}
 
 		set_meta("_edit_layout_mode", (int)p_mode);
 
 		if (p_mode == LayoutMode::LAYOUT_MODE_POSITION) {
-			set_meta("_edit_use_custom_anchors", false);
+			remove_meta("_edit_layout_mode");
+			remove_meta("_edit_use_custom_anchors");
 			set_anchors_and_offsets_preset(LayoutPreset::PRESET_TOP_LEFT, LayoutPresetMode::PRESET_MODE_KEEP_SIZE);
 			set_grow_direction_preset(LayoutPreset::PRESET_TOP_LEFT);
 		}
@@ -1589,22 +1590,22 @@ void Control::set_anchor_and_offset(Side p_side, real_t p_anchor, real_t p_pos, 
 void Control::_set_anchors_layout_preset(int p_preset) {
 	bool list_changed = false;
 
-	if (has_meta("_edit_layout_mode") && (int)get_meta("_edit_layout_mode") != (int)LayoutMode::LAYOUT_MODE_ANCHORS) {
+	if (get_meta("_edit_layout_mode", LayoutMode::LAYOUT_MODE_ANCHORS).operator int() != LayoutMode::LAYOUT_MODE_ANCHORS) {
 		list_changed = true;
-		set_meta("_edit_layout_mode", (int)LayoutMode::LAYOUT_MODE_ANCHORS);
+		set_meta("_edit_layout_mode", LayoutMode::LAYOUT_MODE_ANCHORS);
 	}
 
 	if (p_preset == -1) {
-		if (!has_meta("_edit_use_custom_anchors") || !(bool)get_meta("_edit_use_custom_anchors")) {
+		if (!get_meta("_edit_use_custom_anchors", false)) {
 			set_meta("_edit_use_custom_anchors", true);
 			notify_property_list_changed();
 		}
 		return; // Keep settings as is.
 	}
 
-	if (!has_meta("_edit_use_custom_anchors") || (bool)get_meta("_edit_use_custom_anchors")) {
+	if (get_meta("_edit_use_custom_anchors", true)) {
 		list_changed = true;
-		set_meta("_edit_use_custom_anchors", false);
+		remove_meta("_edit_use_custom_anchors");
 	}
 
 	LayoutPreset preset = (LayoutPreset)p_preset;
@@ -1645,7 +1646,7 @@ void Control::_set_anchors_layout_preset(int p_preset) {
 
 int Control::_get_anchors_layout_preset() const {
 	// If the custom preset was selected by user, use it.
-	if (has_meta("_edit_use_custom_anchors") && (bool)get_meta("_edit_use_custom_anchors")) {
+	if ((bool)get_meta("_edit_use_custom_anchors", false)) {
 		return -1;
 	}
 
