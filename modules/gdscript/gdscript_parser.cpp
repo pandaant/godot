@@ -1624,6 +1624,10 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 					case Node::AWAIT:
 						// Fine.
 						break;
+					case Node::LAMBDA:
+						// Standalone lambdas can't be used, so make this an error.
+						push_error("Standalone lambdas cannot be accessed. Consider assigning it to a variable.", expression);
+						break;
 					default:
 						push_warning(expression, GDScriptWarning::STANDALONE_EXPRESSION);
 				}
@@ -1808,7 +1812,6 @@ GDScriptParser::MatchNode *GDScriptParser::parse_match() {
 #ifdef DEBUG_ENABLED
 	bool all_have_return = true;
 	bool have_wildcard = false;
-	bool wildcard_has_return = false;
 	bool have_wildcard_without_continue = false;
 #endif
 
@@ -1826,9 +1829,6 @@ GDScriptParser::MatchNode *GDScriptParser::parse_match() {
 
 		if (branch->has_wildcard) {
 			have_wildcard = true;
-			if (branch->block->has_return) {
-				wildcard_has_return = true;
-			}
 			if (!branch->block->has_continue) {
 				have_wildcard_without_continue = true;
 			}
@@ -1843,7 +1843,7 @@ GDScriptParser::MatchNode *GDScriptParser::parse_match() {
 	consume(GDScriptTokenizer::Token::DEDENT, R"(Expected an indented block after "match" statement.)");
 
 #ifdef DEBUG_ENABLED
-	if (wildcard_has_return || (all_have_return && have_wildcard)) {
+	if (all_have_return && have_wildcard) {
 		current_suite->has_return = true;
 	}
 #endif
@@ -2103,7 +2103,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 	ExpressionNode *previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 
 	while (p_precedence <= get_rule(current.type)->precedence) {
-		if (previous_operand == nullptr || (p_stop_on_assign && current.type == GDScriptTokenizer::Token::EQUAL)) {
+		if (previous_operand == nullptr || (p_stop_on_assign && current.type == GDScriptTokenizer::Token::EQUAL) || (previous_operand->type == Node::LAMBDA && lambda_ended)) {
 			return previous_operand;
 		}
 		// Also switch multiline mode on here for infix operators.
@@ -2926,6 +2926,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	current_function = function;
 
 	SuiteNode *body = alloc_node<SuiteNode>();
+	body->parent_function = current_function;
+	body->parent_block = current_suite;
+
 	SuiteNode *previous_suite = current_suite;
 	current_suite = body;
 
@@ -3053,7 +3056,7 @@ bool GDScriptParser::has_comment(int p_line) {
 }
 
 String GDScriptParser::get_doc_comment(int p_line, bool p_single_line) {
-	const Map<int, GDScriptTokenizer::CommentData> &comments = tokenizer.get_comments();
+	const HashMap<int, GDScriptTokenizer::CommentData> &comments = tokenizer.get_comments();
 	ERR_FAIL_COND_V(!comments.has(p_line), String());
 
 	if (p_single_line) {
@@ -3105,7 +3108,7 @@ String GDScriptParser::get_doc_comment(int p_line, bool p_single_line) {
 }
 
 void GDScriptParser::get_class_doc_comment(int p_line, String &p_brief, String &p_desc, Vector<Pair<String, String>> &p_tutorials, bool p_inner_class) {
-	const Map<int, GDScriptTokenizer::CommentData> &comments = tokenizer.get_comments();
+	const HashMap<int, GDScriptTokenizer::CommentData> &comments = tokenizer.get_comments();
 	if (!comments.has(p_line)) {
 		return;
 	}
@@ -3565,6 +3568,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 				for (const KeyValue<StringName, int> &E : export_type.enum_values) {
 					if (!first) {
 						enum_hint_string += ",";
+					} else {
 						first = false;
 					}
 					enum_hint_string += E.key.operator String().capitalize().xml_escape();

@@ -588,7 +588,7 @@ void Skeleton3DEditor::update_joint_tree() {
 
 	TreeItem *root = joint_tree->create_item();
 
-	Map<int, TreeItem *> items;
+	HashMap<int, TreeItem *> items;
 
 	items.insert(-1, root);
 
@@ -600,7 +600,7 @@ void Skeleton3DEditor::update_joint_tree() {
 		bones_to_process.erase(current_bone_idx);
 
 		const int parent_idx = skeleton->get_bone_parent(current_bone_idx);
-		TreeItem *parent_item = items.find(parent_idx)->get();
+		TreeItem *parent_item = items.find(parent_idx)->value;
 
 		TreeItem *joint_item = joint_tree->create_item(parent_item);
 		items.insert(current_bone_idx, joint_item);
@@ -821,7 +821,7 @@ Skeleton3DEditor::Skeleton3DEditor(EditorInspectorPluginSkeleton *e_plugin, Skel
 
 shader_type spatial;
 render_mode unshaded, shadows_disabled, depth_draw_always;
-uniform sampler2D texture_albedo : hint_albedo;
+uniform sampler2D texture_albedo : source_color;
 uniform float point_size : hint_range(0,128) = 32;
 void vertex() {
 	if (!OUTPUT_IS_SRGB) {

@@ -1691,6 +1691,8 @@ hb_font_t *TextServerAdvanced::_font_get_hb_handle(const RID &p_font_rid, int64_
 }
 
 RID TextServerAdvanced::create_font() {
+	_THREAD_SAFE_METHOD_
+
 	FontDataAdvanced *fd = memnew(FontDataAdvanced);
 
 	return font_owner.make_rid(fd);
@@ -2688,13 +2690,22 @@ Dictionary TextServerAdvanced::font_get_glyph_contours(const RID &p_font_rid, in
 	int error = FT_Load_Glyph(fd->cache[size]->face, index, FT_LOAD_NO_BITMAP | (fd->force_autohinter ? FT_LOAD_FORCE_AUTOHINT : 0));
 	ERR_FAIL_COND_V(error, Dictionary());
 
-	double h = fd->cache[size]->ascent;
+	if (fd->embolden != 0.f) {
+		FT_Pos strength = fd->embolden * p_size * 4; // 26.6 fractional units (1 / 64).
+		FT_Outline_Embolden(&fd->cache[size]->face->glyph->outline, strength);
+	}
+
+	if (fd->transform != Transform2D()) {
+		FT_Matrix mat = { FT_Fixed(fd->transform[0][0] * 65536), FT_Fixed(fd->transform[0][1] * 65536), FT_Fixed(fd->transform[1][0] * 65536), FT_Fixed(fd->transform[1][1] * 65536) }; // 16.16 fractional units (1 / 65536).
+		FT_Outline_Transform(&fd->cache[size]->face->glyph->outline, &mat);
+	}
+
 	double scale = (1.0 / 64.0) / fd->cache[size]->oversampling * fd->cache[size]->scale;
 	if (fd->msdf) {
 		scale = scale * (double)p_size / (double)fd->msdf_source_size;
 	}
 	for (short i = 0; i < fd->cache[size]->face->glyph->outline.n_points; i++) {
-		points.push_back(Vector3(fd->cache[size]->face->glyph->outline.points[i].x * scale, h - fd->cache[size]->face->glyph->outline.points[i].y * scale, FT_CURVE_TAG(fd->cache[size]->face->glyph->outline.tags[i])));
+		points.push_back(Vector3(fd->cache[size]->face->glyph->outline.points[i].x * scale, -fd->cache[size]->face->glyph->outline.points[i].y * scale, FT_CURVE_TAG(fd->cache[size]->face->glyph->outline.tags[i])));
 	}
 	for (short i = 0; i < fd->cache[size]->face->glyph->outline.n_contours; i++) {
 		contours.push_back(fd->cache[size]->face->glyph->outline.contours[i]);
@@ -3350,6 +3361,7 @@ void TextServerAdvanced::full_copy(ShapedTextDataAdvanced *p_shaped) {
 
 RID TextServerAdvanced::create_shaped_text(TextServer::Direction p_direction, TextServer::Orientation p_orientation) {
 	_THREAD_SAFE_METHOD_
+
 	ShapedTextDataAdvanced *sd = memnew(ShapedTextDataAdvanced);
 	sd->hb_buffer = hb_buffer_create();
 	sd->direction = p_direction;
@@ -3739,6 +3751,8 @@ void TextServerAdvanced::_realign(ShapedTextDataAdvanced *p_sd) const {
 }
 
 RID TextServerAdvanced::shaped_text_substr(const RID &p_shaped, int64_t p_start, int64_t p_length) const {
+	_THREAD_SAFE_METHOD_
+
 	const ShapedTextDataAdvanced *sd = shaped_owner.get_or_null(p_shaped);
 	ERR_FAIL_COND_V(!sd, RID());
 
@@ -5575,7 +5589,7 @@ PackedInt32Array TextServerAdvanced::string_get_word_breaks(const String &p_stri
 	// Convert to UTF-16.
 	Char16String utf16 = p_string.utf16();
 
-	Set<int> breaks;
+	HashSet<int> breaks;
 	UErrorCode err = U_ZERO_ERROR;
 	UBreakIterator *bi = ubrk_open(UBRK_LINE, p_language.ascii().get_data(), (const UChar *)utf16.ptr(), utf16.length(), &err);
 	if (U_FAILURE(err)) {

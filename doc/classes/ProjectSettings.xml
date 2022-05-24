@@ -1592,7 +1592,7 @@
 			If [code]true[/code], jitters DOF samples to make effect slightly blurrier and hide lines created from low sample rates. This can result in a slightly grainy appearance when used with a low number of samples.
 		</member>
 		<member name="rendering/driver/depth_prepass/disable_for_vendors" type="String" setter="" getter="" default="&quot;PowerVR,Mali,Adreno,Apple&quot;">
-			Disables [member rendering/driver/depth_prepass/enable] conditionally for certain venders. By default, disables the depth prepass for mobile devices as mobile devices do not benefit from the depth prepass due to their unique architecture.
+			Disables [member rendering/driver/depth_prepass/enable] conditionally for certain vendors. By default, disables the depth prepass for mobile devices as mobile devices do not benefit from the depth prepass due to their unique architecture.
 		</member>
 		<member name="rendering/driver/depth_prepass/enable" type="bool" setter="" getter="" default="true">
 			If [code]true[/code], performs a previous depth pass before rendering 3D materials. This increases performance significantly in scenes with high overdraw, when complex materials and lighting are used. However, in scenes with few occluded surfaces, the depth prepass may reduce performance. If your game is viewed from a fixed angle that makes it easy to avoid overdraw (such as top-down or side-scrolling perspective), consider disabling the depth prepass to improve performance. This setting can be changed at run-time to optimize performance depending on the scene currently being viewed.
@@ -1723,13 +1723,13 @@
 		<member name="rendering/limits/global_shader_variables/buffer_size" type="int" setter="" getter="" default="65536">
 		</member>
 		<member name="rendering/limits/opengl/max_lights_per_object" type="int" setter="" getter="" default="8">
-			Max number of lights renderable per object. This is further limited by hardware support. Setting this low will slightly reduce memory usage, may decrease shader compile times, and may result in faster rendering on low-end, mobile, or web devices.
+			Max number of omnilights and spotlights renderable per object. At the default value of 8, this means that each surface can be affected by up to 8 omnilights and 8 spotlights. This is further limited by hardware support and [member rendering/limits/opengl/max_renderable_lights]. Setting this low will slightly reduce memory usage, may decrease shader compile times, and may result in faster rendering on low-end, mobile, or web devices.
 		</member>
 		<member name="rendering/limits/opengl/max_renderable_elements" type="int" setter="" getter="" default="65536">
 			Max amount of elements renderable in a frame. If more elements than this are visible per frame, they will not be drawn. Keep in mind elements refer to mesh surfaces and not meshes themselves. Setting this low will slightly reduce memory usage and may decrease shader compile times, particularly on web. For most uses, the default value is suitable, but consider lowering as much as possible on web export.
 		</member>
-		<member name="rendering/limits/opengl/max_renderable_lights" type="int" setter="" getter="" default="256">
-			Max number of lights renderable in a frame. If more lights than this number are used, they will be ignored. Setting this low will slightly reduce memory usage and may decrease shader compile times, particularly on web. For most uses, the default value is suitable, but consider lowering as much as possible on web export.
+		<member name="rendering/limits/opengl/max_renderable_lights" type="int" setter="" getter="" default="32">
+			Max number of positional lights renderable in a frame. If more lights than this number are used, they will be ignored. Setting this low will slightly reduce memory usage and may decrease shader compile times, particularly on web. For most uses, the default value is suitable, but consider lowering as much as possible on web export.
 		</member>
 		<member name="rendering/limits/spatial_indexer/threaded_cull_minimum_instances" type="int" setter="" getter="" default="1000">
 		</member>

@@ -35,6 +35,7 @@
 #include "core/io/json.h"
 #include "core/io/zip_io.h"
 #include "core/os/keyboard.h"
+#include "core/templates/rb_set.h"
 #include "core/version.h"
 #include "editor/editor_node.h"
 #include "editor/editor_paths.h"
@@ -50,7 +51,7 @@ void ExportTemplateManager::_update_template_status() {
 	Error err = da->change_dir(templates_dir);
 	ERR_FAIL_COND_MSG(err != OK, "Could not access templates directory at '" + templates_dir + "'.");
 
-	Set<String> templates;
+	RBSet<String> templates;
 	da->list_dir_begin();
 	if (err == OK) {
 		String c = da->get_next();
@@ -97,7 +98,7 @@ void ExportTemplateManager::_update_template_status() {
 	installed_table->clear();
 	TreeItem *installed_root = installed_table->create_item();
 
-	for (Set<String>::Element *E = templates.back(); E; E = E->prev()) {
+	for (RBSet<String>::Element *E = templates.back(); E; E = E->prev()) {
 		String version_string = E->get();
 		if (version_string == current_version) {
 			continue;
@@ -694,7 +695,7 @@ Error ExportTemplateManager::install_android_template_from_file(const String &p_
 
 	ProgressDialog::get_singleton()->add_task("uncompress_src", TTR("Uncompressing Android Build Sources"), total_files);
 
-	Set<String> dirs_tested;
+	HashSet<String> dirs_tested;
 	int idx = 0;
 	while (ret == UNZ_OK) {
 		// Get file path.

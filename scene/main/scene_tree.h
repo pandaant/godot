@@ -102,7 +102,7 @@ private:
 	bool paused = false;
 	int root_lock = 0;
 
-	Map<StringName, Group> group_map;
+	HashMap<StringName, Group> group_map;
 	bool _quit = false;
 	bool initialized = false;
 
@@ -121,16 +121,20 @@ private:
 		StringName group;
 		StringName call;
 
+		static uint32_t hash(const UGCall &p_val) {
+			return p_val.group.hash() ^ p_val.call.hash();
+		}
+		bool operator==(const UGCall &p_with) const { return group == p_with.group && call == p_with.call; }
 		bool operator<(const UGCall &p_with) const { return group == p_with.group ? call < p_with.call : group < p_with.group; }
 	};
 
 	// Safety for when a node is deleted while a group is being called.
 	int call_lock = 0;
-	Set<Node *> call_skip; // Skip erased nodes.
+	HashSet<Node *> call_skip; // Skip erased nodes.
 
 	List<ObjectID> delete_queue;
 
-	Map<UGCall, Vector<Variant>> unique_group_calls;
+	HashMap<UGCall, Vector<Variant>, UGCall> unique_group_calls;
 	bool ugc_locked = false;
 	void _flush_ugc();
 
@@ -269,7 +273,10 @@ public:
 
 	virtual void finalize() override;
 
+	bool is_auto_accept_quit() const;
 	void set_auto_accept_quit(bool p_enable);
+
+	bool is_quit_on_go_back() const;
 	void set_quit_on_go_back(bool p_enable);
 
 	void quit(int p_exit_code = EXIT_SUCCESS);

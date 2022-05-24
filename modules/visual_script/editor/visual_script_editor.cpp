@@ -647,6 +647,14 @@ void VisualScriptEditor::_update_graph(int p_only_id) {
 		Control::get_theme_icon(SNAME("PackedColorArray"), SNAME("EditorIcons"))
 	};
 
+	// Visual script specific theme for MSDF font.
+	Ref<Theme> vstheme;
+	vstheme.instantiate();
+	Ref<Font> label_font = EditorNode::get_singleton()->get_editor_theme()->get_font("main_msdf", "EditorFonts");
+	vstheme->set_font("font", "Label", label_font);
+	vstheme->set_font("font", "LineEdit", label_font);
+	vstheme->set_font("font", "Button", label_font);
+
 	Ref<Texture2D> seq_port = Control::get_theme_icon(SNAME("VisualShaderPort"), SNAME("EditorIcons"));
 	List<int> node_ids;
 	script->get_node_list(&node_ids);
@@ -960,9 +968,8 @@ void VisualScriptEditor::_update_graph(int p_only_id) {
 
 			slot_idx++;
 		}
-
 		graph->add_child(gnode);
-
+		gnode->set_theme(vstheme);
 		if (gnode->is_comment()) {
 			graph->move_child(gnode, 0);
 		}
@@ -1603,12 +1610,12 @@ void VisualScriptEditor::_remove_output_port(int p_id, int p_port) {
 	List<VisualScript::DataConnection> data_connections;
 	script->get_data_connection_list(&data_connections);
 
-	HashMap<int, Set<int>> conn_map;
+	HashMap<int, RBSet<int>> conn_map;
 	for (const VisualScript::DataConnection &E : data_connections) {
 		if (E.from_node == p_id && E.from_port == p_port) {
 			// Push into the connections map.
 			if (!conn_map.has(E.to_node)) {
-				conn_map.insert(E.to_node, Set<int>());
+				conn_map.insert(E.to_node, RBSet<int>());
 			}
 			conn_map[E.to_node].insert(E.to_port);
 		}
@@ -1617,9 +1624,9 @@ void VisualScriptEditor::_remove_output_port(int p_id, int p_port) {
 	undo_redo->add_do_method(vsn.ptr(), "remove_output_data_port", p_port);
 	undo_redo->add_do_method(this, "_update_graph", p_id);
 
-	for (const KeyValue<int, Set<int>> &E : conn_map) {
-		for (const Set<int>::Element *F = E.value.front(); F; F = F->next()) {
-			undo_redo->add_undo_method(script.ptr(), "data_connect", p_id, p_port, E.key, F->get());
+	for (const KeyValue<int, RBSet<int>> &E : conn_map) {
+		for (const int &F : E.value) {
+			undo_redo->add_undo_method(script.ptr(), "data_connect", p_id, p_port, E.key, F);
 		}
 	}
 
@@ -1760,14 +1767,14 @@ void VisualScriptEditor::_on_nodes_paste() {
 		return;
 	}
 
-	Map<int, int> remap;
+	HashMap<int, int> remap;
 
 	undo_redo->create_action(TTR("Paste VisualScript Nodes"));
 	int idc = script->get_available_id() + 1;
 
-	Set<int> to_select;
+	RBSet<int> to_select;
 
-	Set<Vector2> existing_positions;
+	RBSet<Vector2> existing_positions;
 
 	{
 		List<int> nodes;
@@ -1806,14 +1813,14 @@ void VisualScriptEditor::_on_nodes_paste() {
 		undo_redo->add_undo_method(script.ptr(), "remove_node", new_id);
 	}
 
-	for (Set<VisualScript::SequenceConnection>::Element *E = clipboard->sequence_connections.front(); E; E = E->next()) {
-		undo_redo->add_do_method(script.ptr(), "sequence_connect", remap[E->get().from_node], E->get().from_output, remap[E->get().to_node]);
-		undo_redo->add_undo_method(script.ptr(), "sequence_disconnect", remap[E->get().from_node], E->get().from_output, remap[E->get().to_node]);
+	for (const VisualScript::SequenceConnection &E : clipboard->sequence_connections) {
+		undo_redo->add_do_method(script.ptr(), "sequence_connect", remap[E.from_node], E.from_output, remap[E.to_node]);
+		undo_redo->add_undo_method(script.ptr(), "sequence_disconnect", remap[E.from_node], E.from_output, remap[E.to_node]);
 	}
 
-	for (Set<VisualScript::DataConnection>::Element *E = clipboard->data_connections.front(); E; E = E->next()) {
-		undo_redo->add_do_method(script.ptr(), "data_connect", remap[E->get().from_node], E->get().from_port, remap[E->get().to_node], E->get().to_port);
-		undo_redo->add_undo_method(script.ptr(), "data_disconnect", remap[E->get().from_node], E->get().from_port, remap[E->get().to_node], E->get().to_port);
+	for (const VisualScript::DataConnection &E : clipboard->data_connections) {
+		undo_redo->add_do_method(script.ptr(), "data_connect", remap[E.from_node], E.from_port, remap[E.to_node], E.to_port);
+		undo_redo->add_undo_method(script.ptr(), "data_disconnect", remap[E.from_node], E.from_port, remap[E.to_node], E.to_port);
 	}
 
 	undo_redo->add_do_method(this, "_update_graph");
@@ -1881,7 +1888,7 @@ void VisualScriptEditor::_on_nodes_delete() {
 }
 
 void VisualScriptEditor::_on_nodes_duplicate() {
-	Set<int> to_duplicate;
+	RBSet<int> to_duplicate;
 
 	for (int i = 0; i < graph->get_child_count(); i++) {
 		GraphNode *gn = Object::cast_to<GraphNode>(graph->get_child(i));
@@ -1900,20 +1907,20 @@ void VisualScriptEditor::_on_nodes_duplicate() {
 	undo_redo->create_action(TTR("Duplicate VisualScript Nodes"));
 	int idc = script->get_available_id() + 1;
 
-	Set<int> to_select;
+	RBSet<int> to_select;
 	HashMap<int, int> remap;
 
-	for (Set<int>::Element *F = to_duplicate.front(); F; F = F->next()) {
+	for (const int &F : to_duplicate) {
 		// Duplicate from the specific function but place it into the default func as it would lack the connections.
-		Ref<VisualScriptNode> node = script->get_node(F->get());
+		Ref<VisualScriptNode> node = script->get_node(F);
 
 		Ref<VisualScriptNode> dupe = node->duplicate(true);
 
 		int new_id = idc++;
-		remap.insert(F->get(), new_id);
+		remap.insert(F, new_id);
 
 		to_select.insert(new_id);
-		undo_redo->add_do_method(script.ptr(), "add_node", new_id, dupe, script->get_node_position(F->get()) + Vector2(20, 20));
+		undo_redo->add_do_method(script.ptr(), "add_node", new_id, dupe, script->get_node_position(F) + Vector2(20, 20));
 		undo_redo->add_undo_method(script.ptr(), "remove_node", new_id);
 	}
 
@@ -1959,15 +1966,6 @@ void VisualScriptEditor::_generic_search(Vector2 pos, bool node_centered) {
 	}
 
 	new_connect_node_select->select_from_visual_script(script, false); // do not reset text
-
-	// Ensure that the dialog fits inside the graph.
-	Size2 bounds = graph->get_global_position() + graph->get_size() - new_connect_node_select->get_size();
-	pos.x = pos.x > bounds.x ? bounds.x : pos.x;
-	pos.y = pos.y > bounds.y ? bounds.y : pos.y;
-
-	if (pos != Vector2()) {
-		new_connect_node_select->set_position(pos);
-	}
 }
 
 void VisualScriptEditor::input(const Ref<InputEvent> &p_event) {
@@ -3175,7 +3173,7 @@ void VisualScriptEditor::_graph_connect_to_empty(const String &p_from, int p_fro
 	}
 }
 
-VisualScriptNode::TypeGuess VisualScriptEditor::_guess_output_type(int p_port_action_node, int p_port_action_output, Set<int> &visited_nodes) {
+VisualScriptNode::TypeGuess VisualScriptEditor::_guess_output_type(int p_port_action_node, int p_port_action_output, RBSet<int> &visited_nodes) {
 	VisualScriptNode::TypeGuess tg;
 	tg.type = Variant::NIL;
 
@@ -3226,7 +3224,7 @@ VisualScriptNode::TypeGuess VisualScriptEditor::_guess_output_type(int p_port_ac
 }
 
 void VisualScriptEditor::_port_action_menu(int p_option) {
-	Set<int> vn;
+	RBSet<int> vn;
 
 	switch (p_option) {
 		case CREATE_CALL_SET_GET: {
@@ -3338,7 +3336,7 @@ void VisualScriptEditor::_selected_connect_node(const String &p_text, const Stri
 #endif
 	Vector2 pos = _get_pos_in_graph(port_action_pos);
 
-	Set<int> vn;
+	RBSet<int> vn;
 	bool port_node_exists = true;
 
 	if (drop_position != Vector2()) {
@@ -4094,8 +4092,8 @@ void VisualScriptEditor::_menu_option(int p_what) {
 		} break;
 		case EDIT_CREATE_FUNCTION: {
 			// Create Function.
-			Map<int, Ref<VisualScriptNode>> nodes;
-			Set<int> selections;
+			HashMap<int, Ref<VisualScriptNode>> nodes;
+			RBSet<int> selections;
 			for (int i = 0; i < graph->get_child_count(); i++) {
 				GraphNode *gn = Object::cast_to<GraphNode>(graph->get_child(i));
 				if (gn) {
@@ -4118,18 +4116,18 @@ void VisualScriptEditor::_menu_option(int p_what) {
 				return; // nothing to be done if there are no valid nodes selected
 			}
 
-			Set<VisualScript::SequenceConnection> seqmove;
-			Set<VisualScript::DataConnection> datamove;
+			RBSet<VisualScript::SequenceConnection> seqmove;
+			RBSet<VisualScript::DataConnection> datamove;
 
-			Set<VisualScript::SequenceConnection> seqext;
-			Set<VisualScript::DataConnection> dataext;
+			RBSet<VisualScript::SequenceConnection> seqext;
+			RBSet<VisualScript::DataConnection> dataext;
 
 			int start_node = -1;
-			Set<int> end_nodes;
+			RBSet<int> end_nodes;
 			if (nodes.size() == 1) {
-				Ref<VisualScriptNode> nd = script->get_node(nodes.front()->key());
+				Ref<VisualScriptNode> nd = script->get_node(nodes.begin()->key);
 				if (nd.is_valid() && nd->has_input_sequence_port()) {
-					start_node = nodes.front()->key();
+					start_node = nodes.begin()->key;
 				} else {
 					EditorNode::get_singleton()->show_warning(TTR("Select at least one node with sequence port."));
 					return;
@@ -4167,8 +4165,8 @@ void VisualScriptEditor::_menu_option(int p_what) {
 					}
 				} else {
 					// Pick the node with input sequence.
-					Set<int> nodes_from;
-					Set<int> nodes_to;
+					RBSet<int> nodes_from;
+					RBSet<int> nodes_to;
 					for (const VisualScript::SequenceConnection &E : seqs) {
 						if (nodes.has(E.from_node) && nodes.has(E.to_node)) {
 							seqmove.insert(E);
@@ -4194,9 +4192,9 @@ void VisualScriptEditor::_menu_option(int p_what) {
 						// If we still don't have a start node then,
 						// run through the nodes and select the first tree node,
 						// i.e. node without any input sequence but output sequence.
-						for (Set<int>::Element *E = nodes_from.front(); E; E = E->next()) {
-							if (!nodes_to.has(E->get())) {
-								start_node = E->get();
+						for (const int &E : nodes_from) {
+							if (!nodes_to.has(E)) {
+								start_node = E;
 							}
 						}
 					}
@@ -4265,13 +4263,13 @@ void VisualScriptEditor::_menu_option(int p_what) {
 			// Move the nodes.
 
 			// Handles reconnection of sequence connections on undo, start here in case of issues.
-			for (Set<VisualScript::SequenceConnection>::Element *E = seqext.front(); E; E = E->next()) {
-				undo_redo->add_do_method(script.ptr(), "sequence_disconnect", E->get().from_node, E->get().from_output, E->get().to_node);
-				undo_redo->add_undo_method(script.ptr(), "sequence_connect", E->get().from_node, E->get().from_output, E->get().to_node);
+			for (const VisualScript::SequenceConnection &E : seqext) {
+				undo_redo->add_do_method(script.ptr(), "sequence_disconnect", E.from_node, E.from_output, E.to_node);
+				undo_redo->add_undo_method(script.ptr(), "sequence_connect", E.from_node, E.from_output, E.to_node);
 			}
-			for (Set<VisualScript::DataConnection>::Element *E = dataext.front(); E; E = E->next()) {
-				undo_redo->add_do_method(script.ptr(), "data_disconnect", E->get().from_node, E->get().from_port, E->get().to_node, E->get().to_port);
-				undo_redo->add_undo_method(script.ptr(), "data_connect", E->get().from_node, E->get().from_port, E->get().to_node, E->get().to_port);
+			for (const VisualScript::DataConnection &E : dataext) {
+				undo_redo->add_do_method(script.ptr(), "data_disconnect", E.from_node, E.from_port, E.to_node, E.to_port);
+				undo_redo->add_undo_method(script.ptr(), "data_connect", E.from_node, E.from_port, E.to_node, E.to_port);
 			}
 
 			// I don't really think we need support for non sequenced functions at this moment.
@@ -4279,24 +4277,24 @@ void VisualScriptEditor::_menu_option(int p_what) {
 
 			// Could fail with the new changes, start here when searching for bugs in create function shortcut.
 			int m = 1;
-			for (Set<int>::Element *G = end_nodes.front(); G; G = G->next()) {
+			for (const int &G : end_nodes) {
 				Ref<VisualScriptReturn> ret_node;
 				ret_node.instantiate();
 
 				int ret_id = fn_id + (m++);
 				selections.insert(ret_id);
-				Vector2 posi = _get_available_pos(false, script->get_node_position(G->get()) + Vector2(80, -100));
+				Vector2 posi = _get_available_pos(false, script->get_node_position(G) + Vector2(80, -100));
 				undo_redo->add_do_method(script.ptr(), "add_node", ret_id, ret_node, posi);
 				undo_redo->add_undo_method(script.ptr(), "remove_node", ret_id);
 
-				undo_redo->add_do_method(script.ptr(), "sequence_connect", G->get(), 0, ret_id);
+				undo_redo->add_do_method(script.ptr(), "sequence_connect", G, 0, ret_id);
 				// Add data outputs from each of the end_nodes.
-				Ref<VisualScriptNode> vsn = script->get_node(G->get());
+				Ref<VisualScriptNode> vsn = script->get_node(G);
 				if (vsn.is_valid() && vsn->get_output_value_port_count() > 0) {
 					ret_node->set_enable_return_value(true);
 					// Use the zeroth data port cause that's the likely one that is planned to be used.
 					ret_node->set_return_type(vsn->get_output_value_port_info(0).type);
-					undo_redo->add_do_method(script.ptr(), "data_connect", G->get(), 0, ret_id, 0);
+					undo_redo->add_do_method(script.ptr(), "data_connect", G, 0, ret_id, 0);
 				}
 			}
 
@@ -4331,7 +4329,7 @@ void VisualScriptEditor::_menu_option(int p_what) {
 // This is likely going to be very slow and I am not sure if I should keep it,
 // but I hope that it will not be a problem considering that we won't be creating functions so frequently,
 // and cyclic connections would be a problem but hopefully we won't let them get to this point.
-void VisualScriptEditor::_get_ends(int p_node, const List<VisualScript::SequenceConnection> &p_seqs, const Set<int> &p_selected, Set<int> &r_end_nodes) {
+void VisualScriptEditor::_get_ends(int p_node, const List<VisualScript::SequenceConnection> &p_seqs, const RBSet<int> &p_selected, RBSet<int> &r_end_nodes) {
 	for (const VisualScript::SequenceConnection &E : p_seqs) {
 		int from = E.from_node;
 		int to = E.to_node;
@@ -4575,6 +4573,7 @@ VisualScriptEditor::VisualScriptEditor() {
 	add_child(graph);
 	graph->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	graph->set_anchors_and_offsets_preset(Control::PRESET_WIDE);
+	graph->set_show_zoom_label(true);
 	graph->connect("node_selected", callable_mp(this, &VisualScriptEditor::_node_selected));
 	graph->connect("begin_node_move", callable_mp(this, &VisualScriptEditor::_begin_node_move));
 	graph->connect("end_node_move", callable_mp(this, &VisualScriptEditor::_end_node_move));
@@ -4837,7 +4836,7 @@ Ref<VisualScriptNode> VisualScriptCustomNodes::create_node_custom(const String &
 }
 
 VisualScriptCustomNodes *VisualScriptCustomNodes::singleton = nullptr;
-Map<String, Ref<RefCounted>> VisualScriptCustomNodes::custom_nodes;
+HashMap<String, Ref<RefCounted>> VisualScriptCustomNodes::custom_nodes;
 
 VisualScriptCustomNodes::VisualScriptCustomNodes() {
 	singleton = this;

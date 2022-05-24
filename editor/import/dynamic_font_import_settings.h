@@ -33,6 +33,7 @@
 
 #include "editor/import/resource_importer_dynamic_font.h"
 
+#include "core/templates/rb_set.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/item_list.h"
 #include "scene/gui/option_button.h"
@@ -161,8 +162,8 @@ class DynamicFontImportSettings : public ConfirmationDialog {
 	Ref<Font> font_preview;
 	Ref<Font> font_main;
 
-	Set<char32_t> selected_chars;
-	Set<int32_t> selected_glyphs;
+	RBSet<char32_t> selected_chars;
+	RBSet<int32_t> selected_glyphs;
 
 	void _re_import();
 
