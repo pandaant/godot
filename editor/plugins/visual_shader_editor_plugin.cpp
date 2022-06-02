@@ -1745,6 +1745,8 @@ void VisualShaderEditor::_update_graph() {
 
 	float graph_minimap_opacity = EditorSettings::get_singleton()->get("editors/visual_editors/minimap_opacity");
 	graph->set_minimap_opacity(graph_minimap_opacity);
+	float graph_lines_curvature = EditorSettings::get_singleton()->get("editors/visual_editors/lines_curvature");
+	graph->set_connection_lines_curvature(graph_lines_curvature);
 }
 
 VisualShader::Type VisualShaderEditor::get_current_shader_type() const {
@@ -4675,6 +4677,8 @@ VisualShaderEditor::VisualShaderEditor() {
 	graph->set_drag_forwarding(this);
 	float graph_minimap_opacity = EditorSettings::get_singleton()->get("editors/visual_editors/minimap_opacity");
 	graph->set_minimap_opacity(graph_minimap_opacity);
+	float graph_lines_curvature = EditorSettings::get_singleton()->get("editors/visual_editors/lines_curvature");
+	graph->set_connection_lines_curvature(graph_lines_curvature);
 	graph->add_valid_right_disconnect_type(VisualShaderNode::PORT_TYPE_SCALAR);
 	graph->add_valid_right_disconnect_type(VisualShaderNode::PORT_TYPE_SCALAR_INT);
 	graph->add_valid_right_disconnect_type(VisualShaderNode::PORT_TYPE_BOOLEAN);
@@ -5257,6 +5261,8 @@ VisualShaderEditor::VisualShaderEditor() {
 	add_options.push_back(AddOption("QuarterResColor", "Input", "Sky", "VisualShaderNodeInput", vformat(input_param_for_sky_shader_mode, "quarter_res_color", "QUARTER_RES_COLOR"), { "quarter_res_color" }, VisualShaderNode::PORT_TYPE_VECTOR_4D, TYPE_FLAGS_SKY, Shader::MODE_SKY));
 	add_options.push_back(AddOption("Radiance", "Input", "Sky", "VisualShaderNodeInput", vformat(input_param_for_sky_shader_mode, "radiance", "RADIANCE"), { "radiance" }, VisualShaderNode::PORT_TYPE_SAMPLER, TYPE_FLAGS_SKY, Shader::MODE_SKY));
 	add_options.push_back(AddOption("ScreenUV", "Input", "Sky", "VisualShaderNodeInput", vformat(input_param_for_sky_shader_mode, "screen_uv", "SCREEN_UV"), { "screen_uv" }, VisualShaderNode::PORT_TYPE_VECTOR_2D, TYPE_FLAGS_SKY, Shader::MODE_SKY));
+	add_options.push_back(AddOption("FragCoord", "Input", "Sky", "VisualShaderNodeInput", vformat(input_param_for_sky_shader_mode, "fragcoord", "FRAGCOORD"), { "fragcoord" }, VisualShaderNode::PORT_TYPE_VECTOR_4D, TYPE_FLAGS_SKY, Shader::MODE_SKY));
+
 	add_options.push_back(AddOption("SkyCoords", "Input", "Sky", "VisualShaderNodeInput", vformat(input_param_for_sky_shader_mode, "sky_coords", "SKY_COORDS"), { "sky_coords" }, VisualShaderNode::PORT_TYPE_VECTOR_2D, TYPE_FLAGS_SKY, Shader::MODE_SKY));
 	add_options.push_back(AddOption("Time", "Input", "Sky", "VisualShaderNodeInput", vformat(input_param_for_sky_shader_mode, "time", "TIME"), { "time" }, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_SKY, Shader::MODE_SKY));
 

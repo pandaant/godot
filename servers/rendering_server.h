@@ -724,8 +724,11 @@ public:
 
 	enum FogVolumeShape {
 		FOG_VOLUME_SHAPE_ELLIPSOID,
+		FOG_VOLUME_SHAPE_CONE,
+		FOG_VOLUME_SHAPE_CYLINDER,
 		FOG_VOLUME_SHAPE_BOX,
 		FOG_VOLUME_SHAPE_WORLD,
+		FOG_VOLUME_SHAPE_MAX,
 	};
 
 	virtual void fog_volume_set_shape(RID p_fog_volume, FogVolumeShape p_shape) = 0;
@@ -1468,7 +1471,7 @@ public:
 	virtual void draw(bool p_swap_buffers = true, double frame_step = 0.0) = 0;
 	virtual void sync() = 0;
 	virtual bool has_changed() const = 0;
-	virtual void init() = 0;
+	virtual void init();
 	virtual void finish() = 0;
 
 	/* STATUS INFORMATION */

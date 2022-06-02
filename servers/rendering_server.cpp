@@ -2140,8 +2140,11 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("fog_volume_set_material", "fog_volume", "material"), &RenderingServer::fog_volume_set_material);
 
 	BIND_ENUM_CONSTANT(FOG_VOLUME_SHAPE_ELLIPSOID);
+	BIND_ENUM_CONSTANT(FOG_VOLUME_SHAPE_CONE);
+	BIND_ENUM_CONSTANT(FOG_VOLUME_SHAPE_CYLINDER);
 	BIND_ENUM_CONSTANT(FOG_VOLUME_SHAPE_BOX);
 	BIND_ENUM_CONSTANT(FOG_VOLUME_SHAPE_WORLD);
+	BIND_ENUM_CONSTANT(FOG_VOLUME_SHAPE_MAX);
 
 	/* VISIBILITY NOTIFIER */
 
@@ -2818,7 +2821,9 @@ RenderingServer::RenderingServer() {
 
 	thread_pool = memnew(RendererThreadPool);
 	singleton = this;
+}
 
+void RenderingServer::init() {
 	GLOBAL_DEF_RST("rendering/textures/vram_compression/import_bptc", false);
 	GLOBAL_DEF_RST("rendering/textures/vram_compression/import_s3tc", true);
 	GLOBAL_DEF_RST("rendering/textures/vram_compression/import_etc", false);
