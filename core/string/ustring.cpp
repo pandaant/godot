@@ -3359,36 +3359,36 @@ String String::repeat(int p_count) const {
 	return new_string;
 }
 
-String String::left(int p_pos) const {
-	if (p_pos < 0) {
-		p_pos = length() + p_pos;
+String String::left(int p_len) const {
+	if (p_len < 0) {
+		p_len = length() + p_len;
 	}
 
-	if (p_pos <= 0) {
+	if (p_len <= 0) {
 		return "";
 	}
 
-	if (p_pos >= length()) {
+	if (p_len >= length()) {
 		return *this;
 	}
 
-	return substr(0, p_pos);
+	return substr(0, p_len);
 }
 
-String String::right(int p_pos) const {
-	if (p_pos < 0) {
-		p_pos = length() + p_pos;
+String String::right(int p_len) const {
+	if (p_len < 0) {
+		p_len = length() + p_len;
 	}
 
-	if (p_pos <= 0) {
+	if (p_len <= 0) {
 		return "";
 	}
 
-	if (p_pos >= length()) {
+	if (p_len >= length()) {
 		return *this;
 	}
 
-	return substr(length() - p_pos);
+	return substr(length() - p_len);
 }
 
 char32_t String::unicode_at(int p_idx) const {
@@ -3712,18 +3712,15 @@ String String::uri_encode() const {
 	const CharString temp = utf8();
 	String res;
 	for (int i = 0; i < temp.length(); ++i) {
-		char ord = temp[i];
+		uint8_t ord = temp[i];
 		if (ord == '.' || ord == '-' || ord == '~' || is_ascii_identifier_char(ord)) {
 			res += ord;
 		} else {
-			char h_Val[3];
-#if defined(__GNUC__) || defined(_MSC_VER)
-			snprintf(h_Val, 3, "%02hhX", ord);
-#else
-			sprintf(h_Val, "%02hhX", ord);
-#endif
-			res += "%";
-			res += h_Val;
+			char p[4] = { '%', 0, 0, 0 };
+			static const char hex[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+			p[1] = hex[ord >> 4];
+			p[2] = hex[ord & 0xF];
+			res += p;
 		}
 	}
 	return res;

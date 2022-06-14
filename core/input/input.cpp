@@ -134,7 +134,11 @@ void Input::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_custom_mouse_cursor", "image", "shape", "hotspot"), &Input::set_custom_mouse_cursor, DEFVAL(CURSOR_ARROW), DEFVAL(Vector2()));
 	ClassDB::bind_method(D_METHOD("parse_input_event", "event"), &Input::parse_input_event);
 	ClassDB::bind_method(D_METHOD("set_use_accumulated_input", "enable"), &Input::set_use_accumulated_input);
+	ClassDB::bind_method(D_METHOD("is_using_accumulated_input"), &Input::is_using_accumulated_input);
 	ClassDB::bind_method(D_METHOD("flush_buffered_events"), &Input::flush_buffered_events);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_mode"), "set_mouse_mode", "get_mouse_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_accumulated_input"), "set_use_accumulated_input", "is_using_accumulated_input");
 
 	BIND_ENUM_CONSTANT(MOUSE_MODE_VISIBLE);
 	BIND_ENUM_CONSTANT(MOUSE_MODE_HIDDEN);
@@ -897,6 +901,10 @@ void Input::set_use_accumulated_input(bool p_enable) {
 	use_accumulated_input = p_enable;
 }
 
+bool Input::is_using_accumulated_input() {
+	return use_accumulated_input;
+}
+
 void Input::release_pressed_events() {
 	flush_buffered_events(); // this is needed to release actions strengths
 
@@ -1401,8 +1409,8 @@ String Input::get_joy_guid(int p_device) const {
 	return joy_names[p_device].uid;
 }
 
-Array Input::get_connected_joypads() {
-	Array ret;
+TypedArray<int> Input::get_connected_joypads() {
+	TypedArray<int> ret;
 	HashMap<int, Joypad>::Iterator elem = joy_names.begin();
 	while (elem) {
 		if (elem->value.connected) {

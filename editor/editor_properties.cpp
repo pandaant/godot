@@ -173,6 +173,7 @@ void EditorPropertyMultilineText::_bind_methods() {
 
 EditorPropertyMultilineText::EditorPropertyMultilineText() {
 	HBoxContainer *hb = memnew(HBoxContainer);
+	hb->add_theme_constant_override("separation", 0);
 	add_child(hb);
 	set_bottom_editor(hb);
 	text = memnew(TextEdit);
@@ -733,14 +734,12 @@ void EditorPropertyFlags::_set_read_only(bool p_read_only) {
 	}
 };
 
-void EditorPropertyFlags::_flag_toggled() {
-	uint32_t value = 0;
-	for (int i = 0; i < flags.size(); i++) {
-		if (flags[i]->is_pressed()) {
-			uint32_t val = 1;
-			val <<= flag_indices[i];
-			value |= val;
-		}
+void EditorPropertyFlags::_flag_toggled(int p_index) {
+	uint32_t value = get_edited_object()->get(get_edited_property());
+	if (flags[p_index]->is_pressed()) {
+		value |= flag_values[p_index];
+	} else {
+		value &= ~flag_values[p_index];
 	}
 
 	emit_changed(get_edited_property(), value);
@@ -750,13 +749,7 @@ void EditorPropertyFlags::update_property() {
 	uint32_t value = get_edited_object()->get(get_edited_property());
 
 	for (int i = 0; i < flags.size(); i++) {
-		uint32_t val = 1;
-		val <<= flag_indices[i];
-		if (value & val) {
-			flags[i]->set_pressed(true);
-		} else {
-			flags[i]->set_pressed(false);
-		}
+		flags[i]->set_pressed((value & flag_values[i]) == flag_values[i]);
 	}
 }
 
@@ -764,17 +757,24 @@ void EditorPropertyFlags::setup(const Vector<String> &p_options) {
 	ERR_FAIL_COND(flags.size());
 
 	bool first = true;
+	uint32_t current_val;
 	for (int i = 0; i < p_options.size(); i++) {
 		String option = p_options[i].strip_edges();
 		if (!option.is_empty()) {
 			CheckBox *cb = memnew(CheckBox);
 			cb->set_text(option);
 			cb->set_clip_text(true);
-			cb->connect("pressed", callable_mp(this, &EditorPropertyFlags::_flag_toggled));
+			cb->connect("pressed", callable_mp(this, &EditorPropertyFlags::_flag_toggled), varray(i));
 			add_focusable(cb);
 			vbox->add_child(cb);
 			flags.push_back(cb);
-			flag_indices.push_back(i);
+			Vector<String> text_split = p_options[i].split(":");
+			if (text_split.size() != 1) {
+				current_val = text_split[1].to_int();
+			} else {
+				current_val = 1 << i;
+			}
+			flag_values.push_back(current_val);
 			if (first) {
 				set_label_reference(cb);
 				first = false;
@@ -1259,12 +1259,13 @@ void EditorPropertyInteger::update_property() {
 void EditorPropertyInteger::_bind_methods() {
 }
 
-void EditorPropertyInteger::setup(int64_t p_min, int64_t p_max, int64_t p_step, bool p_allow_greater, bool p_allow_lesser) {
+void EditorPropertyInteger::setup(int64_t p_min, int64_t p_max, int64_t p_step, bool p_allow_greater, bool p_allow_lesser, const String &p_suffix) {
 	spin->set_min(p_min);
 	spin->set_max(p_max);
 	spin->set_step(p_step);
 	spin->set_allow_greater(p_allow_greater);
 	spin->set_allow_lesser(p_allow_lesser);
+	spin->set_suffix(p_suffix);
 }
 
 EditorPropertyInteger::EditorPropertyInteger() {
@@ -2949,6 +2950,7 @@ void EditorPropertyNodePath::_bind_methods() {
 
 EditorPropertyNodePath::EditorPropertyNodePath() {
 	HBoxContainer *hbc = memnew(HBoxContainer);
+	hbc->add_theme_constant_override("separation", 0);
 	add_child(hbc);
 	assign = memnew(Button);
 	assign->set_flat(true);
@@ -3135,17 +3137,15 @@ void EditorPropertyResource::_update_property_bg() {
 		count_subinspectors = MIN(15, count_subinspectors);
 
 		add_theme_color_override("property_color", get_theme_color(SNAME("sub_inspector_property_color"), SNAME("Editor")));
-		add_theme_style_override("bg_selected", get_theme_stylebox("sub_inspector_property_bg_selected" + itos(count_subinspectors), SNAME("Editor")));
+		add_theme_style_override("bg_selected", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));
 		add_theme_style_override("bg", get_theme_stylebox("sub_inspector_property_bg" + itos(count_subinspectors), SNAME("Editor")));
 
-		add_theme_constant_override("font_offset", get_theme_constant(SNAME("sub_inspector_font_offset"), SNAME("Editor")));
 		add_theme_constant_override("v_separation", 0);
 	} else {
 		add_theme_color_override("property_color", get_theme_color(SNAME("property_color"), SNAME("EditorProperty")));
 		add_theme_style_override("bg_selected", get_theme_stylebox(SNAME("bg_selected"), SNAME("EditorProperty")));
 		add_theme_style_override("bg", get_theme_stylebox(SNAME("bg"), SNAME("EditorProperty")));
 		add_theme_constant_override("v_separation", get_theme_constant(SNAME("v_separation"), SNAME("EditorProperty")));
-		add_theme_constant_override("font_offset", get_theme_constant(SNAME("font_offset"), SNAME("EditorProperty")));
 	}
 
 	updating_theme = false;
@@ -3493,7 +3493,7 @@ EditorProperty *EditorInspectorDefaultPlugin::get_editor_for_property(Object *p_
 				EditorPropertyInteger *editor = memnew(EditorPropertyInteger);
 
 				EditorPropertyRangeHint hint = _parse_range_hint(p_hint, p_hint_text, 1);
-				editor->setup(hint.min, hint.max, hint.step, hint.greater, hint.lesser);
+				editor->setup(hint.min, hint.max, hint.step, hint.greater, hint.lesser, hint.suffix);
 
 				return editor;
 			}
