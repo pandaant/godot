@@ -260,6 +260,7 @@ protected:
 
 			float projection_matrix_view[RendererSceneRender::MAX_RENDER_VIEWS][16];
 			float inv_projection_matrix_view[RendererSceneRender::MAX_RENDER_VIEWS][16];
+			float eye_offset[RendererSceneRender::MAX_RENDER_VIEWS][4];
 
 			float viewport_size[2];
 			float screen_pixel_size[2];
@@ -590,7 +591,7 @@ protected:
 			RID material_overlay;
 			AABB aabb;
 
-			bool use_baked_light = false;
+			bool use_baked_light = true;
 			bool cast_double_sided_shadows = false;
 			// bool mirror = false; // !BAS! Does not seem used, we already have this in the main struct
 
