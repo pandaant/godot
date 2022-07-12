@@ -147,7 +147,7 @@ void ResourceLoader::_bind_methods() {
 
 ////// ResourceSaver //////
 
-Error ResourceSaver::save(const String &p_path, const Ref<Resource> &p_resource, uint32_t p_flags) {
+Error ResourceSaver::save(const String &p_path, const Ref<Resource> &p_resource, BitField<SaverFlags> p_flags) {
 	ERR_FAIL_COND_V_MSG(p_resource.is_null(), ERR_INVALID_PARAMETER, "Can't save empty resource to path '" + String(p_path) + "'.");
 	return ::ResourceSaver::save(p_path, p_resource, p_flags);
 }
@@ -179,14 +179,14 @@ void ResourceSaver::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_resource_format_saver", "format_saver", "at_front"), &ResourceSaver::add_resource_format_saver, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("remove_resource_format_saver", "format_saver"), &ResourceSaver::remove_resource_format_saver);
 
-	BIND_ENUM_CONSTANT(FLAG_NONE);
-	BIND_ENUM_CONSTANT(FLAG_RELATIVE_PATHS);
-	BIND_ENUM_CONSTANT(FLAG_BUNDLE_RESOURCES);
-	BIND_ENUM_CONSTANT(FLAG_CHANGE_PATH);
-	BIND_ENUM_CONSTANT(FLAG_OMIT_EDITOR_PROPERTIES);
-	BIND_ENUM_CONSTANT(FLAG_SAVE_BIG_ENDIAN);
-	BIND_ENUM_CONSTANT(FLAG_COMPRESS);
-	BIND_ENUM_CONSTANT(FLAG_REPLACE_SUBRESOURCE_PATHS);
+	BIND_BITFIELD_FLAG(FLAG_NONE);
+	BIND_BITFIELD_FLAG(FLAG_RELATIVE_PATHS);
+	BIND_BITFIELD_FLAG(FLAG_BUNDLE_RESOURCES);
+	BIND_BITFIELD_FLAG(FLAG_CHANGE_PATH);
+	BIND_BITFIELD_FLAG(FLAG_OMIT_EDITOR_PROPERTIES);
+	BIND_BITFIELD_FLAG(FLAG_SAVE_BIG_ENDIAN);
+	BIND_BITFIELD_FLAG(FLAG_COMPRESS);
+	BIND_BITFIELD_FLAG(FLAG_REPLACE_SUBRESOURCE_PATHS);
 }
 
 ////// OS //////
@@ -1840,13 +1840,14 @@ void Thread::_start_func(void *ud) {
 		ERR_FAIL_MSG(vformat("Could not call function '%s' on previously freed instance to start thread %s.", t->target_callable.get_method(), t->get_id()));
 	}
 
-	::Thread::set_name(t->target_callable.get_method());
+	String func_name = t->target_callable.is_custom() ? t->target_callable.get_custom()->get_as_text() : String(t->target_callable.get_method());
+	::Thread::set_name(func_name);
 
 	Callable::CallError ce;
 	t->target_callable.call(nullptr, 0, t->ret, ce);
 	if (ce.error != Callable::CallError::CALL_OK) {
 		t->running.clear();
-		ERR_FAIL_MSG("Could not call function '" + t->target_callable.get_method().operator String() + "' to start thread " + t->get_id() + ": " + Variant::get_callable_error_text(t->target_callable, nullptr, 0, ce) + ".");
+		ERR_FAIL_MSG("Could not call function '" + func_name + "' to start thread " + t->get_id() + ": " + Variant::get_callable_error_text(t->target_callable, nullptr, 0, ce) + ".");
 	}
 
 	t->running.clear();
