@@ -77,15 +77,15 @@
 			<return type="float" />
 			<argument index="0" name="point" type="Vector3" />
 			<description>
-				Returns the shortest distance from the plane to the position [code]point[/code].
+				Returns the shortest distance from the plane to the position [code]point[/code]. If the point is above the plane, the distance will be positive. If below, the distance will be negative.
 			</description>
 		</method>
 		<method name="has_point" qualifiers="const">
 			<return type="bool" />
 			<argument index="0" name="point" type="Vector3" />
-			<argument index="1" name="epsilon" type="float" default="1e-05" />
+			<argument index="1" name="tolerance" type="float" default="1e-05" />
 			<description>
-				Returns [code]true[/code] if [code]point[/code] is inside the plane. Comparison uses a custom minimum [code]epsilon[/code] threshold.
+				Returns [code]true[/code] if [code]point[/code] is inside the plane. Comparison uses a custom minimum [code]tolerance[/code] threshold.
 			</description>
 		</method>
 		<method name="intersect_3" qualifiers="const">

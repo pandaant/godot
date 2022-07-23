@@ -75,6 +75,7 @@
 #include "editor/dependency_editor.h"
 #include "editor/editor_about.h"
 #include "editor/editor_audio_buses.h"
+#include "editor/editor_build_profile.h"
 #include "editor/editor_command_palette.h"
 #include "editor/editor_data.h"
 #include "editor/editor_export.h"
@@ -104,6 +105,7 @@
 #include "editor/editor_translation_parser.h"
 #include "editor/export_template_manager.h"
 #include "editor/filesystem_dock.h"
+#include "editor/import/audio_stream_import_settings.h"
 #include "editor/import/dynamic_font_import_settings.h"
 #include "editor/import/editor_import_collada.h"
 #include "editor/import/resource_importer_bitmask.h"
@@ -131,7 +133,6 @@
 #include "editor/plugins/animation_state_machine_editor.h"
 #include "editor/plugins/animation_tree_editor_plugin.h"
 #include "editor/plugins/asset_library_editor_plugin.h"
-#include "editor/plugins/audio_stream_editor_plugin.h"
 #include "editor/plugins/audio_stream_randomizer_editor_plugin.h"
 #include "editor/plugins/bit_map_editor_plugin.h"
 #include "editor/plugins/bone_map_editor_plugin.h"
@@ -512,10 +513,10 @@ void EditorNode::_update_from_settings() {
 	uint32_t directional_shadow_16_bits = GLOBAL_GET("rendering/shadows/directional_shadow/16_bits");
 	RS::get_singleton()->directional_shadow_atlas_set_size(directional_shadow_size, directional_shadow_16_bits);
 
-	RS::ShadowQuality shadows_quality = RS::ShadowQuality(int(GLOBAL_GET("rendering/shadows/shadows/soft_shadow_quality")));
-	RS::get_singleton()->shadows_quality_set(shadows_quality);
-	RS::ShadowQuality directional_shadow_quality = RS::ShadowQuality(int(GLOBAL_GET("rendering/shadows/directional_shadow/soft_shadow_quality")));
-	RS::get_singleton()->directional_shadow_quality_set(directional_shadow_quality);
+	RS::ShadowQuality shadows_quality = RS::ShadowQuality(int(GLOBAL_GET("rendering/shadows/positional_shadow/soft_shadow_filter_quality")));
+	RS::get_singleton()->positional_soft_shadow_filter_set_quality(shadows_quality);
+	RS::ShadowQuality directional_shadow_quality = RS::ShadowQuality(int(GLOBAL_GET("rendering/shadows/directional_shadow/soft_shadow_filter_quality")));
+	RS::get_singleton()->directional_soft_shadow_filter_set_quality(directional_shadow_quality);
 	float probe_update_speed = GLOBAL_GET("rendering/lightmapping/probe_capture/update_speed");
 	RS::get_singleton()->lightmap_set_probe_capture_update_speed(probe_update_speed);
 	RS::EnvironmentSDFGIFramesToConverge frames_to_converge = RS::EnvironmentSDFGIFramesToConverge(int(GLOBAL_GET("rendering/global_illumination/sdfgi/frames_to_converge")));
@@ -1259,7 +1260,7 @@ void EditorNode::save_resource_as(const Ref<Resource> &p_resource, const String 
 			// This serves no purpose and confused people.
 			continue;
 		}
-		file->add_filter("*." + E + " ; " + E.to_upper());
+		file->add_filter("*." + E, E.to_upper());
 		preferred.push_back(E);
 	}
 	// Lowest priority extension.
@@ -2471,7 +2472,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			ResourceLoader::get_recognized_extensions_for_type("PackedScene", &extensions);
 			file->clear_filters();
 			for (int i = 0; i < extensions.size(); i++) {
-				file->add_filter("*." + extensions[i] + " ; " + extensions[i].to_upper());
+				file->add_filter("*." + extensions[i], extensions[i].to_upper());
 			}
 
 			Node *scene = editor_data.get_edited_scene_root();
@@ -2541,10 +2542,10 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 					if (scene_root) {
 						String scene_filename = scene_root->get_scene_file_path();
 						if (p_option == FILE_CLOSE_ALL_AND_RELOAD_CURRENT_PROJECT) {
-							save_confirmation->get_ok_button()->set_text(TTR("Save & Reload"));
+							save_confirmation->set_ok_button_text(TTR("Save & Reload"));
 							save_confirmation->set_text(vformat(TTR("Save changes to '%s' before reloading?"), !scene_filename.is_empty() ? scene_filename : "unsaved scene"));
 						} else {
-							save_confirmation->get_ok_button()->set_text(TTR("Save & Quit"));
+							save_confirmation->set_ok_button_text(TTR("Save & Quit"));
 							save_confirmation->set_text(vformat(TTR("Save changes to '%s' before closing?"), !scene_filename.is_empty() ? scene_filename : "unsaved scene"));
 						}
 						save_confirmation->popup_centered();
@@ -2617,7 +2618,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			ResourceSaver::get_recognized_extensions(sd, &extensions);
 			file->clear_filters();
 			for (int i = 0; i < extensions.size(); i++) {
-				file->add_filter("*." + extensions[i] + " ; " + extensions[i].to_upper());
+				file->add_filter("*." + extensions[i], extensions[i].to_upper());
 			}
 
 			if (!scene->get_scene_file_path().is_empty()) {
@@ -2660,7 +2661,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 
 		case FILE_EXTERNAL_OPEN_SCENE: {
 			if (unsaved_cache && !p_confirmed) {
-				confirmation->get_ok_button()->set_text(TTR("Open"));
+				confirmation->set_ok_button_text(TTR("Open"));
 				confirmation->set_text(TTR("Current scene not saved. Open anyway?"));
 				confirmation->popup_centered();
 				break;
@@ -2716,7 +2717,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			}
 
 			if (unsaved_cache && !p_confirmed) {
-				confirmation->get_ok_button()->set_text(TTR("Reload Saved Scene"));
+				confirmation->set_ok_button_text(TTR("Reload Saved Scene"));
 				confirmation->set_text(
 						TTR("The current scene has unsaved changes.\nReload the saved scene anyway? This action cannot be undone."));
 				confirmation->popup_centered();
@@ -2805,6 +2806,9 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 				}
 			}
 		} break;
+		case TOOLS_BUILD_PROFILE_MANAGER: {
+			build_profile_manager->popup_centered_clamped(Size2(700, 800) * EDSCALE, 0.8);
+		} break;
 		case RUN_USER_DATA_FOLDER: {
 			// Ensure_user_data_dir() to prevent the edge case: "Open User Data Folder" won't work after the project was renamed in ProjectSettingsEditor unless the project is saved.
 			OS::get_singleton()->ensure_user_data_dir();
@@ -2838,10 +2842,10 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 							i = _next_unsaved_scene(true, ++i);
 						}
 						if (p_option == RELOAD_CURRENT_PROJECT) {
-							save_confirmation->get_ok_button()->set_text(TTR("Save & Reload"));
+							save_confirmation->set_ok_button_text(TTR("Save & Reload"));
 							save_confirmation->set_text(TTR("Save changes to the following scene(s) before reloading?") + unsaved_scenes);
 						} else {
-							save_confirmation->get_ok_button()->set_text(TTR("Save & Quit"));
+							save_confirmation->set_ok_button_text(TTR("Save & Quit"));
 							save_confirmation->set_text((p_option == FILE_QUIT ? TTR("Save changes to the following scene(s) before quitting?") : TTR("Save changes to the following scene(s) before opening Project Manager?")) + unsaved_scenes);
 						}
 						save_confirmation->popup_centered();
@@ -2903,7 +2907,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 			ResourceLoader::get_recognized_extensions_for_type("PackedScene", &extensions);
 			file->clear_filters();
 			for (int i = 0; i < extensions.size(); i++) {
-				file->add_filter("*." + extensions[i] + " ; " + extensions[i].to_upper());
+				file->add_filter("*." + extensions[i], extensions[i].to_upper());
 			}
 
 			Node *scene = editor_data.get_edited_scene_root();
@@ -3586,6 +3590,13 @@ void EditorNode::set_current_scene(int p_idx) {
 	_update_title();
 
 	call_deferred(SNAME("_set_main_scene_state"), state, get_edited_scene()); // Do after everything else is done setting up.
+}
+
+void EditorNode::setup_color_picker(ColorPicker *picker) {
+	int default_color_mode = EDITOR_GET("interface/inspector/default_color_picker_mode");
+	int picker_shape = EDITOR_GET("interface/inspector/default_color_picker_shape");
+	picker->set_color_mode((ColorPicker::ColorModeType)default_color_mode);
+	picker->set_picker_shape((ColorPicker::PickerShapeType)picker_shape);
 }
 
 bool EditorNode::is_scene_open(const String &p_path) {
@@ -4272,14 +4283,14 @@ Error EditorNode::export_preset(const String &p_preset, const String &p_path, bo
 
 void EditorNode::show_accept(const String &p_text, const String &p_title) {
 	current_menu_option = -1;
-	accept->get_ok_button()->set_text(p_title);
+	accept->set_ok_button_text(p_title);
 	accept->set_text(p_text);
 	accept->popup_centered();
 }
 
 void EditorNode::show_save_accept(const String &p_text, const String &p_title) {
 	current_menu_option = -1;
-	save_accept->get_ok_button()->set_text(p_title);
+	save_accept->set_ok_button_text(p_title);
 	save_accept->set_text(p_text);
 	save_accept->popup_centered();
 }
@@ -4333,16 +4344,16 @@ void EditorNode::_dock_make_float() {
 	window->set_title(dock->get_name());
 	Panel *p = memnew(Panel);
 	p->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("PanelForeground"), SNAME("EditorStyles")));
-	p->set_anchors_and_offsets_preset(Control::PRESET_WIDE);
+	p->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 	window->add_child(p);
 	MarginContainer *margin = memnew(MarginContainer);
-	margin->set_anchors_and_offsets_preset(Control::PRESET_WIDE);
+	margin->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 	margin->add_theme_constant_override("margin_right", borders.width);
 	margin->add_theme_constant_override("margin_top", borders.height);
 	margin->add_theme_constant_override("margin_left", borders.width);
 	margin->add_theme_constant_override("margin_bottom", borders.height);
 	window->add_child(margin);
-	dock->set_anchors_and_offsets_preset(Control::PRESET_WIDE);
+	dock->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 	margin->add_child(dock);
 	window->set_wrap_controls(true);
 	window->set_size(dock_size);
@@ -4589,8 +4600,14 @@ void EditorNode::_save_docks_to_config(Ref<ConfigFile> p_layout, const String &p
 			names += name;
 		}
 
+		String config_key = "dock_" + itos(i + 1);
+
+		if (p_layout->has_section_key(p_section, config_key)) {
+			p_layout->erase_section_key(p_section, config_key);
+		}
+
 		if (!names.is_empty()) {
-			p_layout->set_value(p_section, "dock_" + itos(i + 1), names);
+			p_layout->set_value(p_section, config_key, names);
 		}
 	}
 
@@ -4957,8 +4974,8 @@ void EditorNode::_immediate_dialog_confirmed() {
 bool EditorNode::immediate_confirmation_dialog(const String &p_text, const String &p_ok_text, const String &p_cancel_text) {
 	ConfirmationDialog *cd = memnew(ConfirmationDialog);
 	cd->set_text(p_text);
-	cd->get_ok_button()->set_text(p_ok_text);
-	cd->get_cancel_button()->set_text(p_cancel_text);
+	cd->set_ok_button_text(p_ok_text);
+	cd->set_cancel_button_text(p_cancel_text);
 	cd->connect("confirmed", callable_mp(singleton, &EditorNode::_immediate_dialog_confirmed));
 	singleton->gui_base->add_child(cd);
 
@@ -5020,14 +5037,14 @@ void EditorNode::_layout_menu_option(int p_id) {
 		case SETTINGS_LAYOUT_SAVE: {
 			current_menu_option = p_id;
 			layout_dialog->set_title(TTR("Save Layout"));
-			layout_dialog->get_ok_button()->set_text(TTR("Save"));
+			layout_dialog->set_ok_button_text(TTR("Save"));
 			layout_dialog->popup_centered();
 			layout_dialog->set_name_line_enabled(true);
 		} break;
 		case SETTINGS_LAYOUT_DELETE: {
 			current_menu_option = p_id;
 			layout_dialog->set_title(TTR("Delete Layout"));
-			layout_dialog->get_ok_button()->set_text(TTR("Delete"));
+			layout_dialog->set_ok_button_text(TTR("Delete"));
 			layout_dialog->popup_centered();
 			layout_dialog->set_name_line_enabled(false);
 		} break;
@@ -5069,7 +5086,7 @@ void EditorNode::_scene_tab_closed(int p_tab, int option) {
 			? saved_version != editor_data.get_undo_redo().get_version()
 			: editor_data.get_scene_version(p_tab) != 0;
 	if (unsaved) {
-		save_confirmation->get_ok_button()->set_text(TTR("Save & Close"));
+		save_confirmation->set_ok_button_text(TTR("Save & Close"));
 		save_confirmation->set_text(vformat(TTR("Save changes to '%s' before closing?"), !scene->get_scene_file_path().is_empty() ? scene->get_scene_file_path() : "unsaved scene"));
 		save_confirmation->popup_centered();
 	} else {
@@ -5893,6 +5910,8 @@ EditorNode::EditorNode() {
 
 	RenderingServer::get_singleton()->set_debug_generate_wireframes(true);
 
+	AudioServer::get_singleton()->set_enable_tagging_used_audio_streams(true);
+
 	// No navigation server by default if in editor.
 	NavigationServer3D::get_singleton()->set_active(false);
 
@@ -6113,7 +6132,9 @@ EditorNode::EditorNode() {
 	EDITOR_DEF_RST("interface/inspector/default_property_name_style", EditorPropertyNameProcessor::STYLE_CAPITALIZED);
 	EditorSettings::get_singleton()->add_property_hint(PropertyInfo(Variant::INT, "interface/inspector/default_property_name_style", PROPERTY_HINT_ENUM, "Raw,Capitalized,Localized"));
 	EDITOR_DEF_RST("interface/inspector/default_float_step", 0.001);
-	EditorSettings::get_singleton()->add_property_hint(PropertyInfo(Variant::FLOAT, "interface/inspector/default_float_step", PROPERTY_HINT_RANGE, "0,1,0"));
+	// The lowest value is equal to the minimum float step for 32-bit floats.
+	// The step must be set manually, as changing this setting should not change the step here.
+	EditorSettings::get_singleton()->add_property_hint(PropertyInfo(Variant::FLOAT, "interface/inspector/default_float_step", PROPERTY_HINT_RANGE, "0.0000001,1,0.0000001"));
 	EDITOR_DEF_RST("interface/inspector/disable_folding", false);
 	EDITOR_DEF_RST("interface/inspector/auto_unfold_foreign_scenes", true);
 	EDITOR_DEF("interface/inspector/horizontal_vector2_editing", false);
@@ -6134,11 +6155,11 @@ EditorNode::EditorNode() {
 
 	theme_base = memnew(Control);
 	add_child(theme_base);
-	theme_base->set_anchors_and_offsets_preset(Control::PRESET_WIDE);
+	theme_base->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 
 	gui_base = memnew(Panel);
 	theme_base->add_child(gui_base);
-	gui_base->set_anchors_and_offsets_preset(Control::PRESET_WIDE);
+	gui_base->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 
 	theme_base->set_theme(theme);
 	gui_base->set_theme(theme);
@@ -6156,7 +6177,7 @@ EditorNode::EditorNode() {
 
 	main_vbox = memnew(VBoxContainer);
 	gui_base->add_child(main_vbox);
-	main_vbox->set_anchors_and_offsets_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 8);
+	main_vbox->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT, Control::PRESET_MODE_MINSIZE, 8);
 	main_vbox->add_theme_constant_override("separation", 8 * EDSCALE);
 
 	menu_hb = memnew(HBoxContainer);
@@ -6435,6 +6456,9 @@ EditorNode::EditorNode() {
 	scene_import_settings = memnew(SceneImportSettings);
 	gui_base->add_child(scene_import_settings);
 
+	audio_stream_import_settings = memnew(AudioStreamImportSettings);
+	gui_base->add_child(audio_stream_import_settings);
+
 	fontdata_import_settings = memnew(DynamicFontImportSettings);
 	gui_base->add_child(fontdata_import_settings);
 
@@ -6443,6 +6467,10 @@ EditorNode::EditorNode() {
 
 	feature_profile_manager = memnew(EditorFeatureProfileManager);
 	gui_base->add_child(feature_profile_manager);
+
+	build_profile_manager = memnew(EditorBuildProfileManager);
+	gui_base->add_child(build_profile_manager);
+
 	about = memnew(EditorAbout);
 	gui_base->add_child(about);
 	feature_profile_manager->connect("current_feature_profile_changed", callable_mp(this, &EditorNode::_feature_profile_changed));
@@ -6534,6 +6562,10 @@ EditorNode::EditorNode() {
 	p->add_shortcut(ED_SHORTCUT_AND_COMMAND("editor/export", TTR("Export..."), Key::NONE, TTR("Export")), FILE_EXPORT_PROJECT);
 	p->add_item(TTR("Install Android Build Template..."), FILE_INSTALL_ANDROID_SOURCE);
 	p->add_item(TTR("Open User Data Folder"), RUN_USER_DATA_FOLDER);
+
+	p->add_separator();
+	p->add_item(TTR("Customize Engine Build Configuration..."), TOOLS_BUILD_PROFILE_MANAGER);
+	p->add_separator();
 
 	plugin_config_dialog = memnew(PluginConfigDialog);
 	plugin_config_dialog->connect("plugin_ready", callable_mp(this, &EditorNode::_on_plugin_ready));
@@ -6769,7 +6801,7 @@ EditorNode::EditorNode() {
 
 	video_restart_dialog = memnew(ConfirmationDialog);
 	video_restart_dialog->set_text(TTR("Changing the video driver requires restarting the editor."));
-	video_restart_dialog->get_ok_button()->set_text(TTR("Save & Restart"));
+	video_restart_dialog->set_ok_button_text(TTR("Save & Restart"));
 	video_restart_dialog->connect("confirmed", callable_mp(this, &EditorNode::_menu_option), varray(SET_RENDERING_DRIVER_SAVE_AND_RESTART));
 	gui_base->add_child(video_restart_dialog);
 
@@ -6938,7 +6970,7 @@ EditorNode::EditorNode() {
 
 	custom_build_manage_templates = memnew(ConfirmationDialog);
 	custom_build_manage_templates->set_text(TTR("Android build template is missing, please install relevant templates."));
-	custom_build_manage_templates->get_ok_button()->set_text(TTR("Manage Templates"));
+	custom_build_manage_templates->set_ok_button_text(TTR("Manage Templates"));
 	custom_build_manage_templates->add_button(TTR("Install from file"))->connect("pressed", callable_mp(this, &EditorNode::_menu_option), varray(SETTINGS_INSTALL_ANDROID_BUILD_TEMPLATE));
 	custom_build_manage_templates->connect("confirmed", callable_mp(this, &EditorNode::_menu_option), varray(SETTINGS_MANAGE_EXPORT_TEMPLATES));
 	gui_base->add_child(custom_build_manage_templates);
@@ -6953,13 +6985,13 @@ EditorNode::EditorNode() {
 
 	install_android_build_template = memnew(ConfirmationDialog);
 	install_android_build_template->set_text(TTR("This will set up your project for custom Android builds by installing the source template to \"res://android/build\".\nYou can then apply modifications and build your own custom APK on export (adding modules, changing the AndroidManifest.xml, etc.).\nNote that in order to make custom builds instead of using pre-built APKs, the \"Use Custom Build\" option should be enabled in the Android export preset."));
-	install_android_build_template->get_ok_button()->set_text(TTR("Install"));
+	install_android_build_template->set_ok_button_text(TTR("Install"));
 	install_android_build_template->connect("confirmed", callable_mp(this, &EditorNode::_menu_confirm_current));
 	gui_base->add_child(install_android_build_template);
 
 	remove_android_build_template = memnew(ConfirmationDialog);
 	remove_android_build_template->set_text(TTR("The Android build template is already installed in this project and it won't be overwritten.\nRemove the \"res://android/build\" directory manually before attempting this operation again."));
-	remove_android_build_template->get_ok_button()->set_text(TTR("Show in File Manager"));
+	remove_android_build_template->set_ok_button_text(TTR("Show in File Manager"));
 	remove_android_build_template->connect("confirmed", callable_mp(this, &EditorNode::_menu_option), varray(FILE_EXPLORE_ANDROID_BUILD_TEMPLATES));
 	gui_base->add_child(remove_android_build_template);
 
@@ -6970,7 +7002,7 @@ EditorNode::EditorNode() {
 	file_templates->set_file_mode(EditorFileDialog::FILE_MODE_OPEN_FILE);
 	file_templates->set_access(EditorFileDialog::ACCESS_FILESYSTEM);
 	file_templates->clear_filters();
-	file_templates->add_filter("*.tpz ; " + TTR("Template Package"));
+	file_templates->add_filter("*.tpz", TTR("Template Package"));
 
 	file = memnew(EditorFileDialog);
 	gui_base->add_child(file);
@@ -7034,7 +7066,7 @@ EditorNode::EditorNode() {
 
 		disk_changed->connect("confirmed", callable_mp(this, &EditorNode::_reload_modified_scenes));
 		disk_changed->connect("confirmed", callable_mp(this, &EditorNode::_reload_project_settings));
-		disk_changed->get_ok_button()->set_text(TTR("Reload"));
+		disk_changed->set_ok_button_text(TTR("Reload"));
 
 		disk_changed->add_button(TTR("Resave"), !DisplayServer::get_singleton()->get_swap_cancel_ok(), "resave");
 		disk_changed->connect("custom_action", callable_mp(this, &EditorNode::_resave_scenes));
@@ -7065,63 +7097,65 @@ EditorNode::EditorNode() {
 
 	// More visually meaningful to have this later.
 	raise_bottom_panel_item(AnimationPlayerEditor::get_singleton());
-	add_editor_plugin(memnew(ReplicationEditorPlugin));
 
 	add_editor_plugin(VersionControlEditorPlugin::get_singleton());
-	add_editor_plugin(memnew(ShaderEditorPlugin));
-	add_editor_plugin(memnew(ShaderFileEditorPlugin));
 
-	add_editor_plugin(memnew(Camera3DEditorPlugin));
-	add_editor_plugin(memnew(ThemeEditorPlugin));
-	add_editor_plugin(memnew(MultiMeshEditorPlugin));
-	add_editor_plugin(memnew(MeshInstance3DEditorPlugin));
+	// This list is alphabetized, and plugins that depend on Node2D are in their own section below.
 	add_editor_plugin(memnew(AnimationTreeEditorPlugin));
-	add_editor_plugin(memnew(MeshLibraryEditorPlugin));
-	add_editor_plugin(memnew(StyleBoxEditorPlugin));
-	add_editor_plugin(memnew(Sprite2DEditorPlugin));
-	add_editor_plugin(memnew(Skeleton2DEditorPlugin));
-	add_editor_plugin(memnew(GPUParticles2DEditorPlugin));
-	add_editor_plugin(memnew(GPUParticles3DEditorPlugin));
-	add_editor_plugin(memnew(CPUParticles2DEditorPlugin));
+	add_editor_plugin(memnew(AudioBusesEditorPlugin(audio_bus_editor)));
+	add_editor_plugin(memnew(AudioStreamRandomizerEditorPlugin));
+	add_editor_plugin(memnew(BitMapEditorPlugin));
+	add_editor_plugin(memnew(BoneMapEditorPlugin));
+	add_editor_plugin(memnew(Camera3DEditorPlugin));
+	add_editor_plugin(memnew(ControlEditorPlugin));
 	add_editor_plugin(memnew(CPUParticles3DEditorPlugin));
-	add_editor_plugin(memnew(ResourcePreloaderEditorPlugin));
-	add_editor_plugin(memnew(Polygon3DEditorPlugin));
-	add_editor_plugin(memnew(CollisionPolygon2DEditorPlugin));
-	add_editor_plugin(memnew(TilesEditorPlugin));
-	add_editor_plugin(memnew(SpriteFramesEditorPlugin));
-	add_editor_plugin(memnew(TextureRegionEditorPlugin));
-	add_editor_plugin(memnew(VoxelGIEditorPlugin));
-	add_editor_plugin(memnew(LightmapGIEditorPlugin));
-	add_editor_plugin(memnew(OccluderInstance3DEditorPlugin));
-	add_editor_plugin(memnew(Path2DEditorPlugin));
-	add_editor_plugin(memnew(Path3DEditorPlugin));
-	add_editor_plugin(memnew(Line2DEditorPlugin));
-	add_editor_plugin(memnew(Polygon2DEditorPlugin));
-	add_editor_plugin(memnew(LightOccluder2DEditorPlugin));
-	add_editor_plugin(memnew(NavigationPolygonEditorPlugin));
-	add_editor_plugin(memnew(GradientEditorPlugin));
-	add_editor_plugin(memnew(CollisionShape2DEditorPlugin));
 	add_editor_plugin(memnew(CurveEditorPlugin));
 	add_editor_plugin(memnew(FontEditorPlugin));
-	add_editor_plugin(memnew(TextureEditorPlugin));
-	add_editor_plugin(memnew(TextureLayeredEditorPlugin));
-	add_editor_plugin(memnew(Texture3DEditorPlugin));
-	add_editor_plugin(memnew(AudioStreamEditorPlugin));
-	add_editor_plugin(memnew(AudioStreamRandomizerEditorPlugin));
-	add_editor_plugin(memnew(AudioBusesEditorPlugin(audio_bus_editor)));
+	add_editor_plugin(memnew(GPUParticles3DEditorPlugin));
+	add_editor_plugin(memnew(GPUParticlesCollisionSDF3DEditorPlugin));
+	add_editor_plugin(memnew(GradientEditorPlugin));
+	add_editor_plugin(memnew(GradientTexture2DEditorPlugin));
+	add_editor_plugin(memnew(InputEventEditorPlugin));
+	add_editor_plugin(memnew(LightmapGIEditorPlugin));
+	add_editor_plugin(memnew(MaterialEditorPlugin));
+	add_editor_plugin(memnew(MeshEditorPlugin));
+	add_editor_plugin(memnew(MeshInstance3DEditorPlugin));
+	add_editor_plugin(memnew(MeshLibraryEditorPlugin));
+	add_editor_plugin(memnew(MultiMeshEditorPlugin));
+	add_editor_plugin(memnew(OccluderInstance3DEditorPlugin));
+	add_editor_plugin(memnew(Path3DEditorPlugin));
+	add_editor_plugin(memnew(PhysicalBone3DEditorPlugin));
+	add_editor_plugin(memnew(Polygon3DEditorPlugin));
+	add_editor_plugin(memnew(ReplicationEditorPlugin));
+	add_editor_plugin(memnew(ResourcePreloaderEditorPlugin));
+	add_editor_plugin(memnew(ShaderEditorPlugin));
+	add_editor_plugin(memnew(ShaderFileEditorPlugin));
 	add_editor_plugin(memnew(Skeleton3DEditorPlugin));
 	add_editor_plugin(memnew(SkeletonIK3DEditorPlugin));
-	add_editor_plugin(memnew(PhysicalBone3DEditorPlugin));
-	add_editor_plugin(memnew(MeshEditorPlugin));
-	add_editor_plugin(memnew(MaterialEditorPlugin));
-	add_editor_plugin(memnew(GPUParticlesCollisionSDF3DEditorPlugin));
-	add_editor_plugin(memnew(InputEventEditorPlugin));
+	add_editor_plugin(memnew(SpriteFramesEditorPlugin));
+	add_editor_plugin(memnew(StyleBoxEditorPlugin));
 	add_editor_plugin(memnew(SubViewportPreviewEditorPlugin));
-	add_editor_plugin(memnew(ControlEditorPlugin));
-	add_editor_plugin(memnew(GradientTexture2DEditorPlugin));
-	add_editor_plugin(memnew(BitMapEditorPlugin));
+	add_editor_plugin(memnew(Texture3DEditorPlugin));
+	add_editor_plugin(memnew(TextureEditorPlugin));
+	add_editor_plugin(memnew(TextureLayeredEditorPlugin));
+	add_editor_plugin(memnew(TextureRegionEditorPlugin));
+	add_editor_plugin(memnew(ThemeEditorPlugin));
+	add_editor_plugin(memnew(VoxelGIEditorPlugin));
+
+	// 2D
+	add_editor_plugin(memnew(CollisionPolygon2DEditorPlugin));
+	add_editor_plugin(memnew(CollisionShape2DEditorPlugin));
+	add_editor_plugin(memnew(CPUParticles2DEditorPlugin));
+	add_editor_plugin(memnew(GPUParticles2DEditorPlugin));
+	add_editor_plugin(memnew(LightOccluder2DEditorPlugin));
+	add_editor_plugin(memnew(Line2DEditorPlugin));
+	add_editor_plugin(memnew(NavigationPolygonEditorPlugin));
+	add_editor_plugin(memnew(Path2DEditorPlugin));
+	add_editor_plugin(memnew(Polygon2DEditorPlugin));
 	add_editor_plugin(memnew(RayCast2DEditorPlugin));
-	add_editor_plugin(memnew(BoneMapEditorPlugin));
+	add_editor_plugin(memnew(Skeleton2DEditorPlugin));
+	add_editor_plugin(memnew(Sprite2DEditorPlugin));
+	add_editor_plugin(memnew(TilesEditorPlugin));
 
 	for (int i = 0; i < EditorPlugins::get_plugin_count(); i++) {
 		add_editor_plugin(EditorPlugins::create(i));
@@ -7179,6 +7213,7 @@ EditorNode::EditorNode() {
 		vshader_convert.instantiate();
 		resource_conversion_plugins.push_back(vshader_convert);
 	}
+
 	update_spinner_step_msec = OS::get_singleton()->get_ticks_msec();
 	update_spinner_step_frame = Engine::get_singleton()->get_frames_drawn();
 
@@ -7208,7 +7243,7 @@ EditorNode::EditorNode() {
 	set_process(true);
 
 	open_imported = memnew(ConfirmationDialog);
-	open_imported->get_ok_button()->set_text(TTR("Open Anyway"));
+	open_imported->set_ok_button_text(TTR("Open Anyway"));
 	new_inherited_button = open_imported->add_button(TTR("New Inherited"), !DisplayServer::get_singleton()->get_swap_cancel_ok(), "inherit");
 	open_imported->connect("confirmed", callable_mp(this, &EditorNode::_open_imported));
 	open_imported->connect("custom_action", callable_mp(this, &EditorNode::_inherit_imported));
@@ -7249,7 +7284,7 @@ EditorNode::EditorNode() {
 
 	pick_main_scene = memnew(ConfirmationDialog);
 	gui_base->add_child(pick_main_scene);
-	pick_main_scene->get_ok_button()->set_text(TTR("Select"));
+	pick_main_scene->set_ok_button_text(TTR("Select"));
 	pick_main_scene->connect("confirmed", callable_mp(this, &EditorNode::_menu_option), varray(SETTINGS_PICK_MAIN_SCENE));
 	select_current_scene_button = pick_main_scene->add_button(TTR("Select Current"), true, "select_current");
 	pick_main_scene->connect("custom_action", callable_mp(this, &EditorNode::_pick_main_scene_custom_action));

@@ -37,7 +37,9 @@
 #include "servers/rendering/renderer_rd/cluster_builder_rd.h"
 #include "servers/rendering/renderer_rd/effects/bokeh_dof.h"
 #include "servers/rendering/renderer_rd/effects/copy_effects.h"
+#include "servers/rendering/renderer_rd/effects/ss_effects.h"
 #include "servers/rendering/renderer_rd/effects/tone_mapper.h"
+#include "servers/rendering/renderer_rd/effects/vrs.h"
 #include "servers/rendering/renderer_rd/environment/gi.h"
 #include "servers/rendering/renderer_rd/renderer_scene_environment_rd.h"
 #include "servers/rendering/renderer_rd/renderer_scene_sky_rd.h"
@@ -104,11 +106,12 @@ protected:
 	RendererRD::BokehDOF *bokeh_dof = nullptr;
 	RendererRD::CopyEffects *copy_effects = nullptr;
 	RendererRD::ToneMapper *tone_mapper = nullptr;
+	RendererRD::VRS *vrs = nullptr;
 	double time = 0.0;
 	double time_step = 0.0;
 
 	struct RenderBufferData {
-		virtual void configure(RID p_color_buffer, RID p_depth_buffer, RID p_target_buffer, int p_width, int p_height, RS::ViewportMSAA p_msaa, bool p_use_taa, uint32_t p_view_count) = 0;
+		virtual void configure(RID p_color_buffer, RID p_depth_buffer, RID p_target_buffer, int p_width, int p_height, RS::ViewportMSAA p_msaa, bool p_use_taa, uint32_t p_view_count, RID p_vrs_texture) = 0;
 		virtual ~RenderBufferData() {}
 	};
 	virtual RenderBufferData *_create_render_buffer_data() = 0;
@@ -139,7 +142,7 @@ protected:
 	virtual RID _render_buffers_get_velocity_texture(RID p_render_buffers) = 0;
 
 	void _process_ssao(RID p_render_buffers, RID p_environment, RID p_normal_buffer, const CameraMatrix &p_projection);
-	void _process_ssr(RID p_render_buffers, RID p_dest_framebuffer, RID p_normal_buffer, RID p_specular_buffer, RID p_metallic, const Color &p_metallic_mask, RID p_environment, const CameraMatrix &p_projection, bool p_use_additive);
+	void _process_ssr(RID p_render_buffers, RID p_dest_framebuffer, const RID *p_normal_buffer_slices, RID p_specular_buffer, const RID *p_metallic_slices, const Color &p_metallic_mask, RID p_environment, const CameraMatrix *p_projections, const Vector3 *p_eye_offsets, bool p_use_additive);
 	void _process_sss(RID p_render_buffers, const CameraMatrix &p_camera);
 	void _process_ssil(RID p_render_buffers, RID p_environment, RID p_normal_buffer, const CameraMatrix &p_projection, const Transform3D &p_transform);
 	void _copy_framebuffer_to_ssil(RID p_render_buffers);
@@ -149,7 +152,7 @@ protected:
 	void _post_prepass_render(RenderDataRD *p_render_data, bool p_use_gi);
 	void _pre_resolve_render(RenderDataRD *p_render_data, bool p_use_gi);
 
-	void _pre_opaque_render(RenderDataRD *p_render_data, bool p_use_ssao, bool p_use_ssil, bool p_use_gi, RID *p_normal_roughness_views, RID p_voxel_gi_buffer);
+	void _pre_opaque_render(RenderDataRD *p_render_data, bool p_use_ssao, bool p_use_ssil, bool p_use_gi, const RID *p_normal_roughness_slices, RID p_voxel_gi_buffer, const RID *p_vrs_slices);
 
 	void _render_buffers_copy_screen_texture(const RenderDataRD *p_render_data);
 	void _render_buffers_copy_depth_texture(const RenderDataRD *p_render_data);
@@ -161,6 +164,7 @@ protected:
 	PagedArrayPool<GeometryInstance *> cull_argument_pool;
 	PagedArray<GeometryInstance *> cull_argument; //need this to exist
 
+	RendererRD::SSEffects *ss_effects = nullptr;
 	RendererRD::GI gi;
 	RendererSceneSkyRD sky;
 
@@ -416,7 +420,6 @@ private:
 
 	RS::EnvironmentSSAOQuality ssao_quality = RS::ENV_SSAO_QUALITY_MEDIUM;
 	bool ssao_half_size = false;
-	bool ssao_using_half_size = false;
 	float ssao_adaptive_target = 0.5;
 	int ssao_blur_passes = 2;
 	float ssao_fadeout_from = 50.0;
@@ -492,6 +495,8 @@ private:
 		RID depth_texture; //main depth texture
 		RID texture_fb; // framebuffer for the main texture, ONLY USED FOR MOBILE RENDERER POST EFFECTS, DO NOT USE FOR RENDERING 3D!!!
 		RID upscale_texture; //used when upscaling internal_texture (This uses the same resource as internal_texture if there is no upscaling)
+		RID vrs_texture; // texture for vrs.
+		RID vrs_fb; // framebuffer to write to our vrs texture
 
 		// Access to the layers for each of our views (specifically needed for applying post effects on stereoscopic images)
 		struct View {
@@ -557,47 +562,14 @@ private:
 
 			RID downsample_uniform_set;
 
-			RID last_frame;
-			Vector<RID> last_frame_slices;
-
 			CameraMatrix last_frame_projection;
 			Transform3D last_frame_transform;
 
-			struct SSAO {
-				RID ao_deinterleaved;
-				Vector<RID> ao_deinterleaved_slices;
-				RID ao_pong;
-				Vector<RID> ao_pong_slices;
-				RID ao_final;
-				RID importance_map[2];
-				RID depth_texture_view;
-
-				RID gather_uniform_set;
-				RID importance_map_uniform_set;
-			} ssao;
-
-			struct SSIL {
-				RID ssil_final;
-				RID deinterleaved;
-				Vector<RID> deinterleaved_slices;
-				RID pong;
-				Vector<RID> pong_slices;
-				RID edges;
-				Vector<RID> edges_slices;
-				RID importance_map[2];
-				RID depth_texture_view;
-
-				RID gather_uniform_set;
-				RID importance_map_uniform_set;
-				RID projection_uniform_set;
-			} ssil;
+			RendererRD::SSEffects::SSAORenderBuffers ssao;
+			RendererRD::SSEffects::SSILRenderBuffers ssil;
 		} ss_effects;
 
-		struct SSR {
-			RID normal_scaled;
-			RID depth_scaled;
-			RID blur_radius[2];
-		} ssr;
+		RendererRD::SSEffects::SSRRenderBuffers ssr;
 
 		struct TAA {
 			RID history;
@@ -943,6 +915,7 @@ private:
 		bool uses_time = false;
 
 		virtual void set_code(const String &p_Code);
+		virtual void set_path_hint(const String &p_hint);
 		virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
 		virtual void get_param_list(List<PropertyInfo> *p_param_list) const;
 		virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
@@ -1454,8 +1427,8 @@ public:
 	RS::SubSurfaceScatteringQuality sub_surface_scattering_get_quality() const;
 	virtual void sub_surface_scattering_set_scale(float p_scale, float p_depth_scale) override;
 
-	virtual void shadows_quality_set(RS::ShadowQuality p_quality) override;
-	virtual void directional_shadow_quality_set(RS::ShadowQuality p_quality) override;
+	virtual void positional_soft_shadow_filter_set_quality(RS::ShadowQuality p_quality) override;
+	virtual void directional_soft_shadow_filter_set_quality(RS::ShadowQuality p_quality) override;
 
 	virtual void decals_set_filter(RS::DecalFilter p_filter) override;
 	virtual void light_projectors_set_filter(RS::LightProjectorFilter p_filter) override;
@@ -1503,6 +1476,7 @@ public:
 
 	virtual void sdfgi_set_debug_probe_select(const Vector3 &p_position, const Vector3 &p_dir) override;
 
+	virtual bool is_vrs_supported() const;
 	virtual bool is_dynamic_gi_supported() const;
 	virtual bool is_clustered_enabled() const;
 	virtual bool is_volumetric_supported() const;

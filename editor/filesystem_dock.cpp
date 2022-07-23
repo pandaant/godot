@@ -985,7 +985,9 @@ void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorit
 			}
 		}
 
-		if (ResourceLoader::get_resource_type(fpath) == "PackedScene") {
+		String resource_type = ResourceLoader::get_resource_type(fpath);
+
+		if (resource_type == "PackedScene") {
 			bool is_imported = false;
 
 			{
@@ -1005,7 +1007,7 @@ void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorit
 			} else {
 				EditorNode::get_singleton()->open_request(fpath);
 			}
-		} else if (ResourceLoader::get_resource_type(fpath) == "AnimationLibrary") {
+		} else if (resource_type == "AnimationLibrary") {
 			bool is_imported = false;
 
 			{
@@ -1025,6 +1027,25 @@ void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorit
 			} else {
 				EditorNode::get_singleton()->open_request(fpath);
 			}
+		} else if (ResourceLoader::is_imported(fpath)) {
+			// If the importer has advanced settings, show them.
+			int order;
+			bool can_threads;
+			String name;
+			Error err = ResourceFormatImporter::get_singleton()->get_import_order_threads_and_importer(fpath, order, can_threads, name);
+			bool used_advanced_settings = false;
+			if (err == OK) {
+				Ref<ResourceImporter> importer = ResourceFormatImporter::get_singleton()->get_importer_by_name(name);
+				if (importer.is_valid() && importer->has_advanced_options()) {
+					importer->show_advanced_options(fpath);
+					used_advanced_settings = true;
+				}
+			}
+
+			if (!used_advanced_settings) {
+				EditorNode::get_singleton()->load_resource(fpath);
+			}
+
 		} else {
 			EditorNode::get_singleton()->load_resource(fpath);
 		}
@@ -2032,6 +2053,10 @@ void FileSystemDock::_resource_created() {
 		return;
 	} else if (type_name == "VisualShader") {
 		make_shader_dialog->config(fpath.plus_file("new_shader"), false, false, 1);
+		make_shader_dialog->popup_centered();
+		return;
+	} else if (type_name == "ShaderInclude") {
+		make_shader_dialog->config(fpath.plus_file("new_shader_include"), false, false, 2);
 		make_shader_dialog->popup_centered();
 		return;
 	}
@@ -3145,7 +3170,7 @@ FileSystemDock::FileSystemDock() {
 	add_child(remove_dialog);
 
 	move_dialog = memnew(EditorDirDialog);
-	move_dialog->get_ok_button()->set_text(TTR("Move"));
+	move_dialog->set_ok_button_text(TTR("Move"));
 	add_child(move_dialog);
 	move_dialog->connect("dir_selected", callable_mp(this, &FileSystemDock::_move_operation_confirm), make_binds(false));
 
@@ -3155,13 +3180,13 @@ FileSystemDock::FileSystemDock() {
 
 	rename_dialog_text = memnew(LineEdit);
 	rename_dialog_vb->add_margin_child(TTR("Name:"), rename_dialog_text);
-	rename_dialog->get_ok_button()->set_text(TTR("Rename"));
+	rename_dialog->set_ok_button_text(TTR("Rename"));
 	add_child(rename_dialog);
 	rename_dialog->register_text_enter(rename_dialog_text);
 	rename_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_rename_operation_confirm));
 
 	overwrite_dialog = memnew(ConfirmationDialog);
-	overwrite_dialog->get_ok_button()->set_text(TTR("Overwrite"));
+	overwrite_dialog->set_ok_button_text(TTR("Overwrite"));
 	add_child(overwrite_dialog);
 	overwrite_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_move_with_overwrite));
 
@@ -3171,7 +3196,7 @@ FileSystemDock::FileSystemDock() {
 
 	duplicate_dialog_text = memnew(LineEdit);
 	duplicate_dialog_vb->add_margin_child(TTR("Name:"), duplicate_dialog_text);
-	duplicate_dialog->get_ok_button()->set_text(TTR("Duplicate"));
+	duplicate_dialog->set_ok_button_text(TTR("Duplicate"));
 	add_child(duplicate_dialog);
 	duplicate_dialog->register_text_enter(duplicate_dialog_text);
 	duplicate_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_duplicate_operation_confirm));

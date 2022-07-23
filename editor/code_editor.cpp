@@ -332,7 +332,7 @@ void FindReplaceBar::_update_results_count() {
 
 		if (results_count_to_current > results_count) {
 			results_count_to_current = results_count_to_current - results_count;
-		} else if (results_count_to_current == 0) {
+		} else if (results_count_to_current <= 0) {
 			results_count_to_current = results_count;
 		}
 
@@ -1592,6 +1592,10 @@ void CodeTextEditor::set_error(const String &p_error) {
 void CodeTextEditor::set_error_pos(int p_line, int p_column) {
 	error_line = p_line;
 	error_column = p_column;
+}
+
+Point2i CodeTextEditor::get_error_pos() const {
+	return Point2i(error_line, error_column);
 }
 
 void CodeTextEditor::goto_error() {

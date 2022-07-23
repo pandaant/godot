@@ -1378,6 +1378,7 @@ MaterialStorage::MaterialStorage() {
 		actions.usage_defines["NORMAL"] = "#define NORMAL_USED\n";
 		actions.usage_defines["NORMAL_MAP"] = "#define NORMAL_MAP_USED\n";
 		actions.usage_defines["LIGHT"] = "#define LIGHT_SHADER_CODE_USED\n";
+		actions.usage_defines["SPECULAR_SHININESS"] = "#define SPECULAR_SHININESS_USED\n";
 
 		actions.render_mode_defines["skip_vertex_transform"] = "#define SKIP_TRANSFORM_USED\n";
 		actions.render_mode_defines["unshaded"] = "#define MODE_UNSHADED\n";
@@ -2459,6 +2460,13 @@ void MaterialStorage::shader_set_code(RID p_shader, const String &p_code) {
 		material->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_MATERIAL);
 		_material_queue_update(material, true, true);
 	}
+}
+
+void MaterialStorage::shader_set_path_hint(RID p_shader, const String &p_path) {
+	GLES3::Shader *shader = shader_owner.get_or_null(p_shader);
+	ERR_FAIL_COND(!shader);
+
+	shader->path_hint = p_path;
 }
 
 String MaterialStorage::shader_get_code(RID p_shader) const {
