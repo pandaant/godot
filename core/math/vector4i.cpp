@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  gltf_skeleton.h                                                      */
+/*  vector4i.cpp                                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,74 +28,64 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef GLTF_SKELETON_H
-#define GLTF_SKELETON_H
+#include "vector4i.h"
 
-#include "core/io/resource.h"
-#include "gltf_document.h"
+#include "core/math/vector4.h"
+#include "core/string/ustring.h"
 
-class GLTFSkeleton : public Resource {
-	GDCLASS(GLTFSkeleton, Resource);
-	friend class GLTFDocument;
+void Vector4i::set_axis(const int p_axis, const int32_t p_value) {
+	ERR_FAIL_INDEX(p_axis, 4);
+	coord[p_axis] = p_value;
+}
 
-private:
-	// The *synthesized* skeletons joints
-	Vector<GLTFNodeIndex> joints;
+int32_t Vector4i::get_axis(const int p_axis) const {
+	ERR_FAIL_INDEX_V(p_axis, 4, 0);
+	return operator[](p_axis);
+}
 
-	// The roots of the skeleton. If there are multiple, each root must have the
-	// same parent (ie roots are siblings)
-	Vector<GLTFNodeIndex> roots;
+Vector4i::Axis Vector4i::min_axis_index() const {
+	uint32_t min_index = 0;
+	int32_t min_value = x;
+	for (uint32_t i = 1; i < 4; i++) {
+		if (operator[](i) < min_value) {
+			min_index = i;
+			min_value = operator[](i);
+		}
+	}
+	return Vector4i::Axis(min_index);
+}
 
-	// The created Skeleton3D for the scene
-	Skeleton3D *godot_skeleton = nullptr;
+Vector4i::Axis Vector4i::max_axis_index() const {
+	uint32_t max_index = 0;
+	int32_t max_value = x;
+	for (uint32_t i = 1; i < 4; i++) {
+		if (operator[](i) > max_value) {
+			max_index = i;
+			max_value = operator[](i);
+		}
+	}
+	return Vector4i::Axis(max_index);
+}
 
-	// Set of unique bone names for the skeleton
-	HashSet<String> unique_names;
+Vector4i Vector4i::clamp(const Vector4i &p_min, const Vector4i &p_max) const {
+	return Vector4i(
+			CLAMP(x, p_min.x, p_max.x),
+			CLAMP(y, p_min.y, p_max.y),
+			CLAMP(z, p_min.z, p_max.z),
+			CLAMP(w, p_min.w, p_max.w));
+}
 
-	HashMap<int32_t, GLTFNodeIndex> godot_bone_node;
+Vector4i::operator String() const {
+	return "(" + itos(x) + ", " + itos(y) + ", " + itos(z) + ", " + itos(w) + ")";
+}
 
-	Vector<BoneAttachment3D *> bone_attachments;
+Vector4i::operator Vector4() const {
+	return Vector4(x, y, z, w);
+}
 
-protected:
-	static void _bind_methods();
-
-public:
-	Vector<GLTFNodeIndex> get_joints();
-	void set_joints(Vector<GLTFNodeIndex> p_joints);
-
-	Vector<GLTFNodeIndex> get_roots();
-	void set_roots(Vector<GLTFNodeIndex> p_roots);
-
-	Skeleton3D *get_godot_skeleton();
-
-	// Skeleton *get_godot_skeleton() {
-	// 	return this->godot_skeleton;
-	// }
-	// void set_godot_skeleton(Skeleton p_*godot_skeleton) {
-	// 	this->godot_skeleton = p_godot_skeleton;
-	// }
-
-	Array get_unique_names();
-	void set_unique_names(Array p_unique_names);
-
-	//RBMap<int32_t, GLTFNodeIndex> get_godot_bone_node() {
-	//	return this->godot_bone_node;
-	//}
-	//void set_godot_bone_node(RBMap<int32_t, GLTFNodeIndex> p_godot_bone_node) {
-	//	this->godot_bone_node = p_godot_bone_node;
-	//}
-	Dictionary get_godot_bone_node();
-	void set_godot_bone_node(Dictionary p_indict);
-
-	//Dictionary get_godot_bone_node() {
-	//	return VariantConversion::to_dict(this->godot_bone_node);
-	//}
-	//void set_godot_bone_node(Dictionary p_indict) {
-	//	VariantConversion::set_from_dict(this->godot_bone_node, p_indict);
-	//}
-
-	BoneAttachment3D *get_bone_attachment(int idx);
-
-	int32_t get_bone_attachment_count();
-};
-#endif // GLTF_SKELETON_H
+Vector4i::Vector4i(const Vector4 &p_vec4) {
+	x = p_vec4.x;
+	y = p_vec4.y;
+	z = p_vec4.z;
+	w = p_vec4.w;
+}
