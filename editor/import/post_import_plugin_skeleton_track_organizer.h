@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  quick_open.h                                                         */
+/*  post_import_plugin_skeleton_track_organizer.h                        */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,61 +28,19 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef EDITOR_QUICK_OPEN_H
-#define EDITOR_QUICK_OPEN_H
+#ifndef POST_IMPORT_PLUGIN_SKELETON_TRACK_ORGANIZER_H
+#define POST_IMPORT_PLUGIN_SKELETON_TRACK_ORGANIZER_H
 
-#include "core/templates/oa_hash_map.h"
-#include "editor/editor_file_system.h"
-#include "scene/gui/dialogs.h"
-#include "scene/gui/tree.h"
+#include "resource_importer_scene.h"
 
-class EditorQuickOpen : public ConfirmationDialog {
-	GDCLASS(EditorQuickOpen, ConfirmationDialog);
-
-	LineEdit *search_box = nullptr;
-	Tree *search_options = nullptr;
-	StringName base_type;
-	bool allow_multi_select = false;
-
-	Vector<String> files;
-	OAHashMap<String, Ref<Texture2D>> icons;
-
-	struct Entry {
-		String path;
-		float score = 0;
-	};
-
-	struct EntryComparator {
-		_FORCE_INLINE_ bool operator()(const Entry &A, const Entry &B) const {
-			return A.score > B.score;
-		}
-	};
-
-	void _update_search();
-	void _build_search_cache(EditorFileSystemDirectory *p_efsd);
-	float _score_path(const String &p_search, const String &p_path);
-
-	void _confirmed();
-	virtual void cancel_pressed() override;
-	void _cleanup();
-
-	void _sbox_input(const Ref<InputEvent> &p_ie);
-	void _text_changed(const String &p_newtext);
-
-	void _theme_changed();
-
-protected:
-	void _notification(int p_what);
-	static void _bind_methods();
+class PostImportPluginSkeletonTrackOrganizer : public EditorScenePostImportPlugin {
+	GDCLASS(PostImportPluginSkeletonTrackOrganizer, EditorScenePostImportPlugin);
 
 public:
-	StringName get_base_type() const;
+	virtual void get_internal_import_options(InternalImportCategory p_category, List<ResourceImporter::ImportOption> *r_options) override;
+	virtual void internal_process(InternalImportCategory p_category, Node *p_base_scene, Node *p_node, Ref<Resource> p_resource, const Dictionary &p_options) override;
 
-	String get_selected() const;
-	Vector<String> get_selected_files() const;
-
-	void popup_dialog(const StringName &p_base, bool p_enable_multi = false, bool p_dontclear = false);
-	EditorQuickOpen();
+	PostImportPluginSkeletonTrackOrganizer();
 };
 
-#endif // EDITOR_QUICK_OPEN_H
+#endif // POST_IMPORT_PLUGIN_SKELETON_TRACK_ORGANIZER_H

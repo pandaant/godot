@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  thread_work_pool.cpp                                                 */
+/*  editor_export_shared_object.h                                        */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,54 +28,24 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "thread_work_pool.h"
+#ifndef EDITOR_EXPORT_SHARED_OBJECT_H
+#define EDITOR_EXPORT_SHARED_OBJECT_H
 
-#include "core/os/os.h"
+#include "core/string/ustring.h"
+#include "core/templates/vector.h"
 
-void ThreadWorkPool::_thread_function(void *p_user) {
-	ThreadData *thread = static_cast<ThreadData *>(p_user);
-	while (true) {
-		thread->start.wait();
-		if (thread->exit.load()) {
-			break;
-		}
-		thread->work->work();
-		thread->completed.post();
-	}
-}
+struct SharedObject {
+	String path;
+	Vector<String> tags;
+	String target;
 
-void ThreadWorkPool::init(int p_thread_count) {
-	ERR_FAIL_COND(threads != nullptr);
-	if (p_thread_count < 0) {
-		p_thread_count = OS::get_singleton()->get_default_thread_pool_size();
+	SharedObject(const String &p_path, const Vector<String> &p_tags, const String &p_target) :
+			path(p_path),
+			tags(p_tags),
+			target(p_target) {
 	}
 
-	thread_count = p_thread_count;
-	threads = memnew_arr(ThreadData, thread_count);
+	SharedObject() {}
+};
 
-	for (uint32_t i = 0; i < thread_count; i++) {
-		threads[i].exit.store(false);
-		threads[i].thread.start(&ThreadWorkPool::_thread_function, &threads[i]);
-	}
-}
-
-void ThreadWorkPool::finish() {
-	if (threads == nullptr) {
-		return;
-	}
-
-	for (uint32_t i = 0; i < thread_count; i++) {
-		threads[i].exit.store(true);
-		threads[i].start.post();
-	}
-	for (uint32_t i = 0; i < thread_count; i++) {
-		threads[i].thread.wait_to_finish();
-	}
-
-	memdelete_arr(threads);
-	threads = nullptr;
-}
-
-ThreadWorkPool::~ThreadWorkPool() {
-	finish();
-}
+#endif // EDITOR_EXPORT_SHARED_OBJECT_H
