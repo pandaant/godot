@@ -175,7 +175,6 @@
 #include "editor/plugins/polygon_2d_editor_plugin.h"
 #include "editor/plugins/polygon_3d_editor_plugin.h"
 #include "editor/plugins/ray_cast_2d_editor_plugin.h"
-#include "editor/plugins/replication_editor_plugin.h"
 #include "editor/plugins/resource_preloader_editor_plugin.h"
 #include "editor/plugins/root_motion_editor_plugin.h"
 #include "editor/plugins/script_editor_plugin.h"
@@ -1035,7 +1034,7 @@ void EditorNode::_sources_changed(bool p_exist) {
 
 		// Reload the global shader variables, but this time
 		// loading textures, as they are now properly imported.
-		RenderingServer::get_singleton()->global_variables_load_settings(true);
+		RenderingServer::get_singleton()->global_shader_uniforms_load_settings(true);
 
 		// Start preview thread now that it's safe.
 		if (!singleton->cmdline_export_mode) {
@@ -7142,7 +7141,6 @@ EditorNode::EditorNode() {
 	add_editor_plugin(memnew(Path3DEditorPlugin));
 	add_editor_plugin(memnew(PhysicalBone3DEditorPlugin));
 	add_editor_plugin(memnew(Polygon3DEditorPlugin));
-	add_editor_plugin(memnew(ReplicationEditorPlugin));
 	add_editor_plugin(memnew(ResourcePreloaderEditorPlugin));
 	add_editor_plugin(memnew(ShaderEditorPlugin));
 	add_editor_plugin(memnew(ShaderFileEditorPlugin));

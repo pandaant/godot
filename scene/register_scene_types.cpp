@@ -130,18 +130,14 @@
 #include "scene/main/http_request.h"
 #include "scene/main/instance_placeholder.h"
 #include "scene/main/missing_node.h"
+#include "scene/main/multiplayer_api.h"
 #include "scene/main/resource_preloader.h"
 #include "scene/main/scene_tree.h"
 #include "scene/main/timer.h"
 #include "scene/main/viewport.h"
 #include "scene/main/window.h"
-#include "scene/multiplayer/multiplayer_spawner.h"
-#include "scene/multiplayer/multiplayer_synchronizer.h"
-#include "scene/multiplayer/scene_cache_interface.h"
-#include "scene/multiplayer/scene_replication_interface.h"
-#include "scene/multiplayer/scene_rpc_interface.h"
 #include "scene/resources/animation_library.h"
-#include "scene/resources/audio_stream_sample.h"
+#include "scene/resources/audio_stream_wav.h"
 #include "scene/resources/bit_map.h"
 #include "scene/resources/bone_map.h"
 #include "scene/resources/box_shape_3d.h"
@@ -322,9 +318,13 @@ void register_scene_types() {
 	GDREGISTER_ABSTRACT_CLASS(Viewport);
 	GDREGISTER_CLASS(SubViewport);
 	GDREGISTER_CLASS(ViewportTexture);
+
+	GDREGISTER_ABSTRACT_CLASS(MultiplayerPeer);
+	GDREGISTER_CLASS(MultiplayerPeerExtension);
+	GDREGISTER_ABSTRACT_CLASS(MultiplayerAPI);
+	GDREGISTER_CLASS(MultiplayerAPIExtension);
+
 	GDREGISTER_CLASS(HTTPRequest);
-	GDREGISTER_CLASS(MultiplayerSpawner);
-	GDREGISTER_CLASS(MultiplayerSynchronizer);
 	GDREGISTER_CLASS(Timer);
 	GDREGISTER_CLASS(CanvasLayer);
 	GDREGISTER_CLASS(CanvasModulate);
@@ -876,8 +876,6 @@ void register_scene_types() {
 
 	GDREGISTER_CLASS(LabelSettings);
 
-	GDREGISTER_CLASS(SceneReplicationConfig);
-
 	GDREGISTER_CLASS(TextLine);
 	GDREGISTER_CLASS(TextParagraph);
 
@@ -904,7 +902,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(AudioStreamPlayer3D);
 #endif
 	GDREGISTER_ABSTRACT_CLASS(VideoStream);
-	GDREGISTER_CLASS(AudioStreamSample);
+	GDREGISTER_CLASS(AudioStreamWAV);
 
 	OS::get_singleton()->yield(); // may take time to init
 
@@ -1091,6 +1089,7 @@ void register_scene_types() {
 	ClassDB::add_compatibility_class("World", "World3D");
 
 	// Renamed during 4.0 alpha, added to ease transition between alphas.
+	ClassDB::add_compatibility_class("AudioStreamSample", "AudioStreamWAV");
 	ClassDB::add_compatibility_class("StreamCubemap", "CompressedCubemap");
 	ClassDB::add_compatibility_class("StreamCubemapArray", "CompressedCubemapArray");
 	ClassDB::add_compatibility_class("StreamTexture2D", "CompressedTexture2D");
@@ -1118,9 +1117,6 @@ void register_scene_types() {
 	}
 
 	SceneDebugger::initialize();
-	SceneReplicationInterface::make_default();
-	SceneRPCInterface::make_default();
-	SceneCacheInterface::make_default();
 }
 
 void initialize_theme() {
