@@ -51,7 +51,7 @@
 #endif
 
 #ifdef TOOLS_ENABLED
-#include "editor/editor_settings.h"
+#include "editor/editor_paths.h"
 #endif
 
 ///////////////////////////
@@ -848,7 +848,7 @@ Error GDScript::reload(bool p_keep_state) {
 
 // Loading a template, don't parse.
 #ifdef TOOLS_ENABLED
-	if (EditorSettings::get_singleton() && basedir.begins_with(EditorSettings::get_singleton()->get_project_script_templates_dir())) {
+	if (EditorPaths::get_singleton() && basedir.begins_with(EditorPaths::get_singleton()->get_project_script_templates_dir())) {
 		return OK;
 	}
 #endif
@@ -2380,7 +2380,7 @@ void ResourceFormatLoaderGDScript::get_dependencies(const String &p_path, List<S
 	}
 }
 
-Error ResourceFormatSaverGDScript::save(const String &p_path, const Ref<Resource> &p_resource, uint32_t p_flags) {
+Error ResourceFormatSaverGDScript::save(const Ref<Resource> &p_resource, const String &p_path, uint32_t p_flags) {
 	Ref<GDScript> sqscr = p_resource;
 	ERR_FAIL_COND_V(sqscr.is_null(), ERR_INVALID_PARAMETER);
 

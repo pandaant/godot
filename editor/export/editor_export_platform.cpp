@@ -70,7 +70,7 @@ bool EditorExportPlatform::fill_log_messages(RichTextLabel *p_log, Error p_err) 
 		if (get_worst_message_type() >= EditorExportPlatform::EXPORT_MESSAGE_WARNING) {
 			p_log->add_image(EditorNode::get_singleton()->get_gui_base()->get_theme_icon(SNAME("StatusWarning"), SNAME("EditorIcons")), 16 * EDSCALE, 16 * EDSCALE, Color(1.0, 1.0, 1.0), INLINE_ALIGNMENT_CENTER);
 			p_log->add_text(" ");
-			p_log->add_text(TTR("Completed with errors."));
+			p_log->add_text(TTR("Completed with warnings."));
 			has_messages = true;
 		} else {
 			p_log->add_image(EditorNode::get_singleton()->get_gui_base()->get_theme_icon(SNAME("StatusSuccess"), SNAME("EditorIcons")), 16 * EDSCALE, 16 * EDSCALE, Color(1.0, 1.0, 1.0), INLINE_ALIGNMENT_CENTER);
@@ -294,7 +294,7 @@ Ref<ImageTexture> EditorExportPlatform::get_option_icon(int p_index) const {
 
 String EditorExportPlatform::find_export_template(String template_file_name, String *err) const {
 	String current_version = VERSION_FULL_CONFIG;
-	String template_path = EditorSettings::get_singleton()->get_export_templates_dir().plus_file(current_version).plus_file(template_file_name);
+	String template_path = EditorPaths::get_singleton()->get_export_templates_dir().plus_file(current_version).plus_file(template_file_name);
 
 	if (FileAccess::exists(template_path)) {
 		return template_path;
@@ -428,7 +428,7 @@ void EditorExportPlatform::_edit_filter_list(HashSet<String> &r_list, const Stri
 	_edit_files_with_filter(da, filters, r_list, exclude);
 }
 
-EditorExportPlatform::FeatureContainers EditorExportPlatform::get_feature_containers(const Ref<EditorExportPreset> &p_preset, bool p_debug) {
+EditorExportPlatform::FeatureContainers EditorExportPlatform::get_feature_containers(const Ref<EditorExportPreset> &p_preset, bool p_debug) const {
 	Ref<EditorExportPlatform> platform = p_preset->get_platform();
 	List<String> feature_list;
 	platform->get_platform_features(&feature_list);

@@ -244,6 +244,7 @@
 #include "scene/3d/ray_cast_3d.h"
 #include "scene/3d/reflection_probe.h"
 #include "scene/3d/remote_transform_3d.h"
+#include "scene/3d/shape_cast_3d.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/3d/skeleton_ik_3d.h"
 #include "scene/3d/soft_dynamic_body_3d.h"
@@ -549,6 +550,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(CollisionShape3D);
 	GDREGISTER_CLASS(CollisionPolygon3D);
 	GDREGISTER_CLASS(RayCast3D);
+	GDREGISTER_CLASS(ShapeCast3D);
 	GDREGISTER_CLASS(MultiMeshInstance3D);
 
 	GDREGISTER_CLASS(Curve3D);
@@ -1089,7 +1091,9 @@ void register_scene_types() {
 	ClassDB::add_compatibility_class("World", "World3D");
 
 	// Renamed during 4.0 alpha, added to ease transition between alphas.
+	ClassDB::add_compatibility_class("AudioStreamOGGVorbis", "AudioStreamOggVorbis");
 	ClassDB::add_compatibility_class("AudioStreamSample", "AudioStreamWAV");
+	ClassDB::add_compatibility_class("OGGPacketSequence", "OggPacketSequence");
 	ClassDB::add_compatibility_class("StreamCubemap", "CompressedCubemap");
 	ClassDB::add_compatibility_class("StreamCubemapArray", "CompressedCubemapArray");
 	ClassDB::add_compatibility_class("StreamTexture2D", "CompressedTexture2D");
