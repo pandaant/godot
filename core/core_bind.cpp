@@ -46,8 +46,8 @@ namespace core_bind {
 
 ResourceLoader *ResourceLoader::singleton = nullptr;
 
-Error ResourceLoader::load_threaded_request(const String &p_path, const String &p_type_hint, bool p_use_sub_threads) {
-	return ::ResourceLoader::load_threaded_request(p_path, p_type_hint, p_use_sub_threads);
+Error ResourceLoader::load_threaded_request(const String &p_path, const String &p_type_hint, bool p_use_sub_threads, CacheMode p_cache_mode) {
+	return ::ResourceLoader::load_threaded_request(p_path, p_type_hint, p_use_sub_threads, ResourceFormatLoader::CacheMode(p_cache_mode));
 }
 
 ResourceLoader::ThreadLoadStatus ResourceLoader::load_threaded_get_status(const String &p_path, Array r_progress) {
@@ -121,7 +121,7 @@ ResourceUID::ID ResourceLoader::get_resource_uid(const String &p_path) {
 }
 
 void ResourceLoader::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("load_threaded_request", "path", "type_hint", "use_sub_threads"), &ResourceLoader::load_threaded_request, DEFVAL(""), DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("load_threaded_request", "path", "type_hint", "use_sub_threads", "cache_mode"), &ResourceLoader::load_threaded_request, DEFVAL(""), DEFVAL(false), DEFVAL(CACHE_MODE_REUSE));
 	ClassDB::bind_method(D_METHOD("load_threaded_get_status", "path", "progress"), &ResourceLoader::load_threaded_get_status, DEFVAL(Array()));
 	ClassDB::bind_method(D_METHOD("load_threaded_get", "path"), &ResourceLoader::load_threaded_get);
 
@@ -323,6 +323,16 @@ String OS::get_name() const {
 
 Vector<String> OS::get_cmdline_args() {
 	List<String> cmdline = ::OS::get_singleton()->get_cmdline_args();
+	Vector<String> cmdlinev;
+	for (const String &E : cmdline) {
+		cmdlinev.push_back(E);
+	}
+
+	return cmdlinev;
+}
+
+Vector<String> OS::get_cmdline_user_args() {
+	List<String> cmdline = ::OS::get_singleton()->get_cmdline_user_args();
 	Vector<String> cmdlinev;
 	for (const String &E : cmdline) {
 		cmdlinev.push_back(E);
@@ -614,6 +624,7 @@ void OS::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_name"), &OS::get_name);
 	ClassDB::bind_method(D_METHOD("get_cmdline_args"), &OS::get_cmdline_args);
+	ClassDB::bind_method(D_METHOD("get_cmdline_user_args"), &OS::get_cmdline_user_args);
 
 	ClassDB::bind_method(D_METHOD("delay_usec", "usec"), &OS::delay_usec);
 	ClassDB::bind_method(D_METHOD("delay_msec", "msec"), &OS::delay_msec);
@@ -1227,13 +1238,13 @@ Vector<uint8_t> File::get_buffer(int64_t p_length) const {
 	return data;
 }
 
-String File::get_as_text() const {
+String File::get_as_text(bool p_skip_cr) const {
 	ERR_FAIL_COND_V_MSG(f.is_null(), String(), "File must be opened before use, or is lacking read-write permission.");
 
 	uint64_t original_pos = f->get_position();
 	const_cast<FileAccess *>(*f)->seek(0);
 
-	String text = f->get_as_utf8_string();
+	String text = f->get_as_utf8_string(p_skip_cr);
 
 	const_cast<FileAccess *>(*f)->seek(original_pos);
 
@@ -1430,7 +1441,7 @@ void File::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_buffer", "length"), &File::get_buffer);
 	ClassDB::bind_method(D_METHOD("get_line"), &File::get_line);
 	ClassDB::bind_method(D_METHOD("get_csv_line", "delim"), &File::get_csv_line, DEFVAL(","));
-	ClassDB::bind_method(D_METHOD("get_as_text"), &File::get_as_text);
+	ClassDB::bind_method(D_METHOD("get_as_text", "skip_cr"), &File::get_as_text, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("get_md5", "path"), &File::get_md5);
 	ClassDB::bind_method(D_METHOD("get_sha256", "path"), &File::get_sha256);
 	ClassDB::bind_method(D_METHOD("is_big_endian"), &File::is_big_endian);

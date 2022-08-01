@@ -71,7 +71,7 @@ public:
 
 	static ResourceLoader *get_singleton() { return singleton; }
 
-	Error load_threaded_request(const String &p_path, const String &p_type_hint = "", bool p_use_sub_threads = false);
+	Error load_threaded_request(const String &p_path, const String &p_type_hint = "", bool p_use_sub_threads = false, CacheMode p_cache_mode = CACHE_MODE_REUSE);
 	ThreadLoadStatus load_threaded_get_status(const String &p_path, Array r_progress = Array());
 	Ref<Resource> load_threaded_get(const String &p_path);
 
@@ -188,6 +188,7 @@ public:
 
 	String get_name() const;
 	Vector<String> get_cmdline_args();
+	Vector<String> get_cmdline_user_args();
 
 	String get_locale() const;
 	String get_locale_language() const;
@@ -411,7 +412,7 @@ public:
 	Vector<uint8_t> get_buffer(int64_t p_length) const; // Get an array of bytes.
 	String get_line() const;
 	Vector<String> get_csv_line(const String &p_delim = ",") const;
-	String get_as_text() const;
+	String get_as_text(bool p_skip_cr = false) const;
 	String get_md5(const String &p_path) const;
 	String get_sha256(const String &p_path) const;
 
