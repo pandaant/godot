@@ -523,9 +523,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(GPUParticlesAttractorVectorField3D);
 	GDREGISTER_CLASS(CPUParticles3D);
 	GDREGISTER_CLASS(Position3D);
-
 	GDREGISTER_CLASS(RootMotionView);
-	ClassDB::set_class_enabled("RootMotionView", false); // disabled by default, enabled by editor
 
 	OS::get_singleton()->yield(); // may take time to init
 
@@ -787,6 +785,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(QuadMesh);
 	GDREGISTER_CLASS(SphereMesh);
 	GDREGISTER_CLASS(TextMesh);
+	GDREGISTER_CLASS(TorusMesh);
 	GDREGISTER_CLASS(TubeTrailMesh);
 	GDREGISTER_CLASS(RibbonTrailMesh);
 	GDREGISTER_CLASS(PointMesh);

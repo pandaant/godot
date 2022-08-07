@@ -2007,7 +2007,7 @@ void RendererSceneRenderRD::_render_buffers_post_process_and_tonemap(const Rende
 			tonemap.exposure_texture = rb->luminance.current;
 			tonemap.auto_exposure_grey = environment_get_auto_exp_scale(p_render_data->environment);
 		} else {
-			tonemap.exposure_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_WHITE);
+			tonemap.exposure_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_WHITE);
 		}
 
 		if (can_use_effects && p_render_data->environment.is_valid() && environment_get_glow_enabled(p_render_data->environment)) {
@@ -2026,12 +2026,12 @@ void RendererSceneRenderRD::_render_buffers_post_process_and_tonemap(const Rende
 				tonemap.glow_map = texture_storage->texture_get_rd_texture(environment_get_glow_map(p_render_data->environment));
 			} else {
 				tonemap.glow_map_strength = 0.0f;
-				tonemap.glow_map = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_WHITE);
+				tonemap.glow_map = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_WHITE);
 			}
 
 		} else {
-			tonemap.glow_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_BLACK);
-			tonemap.glow_map = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_WHITE);
+			tonemap.glow_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_BLACK);
+			tonemap.glow_map = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_WHITE);
 		}
 
 		if (rb->screen_space_aa == RS::VIEWPORT_SCREEN_SPACE_AA_FXAA) {
@@ -2053,7 +2053,7 @@ void RendererSceneRenderRD::_render_buffers_post_process_and_tonemap(const Rende
 
 		tonemap.use_color_correction = false;
 		tonemap.use_1d_color_correction = false;
-		tonemap.color_correction_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_3D_WHITE);
+		tonemap.color_correction_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_3D_WHITE);
 
 		if (can_use_effects && p_render_data->environment.is_valid()) {
 			tonemap.use_bcs = environment_get_adjustments_enabled(p_render_data->environment);
@@ -2123,14 +2123,14 @@ void RendererSceneRenderRD::_post_process_subpass(RID p_source_texture, RID p_fr
 	}
 
 	tonemap.use_glow = false;
-	tonemap.glow_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_BLACK);
-	tonemap.glow_map = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_WHITE);
+	tonemap.glow_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_BLACK);
+	tonemap.glow_map = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_WHITE);
 	tonemap.use_auto_exposure = false;
-	tonemap.exposure_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_WHITE);
+	tonemap.exposure_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_WHITE);
 
 	tonemap.use_color_correction = false;
 	tonemap.use_1d_color_correction = false;
-	tonemap.color_correction_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_3D_WHITE);
+	tonemap.color_correction_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_3D_WHITE);
 
 	if (can_use_effects && p_render_data->environment.is_valid()) {
 		tonemap.use_bcs = environment_get_adjustments_enabled(p_render_data->environment);
@@ -2174,7 +2174,7 @@ void RendererSceneRenderRD::_render_buffers_debug_draw(RID p_render_buffers, RID
 			RID shadow_atlas_texture = shadow_atlas_get_texture(p_shadow_atlas);
 
 			if (shadow_atlas_texture.is_null()) {
-				shadow_atlas_texture = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_BLACK);
+				shadow_atlas_texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_BLACK);
 			}
 
 			Size2 rtsize = texture_storage->render_target_get_size(rb->render_target);
@@ -2869,7 +2869,7 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 					WARN_PRINT_ONCE("The DirectionalLight3D PSSM splits debug draw mode is not reimplemented yet.");
 				}
 
-				light_data.shadow_enabled = p_using_shadows && light_storage->light_has_shadow(base);
+				light_data.shadow_opacity = p_using_shadows && light_storage->light_has_shadow(base) ? light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_OPACITY) : 0.0;
 
 				float angular_diameter = light_storage->light_get_param(base, RS::LIGHT_PARAM_SIZE);
 				if (angular_diameter > 0.0) {
@@ -2886,7 +2886,7 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 					angular_diameter = 0.0;
 				}
 
-				if (light_data.shadow_enabled) {
+				if (light_data.shadow_opacity > 0.001) {
 					RS::LightDirectionalShadowMode smode = light_storage->light_directional_get_shadow_mode(base);
 
 					int limit = smode == RS::LIGHT_DIRECTIONAL_SHADOW_ORTHOGONAL ? 0 : (smode == RS::LIGHT_DIRECTIONAL_SHADOW_PARALLEL_2_SPLITS ? 1 : 3);
@@ -3040,18 +3040,25 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 
 		// Reuse fade begin, fade length and distance for shadow LOD determination later.
 		float fade_begin = 0.0;
+		float fade_shadow = 0.0;
 		float fade_length = 0.0;
 		real_t distance = 0.0;
 
 		float fade = 1.0;
+		float shadow_opacity_fade = 1.0;
 		if (light_storage->light_is_distance_fade_enabled(li->light)) {
 			fade_begin = light_storage->light_get_distance_fade_begin(li->light);
+			fade_shadow = light_storage->light_get_distance_fade_shadow(li->light);
 			fade_length = light_storage->light_get_distance_fade_length(li->light);
 			distance = camera_plane.distance_to(li->transform.origin);
 
+			// Use `smoothstep()` to make opacity changes more gradual and less noticeable to the player.
 			if (distance > fade_begin) {
-				// Use `smoothstep()` to make opacity changes more gradual and less noticeable to the player.
 				fade = Math::smoothstep(0.0f, 1.0f, 1.0f - float(distance - fade_begin) / fade_length);
+			}
+
+			if (distance > fade_shadow) {
+				shadow_opacity_fade = Math::smoothstep(0.0f, 1.0f, 1.0f - float(distance - fade_shadow) / fade_length);
 			}
 		}
 
@@ -3120,7 +3127,7 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 
 		bool in_shadow_range = true;
 		if (needs_shadow && light_storage->light_is_distance_fade_enabled(li->light)) {
-			if (distance > light_storage->light_get_distance_fade_shadow(li->light)) {
+			if (distance > light_storage->light_get_distance_fade_shadow(li->light) + light_storage->light_get_distance_fade_length(li->light)) {
 				// Out of range, don't draw shadows to improve performance.
 				in_shadow_range = false;
 			}
@@ -3129,7 +3136,7 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 		if (needs_shadow && in_shadow_range) {
 			// fill in the shadow information
 
-			light_data.shadow_enabled = true;
+			light_data.shadow_opacity = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_OPACITY) * shadow_opacity_fade;
 
 			float shadow_texel_size = light_instance_get_shadow_texel_size(li->self, p_shadow_atlas);
 			light_data.shadow_normal_bias = light_storage->light_get_param(base, RS::LIGHT_PARAM_SHADOW_NORMAL_BIAS) * shadow_texel_size * 10.0;
@@ -3189,7 +3196,7 @@ void RendererSceneRenderRD::_setup_lights(const PagedArray<RID> &p_lights, const
 				}
 			}
 		} else {
-			light_data.shadow_enabled = false;
+			light_data.shadow_opacity = 0.0;
 		}
 
 		li->cull_mask = light_storage->light_get_cull_mask(base);
@@ -3637,7 +3644,7 @@ void RendererSceneRenderRD::_pre_opaque_render(RenderDataRD *p_render_data, bool
 	if (p_render_data->render_buffers.is_valid()) {
 		bool directional_shadows = false;
 		for (uint32_t i = 0; i < directional_light_count; i++) {
-			if (cluster.directional_lights[i].shadow_enabled) {
+			if (cluster.directional_lights[i].shadow_opacity > 0.001) {
 				directional_shadows = true;
 				break;
 			}

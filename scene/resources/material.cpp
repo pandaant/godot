@@ -154,18 +154,18 @@ Material::~Material() {
 
 bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 	if (shader.is_valid()) {
-		StringName pr = shader->remap_param(p_name);
+		StringName pr = shader->remap_uniform(p_name);
 		if (!pr) {
 			String n = p_name;
 			if (n.find("param/") == 0) { //backwards compatibility
 				pr = n.substr(6, n.length());
 			}
-			if (n.find("shader_param/") == 0) { //backwards compatibility
-				pr = n.replace_first("shader_param/", "");
+			if (n.find("shader_uniform/") == 0) { //backwards compatibility
+				pr = n.replace_first("shader_uniform/", "");
 			}
 		}
 		if (pr) {
-			set_shader_param(pr, p_value);
+			set_shader_uniform(pr, p_value);
 			return true;
 		}
 	}
@@ -175,14 +175,14 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 
 bool ShaderMaterial::_get(const StringName &p_name, Variant &r_ret) const {
 	if (shader.is_valid()) {
-		StringName pr = shader->remap_param(p_name);
+		StringName pr = shader->remap_uniform(p_name);
 		if (!pr) {
 			String n = p_name;
 			if (n.find("param/") == 0) { //backwards compatibility
 				pr = n.substr(6, n.length());
 			}
-			if (n.find("shader_param/") == 0) { //backwards compatibility
-				pr = n.replace_first("shader_param/", "");
+			if (n.find("shader_uniform/") == 0) { //backwards compatibility
+				pr = n.replace_first("shader_uniform/", "");
 			}
 		}
 
@@ -203,7 +203,7 @@ bool ShaderMaterial::_get(const StringName &p_name, Variant &r_ret) const {
 void ShaderMaterial::_get_property_list(List<PropertyInfo> *p_list) const {
 	if (!shader.is_null()) {
 		List<PropertyInfo> list;
-		shader->get_param_list(&list, true);
+		shader->get_shader_uniform_list(&list, true);
 
 		HashMap<String, HashMap<String, List<PropertyInfo>>> groups;
 		{
@@ -299,7 +299,7 @@ void ShaderMaterial::_get_property_list(List<PropertyInfo> *p_list) const {
 
 bool ShaderMaterial::property_can_revert(const String &p_name) {
 	if (shader.is_valid()) {
-		StringName pr = shader->remap_param(p_name);
+		StringName pr = shader->remap_uniform(p_name);
 		if (pr) {
 			Variant default_value = RenderingServer::get_singleton()->shader_get_param_default(shader->get_rid(), pr);
 			Variant current_value;
@@ -313,7 +313,7 @@ bool ShaderMaterial::property_can_revert(const String &p_name) {
 Variant ShaderMaterial::property_get_revert(const String &p_name) {
 	Variant r_ret;
 	if (shader.is_valid()) {
-		StringName pr = shader->remap_param(p_name);
+		StringName pr = shader->remap_uniform(p_name);
 		if (pr) {
 			r_ret = RenderingServer::get_singleton()->shader_get_param_default(shader->get_rid(), pr);
 		}
@@ -349,7 +349,7 @@ Ref<Shader> ShaderMaterial::get_shader() const {
 	return shader;
 }
 
-void ShaderMaterial::set_shader_param(const StringName &p_param, const Variant &p_value) {
+void ShaderMaterial::set_shader_uniform(const StringName &p_param, const Variant &p_value) {
 	if (p_value.get_type() == Variant::NIL) {
 		param_cache.erase(p_param);
 		RS::get_singleton()->material_set_param(_get_material(), p_param, Variant());
@@ -369,7 +369,7 @@ void ShaderMaterial::set_shader_param(const StringName &p_param, const Variant &
 	}
 }
 
-Variant ShaderMaterial::get_shader_param(const StringName &p_param) const {
+Variant ShaderMaterial::get_shader_uniform(const StringName &p_param) const {
 	if (param_cache.has(p_param)) {
 		return param_cache[p_param];
 	} else {
@@ -384,8 +384,8 @@ void ShaderMaterial::_shader_changed() {
 void ShaderMaterial::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_shader", "shader"), &ShaderMaterial::set_shader);
 	ClassDB::bind_method(D_METHOD("get_shader"), &ShaderMaterial::get_shader);
-	ClassDB::bind_method(D_METHOD("set_shader_param", "param", "value"), &ShaderMaterial::set_shader_param);
-	ClassDB::bind_method(D_METHOD("get_shader_param", "param"), &ShaderMaterial::get_shader_param);
+	ClassDB::bind_method(D_METHOD("set_shader_uniform", "param", "value"), &ShaderMaterial::set_shader_uniform);
+	ClassDB::bind_method(D_METHOD("get_shader_uniform", "param"), &ShaderMaterial::get_shader_uniform);
 	ClassDB::bind_method(D_METHOD("property_can_revert", "name"), &ShaderMaterial::property_can_revert);
 	ClassDB::bind_method(D_METHOD("property_get_revert", "name"), &ShaderMaterial::property_get_revert);
 
@@ -394,12 +394,12 @@ void ShaderMaterial::_bind_methods() {
 
 void ShaderMaterial::get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const {
 	String f = p_function.operator String();
-	if ((f == "get_shader_param" || f == "set_shader_param") && p_idx == 0) {
+	if ((f == "get_shader_uniform" || f == "set_shader_uniform") && p_idx == 0) {
 		if (shader.is_valid()) {
 			List<PropertyInfo> pl;
-			shader->get_param_list(&pl);
+			shader->get_shader_uniform_list(&pl);
 			for (const PropertyInfo &E : pl) {
-				r_options->push_back(E.name.replace_first("shader_param/", "").quote());
+				r_options->push_back(E.name.replace_first("shader_uniform/", "").quote());
 			}
 		}
 	}
@@ -1067,7 +1067,8 @@ void BaseMaterial3D::_update_shader() {
 			code += "		float num_layers = mix(float(heightmap_max_layers),float(heightmap_min_layers), abs(dot(vec3(0.0, 0.0, 1.0), view_dir)));\n";
 			code += "		float layer_depth = 1.0 / num_layers;\n";
 			code += "		float current_layer_depth = 0.0;\n";
-			code += "		vec2 P = view_dir.xy * heightmap_scale;\n";
+			// Multiply the heightmap scale by 0.01 to improve heightmap scale usability.
+			code += "		vec2 P = view_dir.xy * heightmap_scale * 0.01;\n";
 			code += "		vec2 delta = P / num_layers;\n";
 			code += "		vec2 ofs = base_uv;\n";
 			if (flags[FLAG_INVERT_HEIGHTMAP]) {
@@ -1103,7 +1104,8 @@ void BaseMaterial3D::_update_shader() {
 			}
 			// Use offset limiting to improve the appearance of non-deep parallax.
 			// This reduces the impression of depth, but avoids visible warping in the distance.
-			code += "		vec2 ofs = base_uv - view_dir.xy * depth * heightmap_scale;\n";
+			// Multiply the heightmap scale by 0.01 to improve heightmap scale usability.
+			code += "		vec2 ofs = base_uv - view_dir.xy * depth * heightmap_scale * 0.01;\n";
 		}
 
 		code += "		base_uv=ofs;\n";
@@ -1276,38 +1278,21 @@ void BaseMaterial3D::_update_shader() {
 		if ((distance_fade == DISTANCE_FADE_OBJECT_DITHER || distance_fade == DISTANCE_FADE_PIXEL_DITHER)) {
 			if (!RenderingServer::get_singleton()->is_low_end()) {
 				code += "	{\n";
+
 				if (distance_fade == DISTANCE_FADE_OBJECT_DITHER) {
 					code += "		float fade_distance = abs((VIEW_MATRIX * MODEL_MATRIX[3]).z);\n";
 
 				} else {
-					code += "		float fade_distance=-VERTEX.z;\n";
+					code += "		float fade_distance = -VERTEX.z;\n";
 				}
+				// Use interleaved gradient noise, which is fast but still looks good.
+				code += "		const vec3 magic = vec3(0.06711056f, 0.00583715f, 52.9829189f);";
+				code += "		float fade = clamp(smoothstep(distance_fade_min, distance_fade_max, fade_distance), 0.0, 1.0);\n";
+				// Use a hard cap to prevent a few stray pixels from remaining when past the fade-out distance.
+				code += "		if (fade < 0.001 || fade < fract(magic.z * fract(dot(FRAGCOORD.xy, magic.xy)))) {\n";
+				code += "			discard;\n";
+				code += "		}\n";
 
-				code += "		float fade=clamp(smoothstep(distance_fade_min,distance_fade_max,fade_distance),0.0,1.0);\n";
-				code += "		int x = int(FRAGCOORD.x) % 4;\n";
-				code += "		int y = int(FRAGCOORD.y) % 4;\n";
-				code += "		int index = x + y * 4;\n";
-				code += "		float limit = 0.0;\n\n";
-				code += "		if (x < 8) {\n";
-				code += "			if (index == 0) limit = 0.0625;\n";
-				code += "			if (index == 1) limit = 0.5625;\n";
-				code += "			if (index == 2) limit = 0.1875;\n";
-				code += "			if (index == 3) limit = 0.6875;\n";
-				code += "			if (index == 4) limit = 0.8125;\n";
-				code += "			if (index == 5) limit = 0.3125;\n";
-				code += "			if (index == 6) limit = 0.9375;\n";
-				code += "			if (index == 7) limit = 0.4375;\n";
-				code += "			if (index == 8) limit = 0.25;\n";
-				code += "			if (index == 9) limit = 0.75;\n";
-				code += "			if (index == 10) limit = 0.125;\n";
-				code += "			if (index == 11) limit = 0.625;\n";
-				code += "			if (index == 12) limit = 1.0;\n";
-				code += "			if (index == 13) limit = 0.5;\n";
-				code += "			if (index == 14) limit = 0.875;\n";
-				code += "			if (index == 15) limit = 0.375;\n";
-				code += "		}\n\n";
-				code += "	if (fade < limit)\n";
-				code += "		discard;\n";
 				code += "	}\n\n";
 			}
 
@@ -2965,7 +2950,7 @@ BaseMaterial3D::BaseMaterial3D(bool p_orm) :
 	set_clearcoat(1);
 	set_clearcoat_roughness(0.5);
 	set_anisotropy(0);
-	set_heightmap_scale(0.05);
+	set_heightmap_scale(5.0);
 	set_subsurface_scattering_strength(0);
 	set_backlight(Color(0, 0, 0));
 	set_transmittance_color(Color(1, 1, 1, 1));

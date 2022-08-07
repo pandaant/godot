@@ -641,6 +641,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// Add a highlight line at the top of the selected tab.
 	style_tab_selected->set_border_width_all(0);
+	style_tab_selected->set_default_margin(SIDE_LEFT, widget_default_margin.x - border_width);
 	style_tab_selected->set_border_width(SIDE_TOP, Math::round(2 * EDSCALE));
 	// Make the highlight line prominent, but not too prominent as to not be distracting.
 	Color tab_highlight = dark_color_2.lerp(accent_color, 0.75);
@@ -652,6 +653,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	// Prevent visible artifacts and cover the top-left rounded corner of the panel below the tab if selected
 	// We can't prevent them with both rounded corners and non-zero border width, though
 	style_tab_selected->set_expand_margin_size(SIDE_BOTTOM, corner_width > 0 ? corner_width : border_width);
+
+	// When using a border width greater than 0, visually line up the left of the selected tab with the underlying panel.
+	style_tab_selected->set_expand_margin_size(SIDE_LEFT, -border_width);
 
 	style_tab_selected->set_default_margin(SIDE_LEFT, widget_default_margin.x + 2 * EDSCALE);
 	style_tab_selected->set_default_margin(SIDE_RIGHT, widget_default_margin.x + 2 * EDSCALE);
@@ -830,6 +834,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_stylebox("pressed", "CheckButton", style_menu);
 	theme->set_stylebox("disabled", "CheckButton", style_menu);
 	theme->set_stylebox("hover", "CheckButton", style_menu);
+	theme->set_stylebox("hover_pressed", "CheckButton", style_menu);
 
 	theme->set_icon("on", "CheckButton", theme->get_icon(SNAME("GuiToggleOn"), SNAME("EditorIcons")));
 	theme->set_icon("on_disabled", "CheckButton", theme->get_icon(SNAME("GuiToggleOnDisabled"), SNAME("EditorIcons")));
@@ -867,6 +872,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_stylebox("pressed", "CheckBox", sb_checkbox);
 	theme->set_stylebox("disabled", "CheckBox", sb_checkbox);
 	theme->set_stylebox("hover", "CheckBox", sb_checkbox);
+	theme->set_stylebox("hover_pressed", "CheckBox", sb_checkbox);
 	theme->set_icon("checked", "CheckBox", theme->get_icon(SNAME("GuiChecked"), SNAME("EditorIcons")));
 	theme->set_icon("unchecked", "CheckBox", theme->get_icon(SNAME("GuiUnchecked"), SNAME("EditorIcons")));
 	theme->set_icon("radio_checked", "CheckBox", theme->get_icon(SNAME("GuiRadioChecked"), SNAME("EditorIcons")));
@@ -895,17 +901,16 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_stylebox("panel", "PopupDialog", style_popup);
 
 	// PopupMenu
-	const int popup_menu_margin_size = default_margin_size * 1.5 * EDSCALE;
 	Ref<StyleBoxFlat> style_popup_menu = style_popup->duplicate();
 	// Use 1 pixel for the sides, since if 0 is used, the highlight of hovered items is drawn
 	// on top of the popup border. This causes a 'gap' in the panel border when an item is highlighted,
 	// and it looks weird. 1px solves this.
-	style_popup_menu->set_default_margin(SIDE_LEFT, 1 * EDSCALE);
-	style_popup_menu->set_default_margin(SIDE_TOP, popup_menu_margin_size);
-	style_popup_menu->set_default_margin(SIDE_RIGHT, 1 * EDSCALE);
-	style_popup_menu->set_default_margin(SIDE_BOTTOM, popup_menu_margin_size);
+	style_popup_menu->set_default_margin(SIDE_LEFT, EDSCALE);
+	style_popup_menu->set_default_margin(SIDE_TOP, 2 * EDSCALE);
+	style_popup_menu->set_default_margin(SIDE_RIGHT, EDSCALE);
+	style_popup_menu->set_default_margin(SIDE_BOTTOM, 2 * EDSCALE);
 	// Always display a border for PopupMenus so they can be distinguished from their background.
-	style_popup_menu->set_border_width_all(1 * EDSCALE);
+	style_popup_menu->set_border_width_all(EDSCALE);
 	style_popup_menu->set_border_color(dark_color_2);
 	theme->set_stylebox("panel", "PopupMenu", style_popup_menu);
 
@@ -939,12 +944,12 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// Force the v_separation to be even so that the spacing on top and bottom is even.
 	// If the vsep is odd and cannot be split into 2 even groups (of pixels), then it will be lopsided.
-	// We add 2 to the vsep to give it some extra spacing which looks a bit more modern (see Windows, for example)
-	int vsep_base = extra_spacing + default_margin_size + 2;
-	int force_even_vsep = vsep_base + (vsep_base % 2);
+	// We add 2 to the vsep to give it some extra spacing which looks a bit more modern (see Windows, for example).
+	const int vsep_base = extra_spacing + default_margin_size + 6;
+	const int force_even_vsep = vsep_base + (vsep_base % 2);
 	theme->set_constant("v_separation", "PopupMenu", force_even_vsep * EDSCALE);
-	theme->set_constant("item_start_padding", "PopupMenu", popup_menu_margin_size * EDSCALE);
-	theme->set_constant("item_end_padding", "PopupMenu", popup_menu_margin_size * EDSCALE);
+	theme->set_constant("item_start_padding", "PopupMenu", default_margin_size * 1.5 * EDSCALE);
+	theme->set_constant("item_end_padding", "PopupMenu", default_margin_size * 1.5 * EDSCALE);
 
 	// Sub-inspectors
 	for (int i = 0; i < 16; i++) {
@@ -1659,6 +1664,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	style_dictionary_add_item->set_expand_margin_size(SIDE_LEFT, 4 * EDSCALE);
 	style_dictionary_add_item->set_expand_margin_size(SIDE_RIGHT, 4 * EDSCALE);
 	theme->set_stylebox("DictionaryAddItem", "EditorStyles", style_dictionary_add_item);
+
+	Ref<StyleBoxEmpty> vshader_label_style = make_empty_stylebox(2, 1, 2, 1);
+	theme->set_stylebox("label_style", "VShaderEditor", vshader_label_style);
 
 	// adaptive script theme constants
 	// for comments and elements with lower relevance

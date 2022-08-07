@@ -1156,6 +1156,9 @@ void MaterialData::update_textures(const HashMap<StringName, Variant> &p_paramet
 						case ShaderLanguage::ShaderNode::Uniform::HINT_DEFAULT_BLACK: {
 							gl_texture = texture_storage->texture_gl_get_default(DEFAULT_GL_TEXTURE_BLACK);
 						} break;
+						case ShaderLanguage::ShaderNode::Uniform::HINT_DEFAULT_TRANSPARENT: {
+							gl_texture = texture_storage->texture_gl_get_default(DEFAULT_GL_TEXTURE_TRANSPARENT);
+						} break;
 						case ShaderLanguage::ShaderNode::Uniform::HINT_ANISOTROPY: {
 							gl_texture = texture_storage->texture_gl_get_default(DEFAULT_GL_TEXTURE_ANISO);
 						} break;
@@ -1504,6 +1507,11 @@ MaterialStorage::MaterialStorage() {
 		actions.renames["CUSTOM2"] = "custom2_attrib";
 		actions.renames["CUSTOM3"] = "custom3_attrib";
 		actions.renames["OUTPUT_IS_SRGB"] = "SHADER_IS_SRGB";
+
+		actions.renames["NODE_POSITION_WORLD"] = "model_matrix[3].xyz";
+		actions.renames["CAMERA_POSITION_WORLD"] = "scene_data.inv_view_matrix[3].xyz";
+		actions.renames["CAMERA_DIRECTION_WORLD"] = "scene_data.view_matrix[3].xyz";
+		actions.renames["NODE_POSITION_VIEW"] = "(model_matrix * scene_data.view_matrix)[3].xyz";
 
 		actions.renames["VIEW_INDEX"] = "ViewIndex";
 		actions.renames["VIEW_MONO_LEFT"] = "0";
@@ -2320,11 +2328,14 @@ void MaterialStorage::global_shader_uniforms_instance_update(RID p_instance, int
 		ShaderLanguage::TYPE_VEC3, // vec3
 		ShaderLanguage::TYPE_IVEC3, //vec3i
 		ShaderLanguage::TYPE_MAX, //xform2d not supported here
+		ShaderLanguage::TYPE_VEC4, //vec4
+		ShaderLanguage::TYPE_IVEC4, //vec4i
 		ShaderLanguage::TYPE_VEC4, //plane
 		ShaderLanguage::TYPE_VEC4, //quat
 		ShaderLanguage::TYPE_MAX, //aabb not supported here
 		ShaderLanguage::TYPE_MAX, //basis not supported here
 		ShaderLanguage::TYPE_MAX, //xform not supported here
+		ShaderLanguage::TYPE_MAX, //projection not supported here
 		ShaderLanguage::TYPE_VEC4 //color
 	};
 
@@ -2511,11 +2522,11 @@ String MaterialStorage::shader_get_code(RID p_shader) const {
 	return shader->code;
 }
 
-void MaterialStorage::shader_get_param_list(RID p_shader, List<PropertyInfo> *p_param_list) const {
+void MaterialStorage::shader_get_shader_uniform_list(RID p_shader, List<PropertyInfo> *p_param_list) const {
 	GLES3::Shader *shader = shader_owner.get_or_null(p_shader);
 	ERR_FAIL_COND(!shader);
 	if (shader->data) {
-		return shader->data->get_param_list(p_param_list);
+		return shader->data->get_shader_uniform_list(p_param_list);
 	}
 }
 
@@ -2747,14 +2758,14 @@ bool MaterialStorage::material_casts_shadows(RID p_material) {
 	return true; //by default everything casts shadows
 }
 
-void MaterialStorage::material_get_instance_shader_parameters(RID p_material, List<InstanceShaderParam> *r_parameters) {
+void MaterialStorage::material_get_instance_shader_uniforms(RID p_material, List<InstanceShaderParam> *r_parameters) {
 	GLES3::Material *material = material_owner.get_or_null(p_material);
 	ERR_FAIL_COND(!material);
 	if (material->shader && material->shader->data) {
 		material->shader->data->get_instance_param_list(r_parameters);
 
 		if (material->next_pass.is_valid()) {
-			material_get_instance_shader_parameters(material->next_pass, r_parameters);
+			material_get_instance_shader_uniforms(material->next_pass, r_parameters);
 		}
 	}
 }
@@ -2862,7 +2873,7 @@ void CanvasShaderData::set_default_texture_param(const StringName &p_name, RID p
 	}
 }
 
-void CanvasShaderData::get_param_list(List<PropertyInfo> *p_param_list) const {
+void CanvasShaderData::get_shader_uniform_list(List<PropertyInfo> *p_param_list) const {
 	HashMap<int, StringName> order;
 
 	for (const KeyValue<StringName, ShaderLanguage::ShaderNode::Uniform> &E : uniforms) {
@@ -3099,7 +3110,7 @@ void SkyShaderData::set_default_texture_param(const StringName &p_name, RID p_te
 	}
 }
 
-void SkyShaderData::get_param_list(List<PropertyInfo> *p_param_list) const {
+void SkyShaderData::get_shader_uniform_list(List<PropertyInfo> *p_param_list) const {
 	RBMap<int, StringName> order;
 
 	for (const KeyValue<StringName, ShaderLanguage::ShaderNode::Uniform> &E : uniforms) {
@@ -3424,7 +3435,7 @@ void SceneShaderData::set_default_texture_param(const StringName &p_name, RID p_
 	}
 }
 
-void SceneShaderData::get_param_list(List<PropertyInfo> *p_param_list) const {
+void SceneShaderData::get_shader_uniform_list(List<PropertyInfo> *p_param_list) const {
 	RBMap<int, StringName> order;
 
 	for (const KeyValue<StringName, ShaderLanguage::ShaderNode::Uniform> &E : uniforms) {

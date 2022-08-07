@@ -141,6 +141,7 @@
 #include "editor/plugins/bone_map_editor_plugin.h"
 #include "editor/plugins/camera_3d_editor_plugin.h"
 #include "editor/plugins/canvas_item_editor_plugin.h"
+#include "editor/plugins/cast_2d_editor_plugin.h"
 #include "editor/plugins/collision_polygon_2d_editor_plugin.h"
 #include "editor/plugins/collision_shape_2d_editor_plugin.h"
 #include "editor/plugins/control_editor_plugin.h"
@@ -176,7 +177,6 @@
 #include "editor/plugins/physical_bone_3d_editor_plugin.h"
 #include "editor/plugins/polygon_2d_editor_plugin.h"
 #include "editor/plugins/polygon_3d_editor_plugin.h"
-#include "editor/plugins/ray_cast_2d_editor_plugin.h"
 #include "editor/plugins/resource_preloader_editor_plugin.h"
 #include "editor/plugins/root_motion_editor_plugin.h"
 #include "editor/plugins/script_editor_plugin.h"
@@ -2202,9 +2202,10 @@ void EditorNode::_edit_current(bool p_skip_foreign) {
 	Object *prev_inspected_object = InspectorDock::get_inspector_singleton()->get_edited_object();
 
 	bool disable_folding = bool(EDITOR_GET("interface/inspector/disable_folding"));
-	bool stay_in_script_editor_on_node_selected = bool(EDITOR_GET("text_editor/behavior/navigation/stay_in_script_editor_on_node_selected"));
 	bool is_resource = current_obj->is_class("Resource");
 	bool is_node = current_obj->is_class("Node");
+	bool stay_in_script_editor_on_node_selected = bool(EDITOR_GET("text_editor/behavior/navigation/stay_in_script_editor_on_node_selected"));
+	bool skip_main_plugin = false;
 
 	String editable_warning; // None by default.
 
@@ -2241,8 +2242,8 @@ void EditorNode::_edit_current(bool p_skip_foreign) {
 			NodeDock::get_singleton()->set_node(current_node);
 			SceneTreeDock::get_singleton()->set_selected(current_node);
 			InspectorDock::get_singleton()->update(current_node);
-			if (!inspector_only) {
-				inspector_only = stay_in_script_editor_on_node_selected && ScriptEditor::get_singleton()->is_visible_in_tree();
+			if (!inspector_only && !skip_main_plugin) {
+				skip_main_plugin = stay_in_script_editor_on_node_selected && ScriptEditor::get_singleton()->is_visible_in_tree();
 			}
 		} else {
 			NodeDock::get_singleton()->set_node(nullptr);
@@ -2318,7 +2319,7 @@ void EditorNode::_edit_current(bool p_skip_foreign) {
 			}
 		}
 
-		if (main_plugin) {
+		if (main_plugin && !skip_main_plugin) {
 			// Special case if use of external editor is true.
 			Resource *current_res = Object::cast_to<Resource>(current_obj);
 			if (main_plugin->get_name() == "Script" && !current_obj->is_class("VisualScript") && current_res && !current_res->is_built_in() && (bool(EditorSettings::get_singleton()->get("text_editor/external/use_external_editor")) || overrides_external_editor(current_obj))) {
@@ -6156,8 +6157,6 @@ EditorNode::EditorNode() {
 
 	register_exporters();
 
-	ClassDB::set_class_enabled("RootMotionView", true);
-
 	EDITOR_DEF("interface/editor/save_on_focus_loss", false);
 	EDITOR_DEF("interface/editor/show_update_spinner", false);
 	EDITOR_DEF("interface/editor/update_continuously", false);
@@ -6876,6 +6875,7 @@ EditorNode::EditorNode() {
 	filesystem_dock->connect("inherit", callable_mp(this, &EditorNode::_inherit_request));
 	filesystem_dock->connect("instance", callable_mp(this, &EditorNode::_instantiate_request));
 	filesystem_dock->connect("display_mode_changed", callable_mp(this, &EditorNode::_save_docks));
+	get_project_settings()->connect_filesystem_dock_signals(filesystem_dock);
 
 	// Scene: Top left.
 	dock_slot[DOCK_SLOT_LEFT_UR]->add_child(SceneTreeDock::get_singleton());
@@ -7192,7 +7192,7 @@ EditorNode::EditorNode() {
 	add_editor_plugin(memnew(NavigationPolygonEditorPlugin));
 	add_editor_plugin(memnew(Path2DEditorPlugin));
 	add_editor_plugin(memnew(Polygon2DEditorPlugin));
-	add_editor_plugin(memnew(RayCast2DEditorPlugin));
+	add_editor_plugin(memnew(Cast2DEditorPlugin));
 	add_editor_plugin(memnew(Skeleton2DEditorPlugin));
 	add_editor_plugin(memnew(Sprite2DEditorPlugin));
 	add_editor_plugin(memnew(TilesEditorPlugin));

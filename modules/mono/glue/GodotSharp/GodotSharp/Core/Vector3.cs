@@ -574,7 +574,7 @@ namespace Godot
         ///
         /// This method also handles interpolating the lengths if the input vectors
         /// have different lengths. For the special case of one or both input vectors
-        /// having zero length, this method behaves like <see cref="Lerp"/>.
+        /// having zero length, this method behaves like <see cref="Lerp(Vector3, real_t)"/>.
         /// </summary>
         /// <param name="to">The destination vector for interpolation.</param>
         /// <param name="weight">A value on the range of 0.0 to 1.0, representing the amount of interpolation.</param>
@@ -617,22 +617,6 @@ namespace Godot
                 Mathf.Snapped(x, step.x),
                 Mathf.Snapped(y, step.y),
                 Mathf.Snapped(z, step.z)
-            );
-        }
-
-        /// <summary>
-        /// Returns a diagonal matrix with the vector as main diagonal.
-        ///
-        /// This is equivalent to a <see cref="Basis"/> with no rotation or shearing and
-        /// this vector's components set as the scale.
-        /// </summary>
-        /// <returns>A <see cref="Basis"/> with the vector as its main diagonal.</returns>
-        public Basis ToDiagonalMatrix()
-        {
-            return new Basis(
-                x, 0, 0,
-                0, y, 0,
-                0, 0, z
             );
         }
 

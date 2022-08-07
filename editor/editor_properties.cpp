@@ -133,6 +133,11 @@ void EditorPropertyMultilineText::_text_changed() {
 void EditorPropertyMultilineText::_open_big_text() {
 	if (!big_text_dialog) {
 		big_text = memnew(TextEdit);
+		if (expression) {
+			big_text->set_syntax_highlighter(text->get_syntax_highlighter());
+			big_text->add_theme_font_override("font", get_theme_font(SNAME("expression"), SNAME("EditorFonts")));
+			big_text->add_theme_font_size_override("font_size", get_theme_font_size(SNAME("expression_size"), SNAME("EditorFonts")));
+		}
 		big_text->connect("text_changed", callable_mp(this, &EditorPropertyMultilineText::_big_text_changed));
 		big_text->set_line_wrapping_mode(TextEdit::LineWrappingMode::LINE_WRAPPING_BOUNDARY);
 		big_text_dialog = memnew(AcceptDialog);
@@ -162,12 +167,24 @@ void EditorPropertyMultilineText::_notification(int p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			Ref<Texture2D> df = get_theme_icon(SNAME("DistractionFree"), SNAME("EditorIcons"));
 			open_big_text->set_icon(df);
-			Ref<Font> font = get_theme_font(SNAME("font"), SNAME("Label"));
-			int font_size = get_theme_font_size(SNAME("font_size"), SNAME("Label"));
-			text->set_custom_minimum_size(Vector2(0, font->get_height(font_size) * 6));
-			text->add_theme_font_override("font", get_theme_font("expression", "EditorFonts"));
-			text->add_theme_font_size_override("font_size", get_theme_font_size("expression_size", "EditorFonts"));
 
+			Ref<Font> font;
+			int font_size;
+			if (expression) {
+				font = get_theme_font(SNAME("expression"), SNAME("EditorFonts"));
+				font_size = get_theme_font_size(SNAME("expression_size"), SNAME("EditorFonts"));
+
+				text->add_theme_font_override("font", font);
+				text->add_theme_font_size_override("font_size", font_size);
+				if (big_text) {
+					big_text->add_theme_font_override("font", font);
+					big_text->add_theme_font_size_override("font_size", font_size);
+				}
+			} else {
+				font = get_theme_font(SNAME("font"), SNAME("TextEdit"));
+				font_size = get_theme_font_size(SNAME("font_size"), SNAME("TextEdit"));
+			}
+			text->set_custom_minimum_size(Vector2(0, font->get_height(font_size) * 6));
 		} break;
 	}
 }
@@ -490,13 +507,55 @@ void EditorPropertyPath::_path_focus_exited() {
 	_path_selected(path->get_text());
 }
 
+void EditorPropertyPath::_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
+	const Dictionary drag_data = p_data;
+	if (!drag_data.has("type")) {
+		return;
+	}
+	if (String(drag_data["type"]) != "files") {
+		return;
+	}
+	const Vector<String> filesPaths = drag_data["files"];
+	if (filesPaths.size() == 0) {
+		return;
+	}
+
+	emit_changed(get_edited_property(), filesPaths[0]);
+	update_property();
+}
+
+bool EditorPropertyPath::_can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const {
+	const Dictionary drag_data = p_data;
+	if (!drag_data.has("type")) {
+		return false;
+	}
+	if (String(drag_data["type"]) != "files") {
+		return false;
+	}
+	const Vector<String> filesPaths = drag_data["files"];
+	if (filesPaths.size() == 0) {
+		return false;
+	}
+
+	for (const String &extension : extensions) {
+		if (filesPaths[0].ends_with(extension.substr(1, extension.size() - 1))) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void EditorPropertyPath::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("_can_drop_data_fw", "position", "data", "from"), &EditorPropertyPath::_can_drop_data_fw);
+	ClassDB::bind_method(D_METHOD("_drop_data_fw", "position", "data", "from"), &EditorPropertyPath::_drop_data_fw);
 }
 
 EditorPropertyPath::EditorPropertyPath() {
 	HBoxContainer *path_hb = memnew(HBoxContainer);
 	add_child(path_hb);
 	path = memnew(LineEdit);
+	path->set_drag_forwarding(this);
 	path->set_structured_text_bidi_override(TextServer::STRUCTURED_TEXT_FILE);
 	path_hb->add_child(path);
 	path->connect("text_submitted", callable_mp(this, &EditorPropertyPath::_path_selected));
@@ -1580,6 +1639,11 @@ void EditorPropertyEasing::_spin_value_changed(double p_value) {
 	// which can cause crashes and other issues.
 	p_value = CLAMP(p_value, -1'000'000, 1'000'000);
 
+	if (positive_only) {
+		// Force a positive or zero value if a negative value was manually entered by double-clicking.
+		p_value = MAX(0.0, p_value);
+	}
+
 	emit_changed(get_edited_property(), p_value);
 	_spin_focus_exited();
 }
@@ -1591,9 +1655,9 @@ void EditorPropertyEasing::_spin_focus_exited() {
 	easing_draw->update();
 }
 
-void EditorPropertyEasing::setup(bool p_full, bool p_flip) {
+void EditorPropertyEasing::setup(bool p_positive_only, bool p_flip) {
 	flip = p_flip;
-	full = p_full;
+	positive_only = p_positive_only;
 }
 
 void EditorPropertyEasing::_notification(int p_what) {
@@ -1601,13 +1665,13 @@ void EditorPropertyEasing::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED:
 		case NOTIFICATION_ENTER_TREE: {
 			preset->clear();
-			preset->add_icon_item(get_theme_icon(SNAME("CurveConstant"), SNAME("EditorIcons")), "Zero", EASING_ZERO);
 			preset->add_icon_item(get_theme_icon(SNAME("CurveLinear"), SNAME("EditorIcons")), "Linear", EASING_LINEAR);
-			preset->add_icon_item(get_theme_icon(SNAME("CurveIn"), SNAME("EditorIcons")), "In", EASING_IN);
-			preset->add_icon_item(get_theme_icon(SNAME("CurveOut"), SNAME("EditorIcons")), "Out", EASING_OUT);
-			if (full) {
-				preset->add_icon_item(get_theme_icon(SNAME("CurveInOut"), SNAME("EditorIcons")), "In-Out", EASING_IN_OUT);
-				preset->add_icon_item(get_theme_icon(SNAME("CurveOutIn"), SNAME("EditorIcons")), "Out-In", EASING_OUT_IN);
+			preset->add_icon_item(get_theme_icon(SNAME("CurveIn"), SNAME("EditorIcons")), "Ease In", EASING_IN);
+			preset->add_icon_item(get_theme_icon(SNAME("CurveOut"), SNAME("EditorIcons")), "Ease Out", EASING_OUT);
+			preset->add_icon_item(get_theme_icon(SNAME("CurveConstant"), SNAME("EditorIcons")), "Zero", EASING_ZERO);
+			if (!positive_only) {
+				preset->add_icon_item(get_theme_icon(SNAME("CurveInOut"), SNAME("EditorIcons")), "Ease In-Out", EASING_IN_OUT);
+				preset->add_icon_item(get_theme_icon(SNAME("CurveOutIn"), SNAME("EditorIcons")), "Ease Out-In", EASING_OUT_IN);
 			}
 			easing_draw->set_custom_minimum_size(Size2(0, get_theme_font(SNAME("font"), SNAME("Label"))->get_height(get_theme_font_size(SNAME("font_size"), SNAME("Label"))) * 2));
 		} break;
@@ -4105,20 +4169,20 @@ EditorProperty *EditorInspectorDefaultPlugin::get_editor_for_property(Object *p_
 		case Variant::FLOAT: {
 			if (p_hint == PROPERTY_HINT_EXP_EASING) {
 				EditorPropertyEasing *editor = memnew(EditorPropertyEasing);
-				bool full = true;
+				bool positive_only = false;
 				bool flip = false;
-				Vector<String> hints = p_hint_text.split(",");
+				const Vector<String> hints = p_hint_text.split(",");
 				for (int i = 0; i < hints.size(); i++) {
-					String h = hints[i].strip_edges();
-					if (h == "attenuation") {
+					const String hint = hints[i].strip_edges();
+					if (hint == "attenuation") {
 						flip = true;
 					}
-					if (h == "inout") {
-						full = true;
+					if (hint == "positive_only") {
+						positive_only = true;
 					}
 				}
 
-				editor->setup(full, flip);
+				editor->setup(positive_only, flip);
 				return editor;
 
 			} else {

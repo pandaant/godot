@@ -1500,9 +1500,9 @@ TypedArray<Image> RenderingServer::_texture_3d_get(RID p_texture) const {
 	return ret;
 }
 
-TypedArray<Dictionary> RenderingServer::_shader_get_param_list(RID p_shader) const {
+TypedArray<Dictionary> RenderingServer::_shader_get_shader_uniform_list(RID p_shader) const {
 	List<PropertyInfo> l;
-	shader_get_param_list(p_shader, &l);
+	shader_get_shader_uniform_list(p_shader, &l);
 	return convert_property_list(&l);
 }
 
@@ -1625,9 +1625,9 @@ Dictionary RenderingServer::_mesh_get_surface(RID p_mesh, int p_idx) {
 	return d;
 }
 
-Array RenderingServer::_instance_geometry_get_shader_parameter_list(RID p_instance) const {
+Array RenderingServer::_instance_geometry_get_shader_uniform_list(RID p_instance) const {
 	List<PropertyInfo> params;
-	instance_geometry_get_shader_parameter_list(p_instance, &params);
+	instance_geometry_get_shader_uniform_list(p_instance, &params);
 	return convert_property_list(&params);
 }
 
@@ -1701,7 +1701,7 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("shader_set_code", "shader", "code"), &RenderingServer::shader_set_code);
 	ClassDB::bind_method(D_METHOD("shader_set_path_hint", "shader", "path"), &RenderingServer::shader_set_path_hint);
 	ClassDB::bind_method(D_METHOD("shader_get_code", "shader"), &RenderingServer::shader_get_code);
-	ClassDB::bind_method(D_METHOD("shader_get_param_list", "shader"), &RenderingServer::_shader_get_param_list);
+	ClassDB::bind_method(D_METHOD("shader_get_shader_uniform_list", "shader"), &RenderingServer::_shader_get_shader_uniform_list);
 	ClassDB::bind_method(D_METHOD("shader_get_param_default", "shader", "param"), &RenderingServer::shader_get_param_default);
 
 	ClassDB::bind_method(D_METHOD("shader_set_default_texture_param", "shader", "param", "texture", "index"), &RenderingServer::shader_set_default_texture_param, DEFVAL(0));
@@ -1885,9 +1885,10 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("light_projectors_set_filter", "filter"), &RenderingServer::light_projectors_set_filter);
 
 	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_NEAREST);
-	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_NEAREST_MIPMAPS);
 	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_LINEAR);
+	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_NEAREST_MIPMAPS);
 	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_LINEAR_MIPMAPS);
+	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_NEAREST_MIPMAPS_ANISOTROPIC);
 	BIND_ENUM_CONSTANT(LIGHT_PROJECTOR_FILTER_LINEAR_MIPMAPS_ANISOTROPIC);
 
 	BIND_ENUM_CONSTANT(LIGHT_DIRECTIONAL);
@@ -1910,6 +1911,7 @@ void RenderingServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(LIGHT_PARAM_SHADOW_NORMAL_BIAS);
 	BIND_ENUM_CONSTANT(LIGHT_PARAM_SHADOW_BIAS);
 	BIND_ENUM_CONSTANT(LIGHT_PARAM_SHADOW_PANCAKE_SIZE);
+	BIND_ENUM_CONSTANT(LIGHT_PARAM_SHADOW_OPACITY);
 	BIND_ENUM_CONSTANT(LIGHT_PARAM_SHADOW_BLUR);
 	BIND_ENUM_CONSTANT(LIGHT_PARAM_SHADOW_VOLUMETRIC_FOG_FADE);
 	BIND_ENUM_CONSTANT(LIGHT_PARAM_TRANSMITTANCE_BIAS);
@@ -1989,9 +1991,10 @@ void RenderingServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(DECAL_TEXTURE_MAX);
 
 	BIND_ENUM_CONSTANT(DECAL_FILTER_NEAREST);
-	BIND_ENUM_CONSTANT(DECAL_FILTER_NEAREST_MIPMAPS);
 	BIND_ENUM_CONSTANT(DECAL_FILTER_LINEAR);
+	BIND_ENUM_CONSTANT(DECAL_FILTER_NEAREST_MIPMAPS);
 	BIND_ENUM_CONSTANT(DECAL_FILTER_LINEAR_MIPMAPS);
+	BIND_ENUM_CONSTANT(DECAL_FILTER_NEAREST_MIPMAPS_ANISOTROPIC);
 	BIND_ENUM_CONSTANT(DECAL_FILTER_LINEAR_MIPMAPS_ANISOTROPIC);
 
 	/* GI API (affects VoxelGI and SDFGI) */
@@ -2482,10 +2485,10 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("instance_geometry_set_lightmap", "instance", "lightmap", "lightmap_uv_scale", "lightmap_slice"), &RenderingServer::instance_geometry_set_lightmap);
 	ClassDB::bind_method(D_METHOD("instance_geometry_set_lod_bias", "instance", "lod_bias"), &RenderingServer::instance_geometry_set_lod_bias);
 
-	ClassDB::bind_method(D_METHOD("instance_geometry_set_shader_parameter", "instance", "parameter", "value"), &RenderingServer::instance_geometry_set_shader_parameter);
-	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_parameter", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_parameter);
-	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_parameter_default_value", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_parameter_default_value);
-	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_parameter_list", "instance"), &RenderingServer::_instance_geometry_get_shader_parameter_list);
+	ClassDB::bind_method(D_METHOD("instance_geometry_set_shader_uniform", "instance", "parameter", "value"), &RenderingServer::instance_geometry_set_shader_uniform);
+	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_uniform", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_uniform);
+	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_uniform_default_value", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_uniform_default_value);
+	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_uniform_list", "instance"), &RenderingServer::_instance_geometry_get_shader_uniform_list);
 
 	ClassDB::bind_method(D_METHOD("instances_cull_aabb", "aabb", "scenario"), &RenderingServer::_instances_cull_aabb_bind, DEFVAL(RID()));
 	ClassDB::bind_method(D_METHOD("instances_cull_ray", "from", "to", "scenario"), &RenderingServer::_instances_cull_ray_bind, DEFVAL(RID()));
@@ -2956,9 +2959,9 @@ void RenderingServer::init() {
 					PROPERTY_HINT_RANGE, "-2,2,0.001"));
 
 	GLOBAL_DEF("rendering/textures/decals/filter", DECAL_FILTER_LINEAR_MIPMAPS);
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/decals/filter", PropertyInfo(Variant::INT, "rendering/textures/decals/filter", PROPERTY_HINT_ENUM, "Nearest (Fast),Nearest+Mipmaps,Linear,Linear+Mipmaps,Linear+Mipmaps Anisotropic (Slow)"));
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/decals/filter", PropertyInfo(Variant::INT, "rendering/textures/decals/filter", PROPERTY_HINT_ENUM, "Nearest (Fast),Linear (Fast),Nearest Mipmap (Fast),Linear Mipmap (Fast),Nearest Mipmap Anisotropic (Average),Linear Mipmap Anisotropic (Average)"));
 	GLOBAL_DEF("rendering/textures/light_projectors/filter", LIGHT_PROJECTOR_FILTER_LINEAR_MIPMAPS);
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/light_projectors/filter", PropertyInfo(Variant::INT, "rendering/textures/light_projectors/filter", PROPERTY_HINT_ENUM, "Nearest (Fast),Nearest+Mipmaps,Linear,Linear+Mipmaps,Linear+Mipmaps Anisotropic (Slow)"));
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/light_projectors/filter", PropertyInfo(Variant::INT, "rendering/textures/light_projectors/filter", PROPERTY_HINT_ENUM, "Nearest (Fast),Linear (Fast),Nearest Mipmap (Fast),Linear Mipmap (Fast),Nearest Mipmap Anisotropic (Average),Linear Mipmap Anisotropic (Average)"));
 
 	GLOBAL_DEF_RST("rendering/occlusion_culling/occlusion_rays_per_thread", 512);
 	GLOBAL_DEF_RST("rendering/occlusion_culling/bvh_build_quality", 2);

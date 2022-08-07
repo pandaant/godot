@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  emws_server.h                                                        */
+/*  core_globals.cpp                                                     */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,37 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef EMWS_SERVER_H
-#define EMWS_SERVER_H
+#include "core_globals.h"
 
-#ifdef JAVASCRIPT_ENABLED
-
-#include "core/object/ref_counted.h"
-#include "emws_peer.h"
-#include "websocket_server.h"
-
-class EMWSServer : public WebSocketServer {
-	GDCIIMPL(EMWSServer, WebSocketServer);
-
-public:
-	Error set_buffers(int p_in_buffer, int p_in_packets, int p_out_buffer, int p_out_packets) override;
-	void set_extra_headers(const Vector<String> &p_headers) override;
-	Error listen(int p_port, Vector<String> p_protocols = Vector<String>(), bool gd_mp_api = false) override;
-	void stop() override;
-	bool is_listening() const override;
-	bool has_peer(int p_id) const override;
-	Ref<WebSocketPeer> get_peer(int p_id) const override;
-	IPAddress get_peer_address(int p_peer_id) const override;
-	int get_peer_port(int p_peer_id) const override;
-	void disconnect_peer(int p_peer_id, int p_code = 1000, String p_reason = "") override;
-	int get_max_packet_size() const override;
-	virtual void poll() override;
-	virtual Vector<String> get_protocols() const;
-
-	EMWSServer();
-	~EMWSServer();
-};
-
-#endif
-
-#endif // EMWS_SERVER_H
+bool CoreGlobals::leak_reporting_enabled = true;
+bool CoreGlobals::print_line_enabled = true;
+bool CoreGlobals::print_error_enabled = true;

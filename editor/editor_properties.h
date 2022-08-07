@@ -142,6 +142,8 @@ class EditorPropertyPath : public EditorProperty {
 	void _path_selected(const String &p_path);
 	void _path_pressed();
 	void _path_focus_exited();
+	void _drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+	bool _can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 
 protected:
 	virtual void _set_read_only(bool p_read_only) override;
@@ -443,6 +445,7 @@ class EditorPropertyEasing : public EditorProperty {
 	bool dragging = false;
 	bool full = false;
 	bool flip = false;
+	bool positive_only = false;
 
 	enum {
 		EASING_ZERO,
@@ -471,7 +474,7 @@ protected:
 
 public:
 	virtual void update_property() override;
-	void setup(bool p_full, bool p_flip);
+	void setup(bool p_positive_only, bool p_flip);
 	EditorPropertyEasing();
 };
 

@@ -53,6 +53,7 @@
 #include "scene/gui/flow_container.h"
 #include "scene/gui/grid_container.h"
 #include "scene/gui/nine_patch_rect.h"
+#include "scene/gui/separator.h"
 #include "scene/gui/subviewport_container.h"
 #include "scene/gui/view_panner.h"
 #include "scene/main/canvas_layer.h"
@@ -4236,13 +4237,13 @@ void CanvasItemEditor::_insert_animation_keys(bool p_location, bool p_rotation, 
 			Control *ctrl = Object::cast_to<Control>(canvas_item);
 
 			if (key_pos) {
-				te->insert_node_value_key(ctrl, "rect_position", ctrl->get_position(), p_on_existing);
+				te->insert_node_value_key(ctrl, "position", ctrl->get_position(), p_on_existing);
 			}
 			if (key_rot) {
-				te->insert_node_value_key(ctrl, "rect_rotation", ctrl->get_rotation(), p_on_existing);
+				te->insert_node_value_key(ctrl, "rotation", ctrl->get_rotation(), p_on_existing);
 			}
 			if (key_scale) {
-				te->insert_node_value_key(ctrl, "rect_size", ctrl->get_size(), p_on_existing);
+				te->insert_node_value_key(ctrl, "size", ctrl->get_size(), p_on_existing);
 			}
 		}
 	}
@@ -5215,7 +5216,7 @@ CanvasItemEditor::CanvasItemEditor() {
 	group_button->set_flat(true);
 	main_menu_hbox->add_child(group_button);
 	group_button->connect("pressed", callable_mp(this, &CanvasItemEditor::_popup_callback).bind(GROUP_SELECTED));
-	group_button->set_tooltip(TTR("Makes sure the object's children are not selectable."));
+	group_button->set_tooltip(TTR("Make selected node's children not selectable."));
 	// Define the shortcut globally (without a context) so that it works if the Scene tree dock is currently focused.
 	group_button->set_shortcut(ED_SHORTCUT("editor/group_selected_nodes", TTR("Group Selected Node(s)"), KeyModifierMask::CMD | Key::G));
 
@@ -5223,7 +5224,7 @@ CanvasItemEditor::CanvasItemEditor() {
 	ungroup_button->set_flat(true);
 	main_menu_hbox->add_child(ungroup_button);
 	ungroup_button->connect("pressed", callable_mp(this, &CanvasItemEditor::_popup_callback).bind(UNGROUP_SELECTED));
-	ungroup_button->set_tooltip(TTR("Restores the object's children's ability to be selected."));
+	ungroup_button->set_tooltip(TTR("Make selected node's children selectable."));
 	// Define the shortcut globally (without a context) so that it works if the Scene tree dock is currently focused.
 	ungroup_button->set_shortcut(ED_SHORTCUT("editor/ungroup_selected_nodes", TTR("Ungroup Selected Node(s)"), KeyModifierMask::CMD | KeyModifierMask::SHIFT | Key::G));
 

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  emws_server.cpp                                                      */
+/*  test_transform_2d.h                                                  */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,65 +28,61 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifdef JAVASCRIPT_ENABLED
+#ifndef TEST_TRANSFORM_2D_H
+#define TEST_TRANSFORM_2D_H
 
-#include "emws_server.h"
-#include "core/os/os.h"
+#include "core/math/transform_2d.h"
 
-void EMWSServer::set_extra_headers(const Vector<String> &p_headers) {
+#include "tests/test_macros.h"
+
+namespace TestTransform2D {
+
+Transform2D create_dummy_transform() {
+	return Transform2D(Vector2(1, 2), Vector2(3, 4), Vector2(5, 6));
 }
 
-Error EMWSServer::listen(int p_port, Vector<String> p_protocols, bool gd_mp_api) {
-	return FAILED;
+Transform2D identity() {
+	return Transform2D();
 }
 
-bool EMWSServer::is_listening() const {
-	return false;
+TEST_CASE("[Transform2D] translation") {
+	Vector2 offset = Vector2(1, 2);
+
+	// Both versions should give the same result applied to identity.
+	CHECK(identity().translated(offset) == identity().translated_local(offset));
+
+	// Check both versions against left and right multiplications.
+	Transform2D orig = create_dummy_transform();
+	Transform2D T = identity().translated(offset);
+	CHECK(orig.translated(offset) == T * orig);
+	CHECK(orig.translated_local(offset) == orig * T);
 }
 
-void EMWSServer::stop() {
+TEST_CASE("[Transform2D] scaling") {
+	Vector2 scaling = Vector2(1, 2);
+
+	// Both versions should give the same result applied to identity.
+	CHECK(identity().scaled(scaling) == identity().scaled_local(scaling));
+
+	// Check both versions against left and right multiplications.
+	Transform2D orig = create_dummy_transform();
+	Transform2D S = identity().scaled(scaling);
+	CHECK(orig.scaled(scaling) == S * orig);
+	CHECK(orig.scaled_local(scaling) == orig * S);
 }
 
-bool EMWSServer::has_peer(int p_id) const {
-	return false;
+TEST_CASE("[Transform2D] rotation") {
+	real_t phi = 1.0;
+
+	// Both versions should give the same result applied to identity.
+	CHECK(identity().rotated(phi) == identity().rotated_local(phi));
+
+	// Check both versions against left and right multiplications.
+	Transform2D orig = create_dummy_transform();
+	Transform2D R = identity().rotated(phi);
+	CHECK(orig.rotated(phi) == R * orig);
+	CHECK(orig.rotated_local(phi) == orig * R);
 }
+} // namespace TestTransform2D
 
-Ref<WebSocketPeer> EMWSServer::get_peer(int p_id) const {
-	return nullptr;
-}
-
-Vector<String> EMWSServer::get_protocols() const {
-	Vector<String> out;
-
-	return out;
-}
-
-IPAddress EMWSServer::get_peer_address(int p_peer_id) const {
-	return IPAddress();
-}
-
-int EMWSServer::get_peer_port(int p_peer_id) const {
-	return 0;
-}
-
-void EMWSServer::disconnect_peer(int p_peer_id, int p_code, String p_reason) {
-}
-
-void EMWSServer::poll() {
-}
-
-int EMWSServer::get_max_packet_size() const {
-	return 0;
-}
-
-Error EMWSServer::set_buffers(int p_in_buffer, int p_in_packets, int p_out_buffer, int p_out_packets) {
-	return OK;
-}
-
-EMWSServer::EMWSServer() {
-}
-
-EMWSServer::~EMWSServer() {
-}
-
-#endif // JAVASCRIPT_ENABLED
+#endif // TEST_TRANSFORM_2D_H

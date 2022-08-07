@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  ray_cast_2d_editor_plugin.h                                          */
+/*  test_rid.h                                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,52 +28,74 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef RAY_CAST_2D_EDITOR_PLUGIN_H
-#define RAY_CAST_2D_EDITOR_PLUGIN_H
+#ifndef TEST_RID_H
+#define TEST_RID_H
 
-#include "editor/editor_plugin.h"
-#include "scene/2d/ray_cast_2d.h"
+#include "core/templates/rid.h"
 
-class CanvasItemEditor;
+#include "tests/test_macros.h"
 
-class RayCast2DEditor : public Control {
-	GDCLASS(RayCast2DEditor, Control);
+namespace TestRID {
+TEST_CASE("[RID] Default Constructor") {
+	RID rid;
 
-	UndoRedo *undo_redo = nullptr;
-	CanvasItemEditor *canvas_item_editor = nullptr;
-	RayCast2D *node;
+	CHECK(rid.get_id() == 0);
+}
 
-	bool pressed = false;
-	Point2 original_target_position;
+TEST_CASE("[RID] Factory method") {
+	RID rid = RID::from_uint64(1);
 
-protected:
-	void _notification(int p_what);
-	void _node_removed(Node *p_node);
+	CHECK(rid.get_id() == 1);
+}
 
-public:
-	bool forward_canvas_gui_input(const Ref<InputEvent> &p_event);
-	void forward_canvas_draw_over_viewport(Control *p_overlay);
-	void edit(Node *p_node);
+TEST_CASE("[RID] Operators") {
+	RID rid = RID::from_uint64(1);
 
-	RayCast2DEditor();
-};
+	RID rid_zero = RID::from_uint64(0);
+	RID rid_one = RID::from_uint64(1);
+	RID rid_two = RID::from_uint64(2);
 
-class RayCast2DEditorPlugin : public EditorPlugin {
-	GDCLASS(RayCast2DEditorPlugin, EditorPlugin);
+	CHECK_FALSE(rid == rid_zero);
+	CHECK(rid == rid_one);
+	CHECK_FALSE(rid == rid_two);
 
-	RayCast2DEditor *ray_cast_2d_editor = nullptr;
+	CHECK_FALSE(rid < rid_zero);
+	CHECK_FALSE(rid < rid_one);
+	CHECK(rid < rid_two);
 
-public:
-	virtual bool forward_canvas_gui_input(const Ref<InputEvent> &p_event) override { return ray_cast_2d_editor->forward_canvas_gui_input(p_event); }
-	virtual void forward_canvas_draw_over_viewport(Control *p_overlay) override { ray_cast_2d_editor->forward_canvas_draw_over_viewport(p_overlay); }
+	CHECK_FALSE(rid <= rid_zero);
+	CHECK(rid <= rid_one);
+	CHECK(rid <= rid_two);
 
-	virtual String get_name() const override { return "RayCast2D"; }
-	bool has_main_screen() const override { return false; }
-	virtual void edit(Object *p_object) override;
-	virtual bool handles(Object *p_object) const override;
-	virtual void make_visible(bool visible) override;
+	CHECK(rid > rid_zero);
+	CHECK_FALSE(rid > rid_one);
+	CHECK_FALSE(rid > rid_two);
 
-	RayCast2DEditorPlugin();
-};
+	CHECK(rid >= rid_zero);
+	CHECK(rid >= rid_one);
+	CHECK_FALSE(rid >= rid_two);
 
-#endif // RAY_CAST_2D_EDITOR_PLUGIN_H
+	CHECK(rid != rid_zero);
+	CHECK_FALSE(rid != rid_one);
+	CHECK(rid != rid_two);
+}
+
+TEST_CASE("[RID] 'is_valid' & 'is_null'") {
+	RID rid_zero = RID::from_uint64(0);
+	RID rid_one = RID::from_uint64(1);
+
+	CHECK_FALSE(rid_zero.is_valid());
+	CHECK(rid_zero.is_null());
+
+	CHECK(rid_one.is_valid());
+	CHECK_FALSE(rid_one.is_null());
+}
+
+TEST_CASE("[RID] 'get_local_index'") {
+	CHECK(RID::from_uint64(1).get_local_index() == 1);
+	CHECK(RID::from_uint64(4'294'967'295).get_local_index() == 4'294'967'295);
+	CHECK(RID::from_uint64(4'294'967'297).get_local_index() == 1);
+}
+} // namespace TestRID
+
+#endif // TEST_RID_H
