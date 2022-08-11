@@ -1613,12 +1613,11 @@ void EditorInspectorArray::_rmb_popup_id_pressed(int p_id) {
 			_clear_array();
 			break;
 		case OPTION_RESIZE_ARRAY:
-			new_size = count;
-			new_size_line_edit->set_text(Variant(new_size));
+			new_size_spin_box->set_value(count);
 			resize_dialog->get_ok_button()->set_disabled(true);
-			resize_dialog->popup_centered();
-			new_size_line_edit->grab_focus();
-			new_size_line_edit->select_all();
+			resize_dialog->popup_centered(Size2i(250, 0) * EDSCALE);
+			new_size_spin_box->get_line_edit()->grab_focus();
+			new_size_spin_box->get_line_edit()->select_all();
 			break;
 		default:
 			break;
@@ -2013,36 +2012,21 @@ int EditorInspectorArray::_drop_position() const {
 	return -1;
 }
 
-void EditorInspectorArray::_new_size_line_edit_text_changed(String p_text) {
-	bool valid = false;
-	if (p_text.is_valid_int()) {
-		int val = p_text.to_int();
-		if (val > 0 && val != count) {
-			valid = true;
-		}
-	}
-	resize_dialog->get_ok_button()->set_disabled(!valid);
-}
-
-void EditorInspectorArray::_new_size_line_edit_text_submitted(String p_text) {
-	bool valid = false;
-	if (p_text.is_valid_int()) {
-		int val = p_text.to_int();
-		if (val > 0 && val != count) {
-			new_size = val;
-			valid = true;
-		}
-	}
-	if (valid) {
-		resize_dialog->hide();
-		_resize_array(new_size);
-	} else {
-		new_size_line_edit->set_text(Variant(new_size));
-	}
-}
-
 void EditorInspectorArray::_resize_dialog_confirmed() {
-	_new_size_line_edit_text_submitted(new_size_line_edit->get_text());
+	if (int(new_size_spin_box->get_value()) == count) {
+		return;
+	}
+
+	resize_dialog->hide();
+	_resize_array(int(new_size_spin_box->get_value()));
+}
+
+void EditorInspectorArray::_new_size_spin_box_value_changed(float p_value) {
+	resize_dialog->get_ok_button()->set_disabled(int(p_value) == count);
+}
+
+void EditorInspectorArray::_new_size_spin_box_text_submitted(String p_text) {
+	_resize_dialog_confirmed();
 }
 
 void EditorInspectorArray::_setup() {
@@ -2342,10 +2326,11 @@ EditorInspectorArray::EditorInspectorArray() {
 	VBoxContainer *resize_dialog_vbox = memnew(VBoxContainer);
 	resize_dialog->add_child(resize_dialog_vbox);
 
-	new_size_line_edit = memnew(LineEdit);
-	new_size_line_edit->connect("text_changed", callable_mp(this, &EditorInspectorArray::_new_size_line_edit_text_changed));
-	new_size_line_edit->connect("text_submitted", callable_mp(this, &EditorInspectorArray::_new_size_line_edit_text_submitted));
-	resize_dialog_vbox->add_margin_child(TTRC("New Size:"), new_size_line_edit);
+	new_size_spin_box = memnew(SpinBox);
+	new_size_spin_box->set_max(16384);
+	new_size_spin_box->connect("value_changed", callable_mp(this, &EditorInspectorArray::_new_size_spin_box_value_changed));
+	new_size_spin_box->get_line_edit()->connect("text_submitted", callable_mp(this, &EditorInspectorArray::_new_size_spin_box_text_submitted));
+	resize_dialog_vbox->add_margin_child(TTRC("New Size:"), new_size_spin_box);
 
 	vbox->connect("visibility_changed", callable_mp(this, &EditorInspectorArray::_vbox_visibility_changed));
 }
@@ -2677,7 +2662,7 @@ void EditorInspector::update_tree() {
 		_parse_added_editors(main_vbox, nullptr, ped);
 	}
 
-	StringName type_name;
+	StringName doc_name;
 
 	// Get the lists of editors for properties.
 	for (List<PropertyInfo>::Element *E_property = plist.front(); E_property; E_property = E_property->next()) {
@@ -2750,7 +2735,7 @@ void EditorInspector::update_tree() {
 
 			String type = p.name;
 			String label = p.name;
-			type_name = p.name;
+			doc_name = p.name;
 
 			// Set the category icon.
 			if (!ClassDB::class_exists(type) && !ScriptServer::is_global_class(type) && p.hint_string.length() && FileAccess::exists(p.hint_string)) {
@@ -2761,6 +2746,10 @@ void EditorInspector::update_tree() {
 				if (script.is_valid()) {
 					base_type = script->get_instance_base_type();
 					name = EditorNode::get_editor_data().script_class_get_name(script->get_path());
+					Vector<DocData::ClassDoc> docs = script->get_documentation();
+					if (!docs.is_empty()) {
+						doc_name = docs[0].name;
+					}
 					if (name != StringName() && label != name) {
 						label = name;
 					}
@@ -2789,17 +2778,17 @@ void EditorInspector::update_tree() {
 
 			if (use_doc_hints) {
 				// Sets the category tooltip to show documentation.
-				if (!class_descr_cache.has(type_name)) {
+				if (!class_descr_cache.has(doc_name)) {
 					String descr;
 					DocTools *dd = EditorHelp::get_doc_data();
-					HashMap<String, DocData::ClassDoc>::Iterator E = dd->class_list.find(type_name);
+					HashMap<String, DocData::ClassDoc>::Iterator E = dd->class_list.find(doc_name);
 					if (E) {
 						descr = DTR(E->value.brief_description);
 					}
-					class_descr_cache[type_name] = descr;
+					class_descr_cache[doc_name] = descr;
 				}
 
-				category->set_tooltip(p.name + "::" + (class_descr_cache[type_name].is_empty() ? "" : class_descr_cache[type_name]));
+				category->set_tooltip(p.name + "::" + (class_descr_cache[doc_name].is_empty() ? "" : class_descr_cache[doc_name]));
 			}
 
 			// Add editors at the start of a category.
@@ -3097,7 +3086,7 @@ void EditorInspector::update_tree() {
 			// Build the doc hint, to use as tooltip.
 
 			// Get the class name.
-			StringName classname = type_name == "" ? object->get_class_name() : type_name;
+			StringName classname = doc_name == "" ? object->get_class_name() : doc_name;
 			if (!object_class.is_empty()) {
 				classname = object_class;
 			}

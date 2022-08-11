@@ -2459,8 +2459,7 @@ void RendererSceneRenderRD::render_buffers_configure(RID p_render_buffers, RID p
 		p_internal_width = p_width;
 	}
 
-	const float texture_mipmap_bias = -log2f(p_width / p_internal_width) + p_texture_mipmap_bias;
-	material_storage->sampler_rd_configure_custom(texture_mipmap_bias);
+	material_storage->sampler_rd_configure_custom(p_texture_mipmap_bias);
 	update_uniform_sets();
 
 	RenderBuffers *rb = render_buffers_owner.get_or_null(p_render_buffers);
@@ -4086,19 +4085,8 @@ bool RendererSceneRenderRD::free(RID p_rid) {
 		decal_instance_owner.free(p_rid);
 	} else if (lightmap_instance_owner.owns(p_rid)) {
 		lightmap_instance_owner.free(p_rid);
-	} else if (gi.voxel_gi_instance_owner.owns(p_rid)) {
-		RendererRD::GI::VoxelGIInstance *voxel_gi = gi.voxel_gi_instance_owner.get_or_null(p_rid);
-		if (voxel_gi->texture.is_valid()) {
-			RD::get_singleton()->free(voxel_gi->texture);
-			RD::get_singleton()->free(voxel_gi->write_buffer);
-		}
-
-		for (int i = 0; i < voxel_gi->dynamic_maps.size(); i++) {
-			RD::get_singleton()->free(voxel_gi->dynamic_maps[i].texture);
-			RD::get_singleton()->free(voxel_gi->dynamic_maps[i].depth);
-		}
-
-		gi.voxel_gi_instance_owner.free(p_rid);
+	} else if (gi.voxel_gi_instance_owns(p_rid)) {
+		gi.voxel_gi_instance_free(p_rid);
 	} else if (sky.sky_owner.owns(p_rid)) {
 		sky.update_dirty_skys();
 		sky.free_sky(p_rid);

@@ -74,6 +74,9 @@ void OptionButton::_notification(int p_what) {
 					case DRAW_HOVER:
 						clr = get_theme_color(SNAME("font_hover_color"));
 						break;
+					case DRAW_HOVER_PRESSED:
+						clr = get_theme_color(SNAME("font_hover_pressed_color"));
+						break;
 					case DRAW_DISABLED:
 						clr = get_theme_color(SNAME("font_disabled_color"));
 						break;
@@ -498,7 +501,7 @@ void OptionButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_selected_id"), &OptionButton::get_selected_id);
 	ClassDB::bind_method(D_METHOD("get_selected_metadata"), &OptionButton::get_selected_metadata);
 	ClassDB::bind_method(D_METHOD("remove_item", "idx"), &OptionButton::remove_item);
-	ClassDB::bind_method(D_METHOD("_select_int"), &OptionButton::_select_int);
+	ClassDB::bind_method(D_METHOD("_select_int", "idx"), &OptionButton::_select_int);
 
 	ClassDB::bind_method(D_METHOD("get_popup"), &OptionButton::get_popup);
 
