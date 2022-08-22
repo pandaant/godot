@@ -161,7 +161,7 @@ static DisplayServer::WindowMode window_mode = DisplayServer::WINDOW_MODE_WINDOW
 static DisplayServer::ScreenOrientation window_orientation = DisplayServer::SCREEN_LANDSCAPE;
 static DisplayServer::VSyncMode window_vsync_mode = DisplayServer::VSYNC_ENABLED;
 static uint32_t window_flags = 0;
-static Size2i window_size = Size2i(1024, 600);
+static Size2i window_size = Size2i(1152, 648);
 
 static int init_screen = -1;
 static bool init_fullscreen = false;
@@ -1997,10 +1997,16 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	GLOBAL_DEF_RST("internationalization/rendering/text_driver", "");
 	String text_driver_options;
 	for (int i = 0; i < TextServerManager::get_singleton()->get_interface_count(); i++) {
-		if (i > 0) {
+		const String driver_name = TextServerManager::get_singleton()->get_interface(i)->get_name();
+		if (driver_name == "Dummy") {
+			// Dummy text driver cannot draw any text, making the editor unusable if selected.
+			continue;
+		}
+		if (!text_driver_options.is_empty() && text_driver_options.find(",") == -1) {
+			// Not the first option; add a comma before it as a separator for the property hint.
 			text_driver_options += ",";
 		}
-		text_driver_options += TextServerManager::get_singleton()->get_interface(i)->get_name();
+		text_driver_options += driver_name;
 	}
 	ProjectSettings::get_singleton()->set_custom_property_info("internationalization/rendering/text_driver", PropertyInfo(Variant::STRING, "internationalization/rendering/text_driver", PROPERTY_HINT_ENUM, text_driver_options));
 
@@ -2248,18 +2254,6 @@ bool Main::start() {
 			Ref<DirAccess> da = DirAccess::open(doc_tool_path);
 			ERR_FAIL_COND_V_MSG(da.is_null(), false, "Argument supplied to --doctool must be a valid directory path.");
 		}
-
-#ifndef MODULE_MONO_ENABLED
-		// Hack to define Mono-specific project settings even on non-Mono builds,
-		// so that we don't lose their descriptions and default values in DocData.
-		// Default values should be synced with mono_gd/gd_mono.cpp.
-		GLOBAL_DEF("mono/debugger_agent/port", 23685);
-		GLOBAL_DEF("mono/debugger_agent/wait_for_debugger", false);
-		GLOBAL_DEF("mono/debugger_agent/wait_timeout", 3000);
-		GLOBAL_DEF("mono/profiler/args", "log:calls,alloc,sample,output=output.mlpd");
-		GLOBAL_DEF("mono/profiler/enabled", false);
-		GLOBAL_DEF("mono/runtime/unhandled_exception_policy", 0);
-#endif
 
 		Error err;
 		DocTools doc;

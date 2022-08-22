@@ -788,6 +788,25 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	editor_log_button_pressed->set_border_color(accent_color);
 	theme->set_stylebox("pressed", "EditorLogFilterButton", editor_log_button_pressed);
 
+	// MenuBar
+	theme->set_stylebox("normal", "MenuBar", style_widget);
+	theme->set_stylebox("hover", "MenuBar", style_widget_hover);
+	theme->set_stylebox("pressed", "MenuBar", style_widget_pressed);
+	theme->set_stylebox("focus", "MenuBar", style_widget_focus);
+	theme->set_stylebox("disabled", "MenuBar", style_widget_disabled);
+
+	theme->set_color("font_color", "MenuBar", font_color);
+	theme->set_color("font_hover_color", "MenuBar", font_hover_color);
+	theme->set_color("font_focus_color", "MenuBar", font_focus_color);
+	theme->set_color("font_pressed_color", "MenuBar", accent_color);
+	theme->set_color("font_disabled_color", "MenuBar", font_disabled_color);
+
+	theme->set_color("icon_normal_color", "MenuBar", icon_normal_color);
+	theme->set_color("icon_hover_color", "MenuBar", icon_hover_color);
+	theme->set_color("icon_focus_color", "MenuBar", icon_focus_color);
+	theme->set_color("icon_pressed_color", "MenuBar", icon_pressed_color);
+	theme->set_color("icon_disabled_color", "MenuBar", icon_disabled_color);
+
 	// OptionButton
 	Ref<StyleBoxFlat> style_option_button_focus = style_widget_focus->duplicate();
 	Ref<StyleBoxFlat> style_option_button_normal = style_widget->duplicate();
@@ -912,6 +931,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	// Always display a border for PopupMenus so they can be distinguished from their background.
 	style_popup_menu->set_border_width_all(EDSCALE);
 	style_popup_menu->set_border_color(dark_color_2);
+	// Popups are separate windows by default in the editor. Windows currently don't support per-pixel transparency
+	// in 4.0, and even if it was, it may not always work in practice (e.g. running with compositing disabled).
+	style_popup_menu->set_corner_radius_all(0);
 	theme->set_stylebox("panel", "PopupMenu", style_popup_menu);
 
 	Ref<StyleBoxFlat> style_menu_hover = style_widget_hover->duplicate();
@@ -1459,6 +1481,17 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// PopupPanel
 	theme->set_stylebox("panel", "PopupPanel", style_popup);
+
+	Ref<StyleBoxFlat> control_editor_popup_style = style_popup->duplicate();
+	control_editor_popup_style->set_shadow_size(0);
+	control_editor_popup_style->set_default_margin(SIDE_LEFT, default_margin_size * EDSCALE);
+	control_editor_popup_style->set_default_margin(SIDE_TOP, default_margin_size * EDSCALE);
+	control_editor_popup_style->set_default_margin(SIDE_RIGHT, default_margin_size * EDSCALE);
+	control_editor_popup_style->set_default_margin(SIDE_BOTTOM, default_margin_size * EDSCALE);
+	control_editor_popup_style->set_border_width_all(0);
+
+	theme->set_stylebox("panel", "ControlEditorPopupButton", control_editor_popup_style);
+	theme->set_type_variation("ControlEditorPopupButton", "PopupPanel");
 
 	// SpinBox
 	theme->set_icon("updown", "SpinBox", theme->get_icon(SNAME("GuiSpinboxUpdown"), SNAME("EditorIcons")));

@@ -78,6 +78,7 @@ class FileSystemDock;
 class HSplitContainer;
 class ImportDock;
 class LinkButton;
+class MenuBar;
 class MenuButton;
 class NodeDock;
 class OrphanResourcesDialog;
@@ -141,6 +142,7 @@ private:
 		FILE_SAVE_AS_SCENE,
 		FILE_SAVE_ALL_SCENES,
 		FILE_SAVE_AND_RUN,
+		FILE_SAVE_AND_RUN_MAIN_SCENE,
 		FILE_SHOW_IN_FILESYSTEM,
 		FILE_EXPORT_PROJECT,
 		FILE_EXPORT_MESH_LIBRARY,
@@ -321,11 +323,12 @@ private:
 
 	HBoxContainer *menu_hb = nullptr;
 	Control *main_control = nullptr;
-	MenuButton *file_menu = nullptr;
-	MenuButton *project_menu = nullptr;
-	MenuButton *debug_menu = nullptr;
-	MenuButton *settings_menu = nullptr;
-	MenuButton *help_menu = nullptr;
+	MenuBar *main_menu = nullptr;
+	PopupMenu *file_menu = nullptr;
+	PopupMenu *project_menu = nullptr;
+	PopupMenu *debug_menu = nullptr;
+	PopupMenu *settings_menu = nullptr;
+	PopupMenu *help_menu = nullptr;
 	PopupMenu *tool_menu = nullptr;
 	PopupMenu *export_as_menu = nullptr;
 	Button *export_button = nullptr;
