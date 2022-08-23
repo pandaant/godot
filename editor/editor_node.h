@@ -72,6 +72,7 @@ class EditorRun;
 class EditorRunNative;
 class EditorSettingsDialog;
 class EditorToaster;
+class EditorUndoRedoManager;
 class ExportTemplateManager;
 class FileDialog;
 class FileSystemDock;
@@ -471,9 +472,6 @@ private:
 	String open_navigate;
 	String run_custom_filename;
 
-	uint64_t saved_version = 1;
-	uint64_t last_checked_version = 0;
-
 	DynamicFontImportSettings *fontdata_import_settings = nullptr;
 	SceneImportSettings *scene_import_settings = nullptr;
 	AudioStreamImportSettings *audio_stream_import_settings = nullptr;
@@ -682,6 +680,10 @@ private:
 	void _bottom_panel_switch(bool p_enable, int p_idx);
 	void _bottom_panel_raise_toggled(bool);
 
+	void _begin_first_scan();
+	bool use_startup_benchmark = false;
+	String startup_benchmark_file;
+
 protected:
 	friend class FileSystemDock;
 
@@ -705,7 +707,7 @@ public:
 	static EditorLog *get_log() { return singleton->log; }
 	static EditorData &get_editor_data() { return singleton->editor_data; }
 	static EditorFolding &get_editor_folding() { return singleton->editor_folding; }
-	static UndoRedo *get_undo_redo() { return &singleton->editor_data.get_undo_redo(); }
+	static Ref<EditorUndoRedoManager> &get_undo_redo();
 
 	static HBoxContainer *get_menu_hb() { return singleton->menu_hb; }
 	static VSplitContainer *get_top_split() { return singleton->top_split; }
@@ -789,7 +791,6 @@ public:
 
 	bool is_scene_open(const String &p_path);
 
-	void set_current_version(uint64_t p_version);
 	void set_current_scene(int p_idx);
 
 	void setup_color_picker(ColorPicker *picker);
@@ -816,6 +817,7 @@ public:
 
 	void _copy_warning(const String &p_str);
 
+	void set_use_startup_benchmark(bool p_use_startup_benchmark, const String &p_startup_benchmark_file);
 	Error export_preset(const String &p_preset, const String &p_path, bool p_debug, bool p_pack_only);
 
 	Control *get_gui_base() { return gui_base; }

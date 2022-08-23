@@ -38,6 +38,7 @@
 
 class GraphEdit;
 
+class EditorUndoRedoManager;
 class VisualScriptEditorSignalEdit;
 class VisualScriptEditorVariableEdit;
 
@@ -135,8 +136,7 @@ class VisualScriptEditor : public ScriptEditorBase {
 	EditorProperty *default_property_editor = nullptr;
 	Ref<VisualScriptEditedProperty> edited_default_property_holder;
 
-	UndoRedo *undo_redo = nullptr;
-
+	Ref<EditorUndoRedoManager> undo_redo;
 	Tree *members = nullptr;
 	AcceptDialog *function_name_edit = nullptr;
 	LineEdit *function_name_box = nullptr;
@@ -341,7 +341,7 @@ public:
 	virtual void ensure_focus() override;
 	virtual void tag_saved_version() override;
 	virtual void reload(bool p_soft) override;
-	virtual Array get_breakpoints() override;
+	virtual PackedInt32Array get_breakpoints() override;
 	virtual void set_breakpoint(int p_line, bool p_enable) override{};
 	virtual void clear_breakpoints() override{};
 	virtual void add_callback(const String &p_function, PackedStringArray p_args) override;

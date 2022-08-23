@@ -43,6 +43,7 @@
 #include "editor/editor_resource_preview.h"
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "scene/gui/check_button.h"
 #include "scene/gui/graph_edit.h"
 #include "scene/gui/separator.h"
@@ -74,7 +75,7 @@ class VisualScriptEditorSignalEdit : public Object {
 	StringName sig;
 
 public:
-	UndoRedo *undo_redo;
+	Ref<EditorUndoRedoManager> undo_redo;
 	Ref<VisualScript> script;
 
 protected:
@@ -197,8 +198,6 @@ public:
 		sig = p_sig;
 		notify_property_list_changed();
 	}
-
-	VisualScriptEditorSignalEdit() { undo_redo = nullptr; }
 };
 
 class VisualScriptEditorVariableEdit : public Object {
@@ -207,7 +206,7 @@ class VisualScriptEditorVariableEdit : public Object {
 	StringName var;
 
 public:
-	UndoRedo *undo_redo;
+	Ref<EditorUndoRedoManager> undo_redo;
 	Ref<VisualScript> script;
 
 protected:
@@ -355,8 +354,6 @@ public:
 		var = p_var;
 		notify_property_list_changed();
 	}
-
-	VisualScriptEditorVariableEdit() { undo_redo = nullptr; }
 };
 
 static Color _color_from_type(Variant::Type p_type, bool dark_theme = true) {
@@ -2853,8 +2850,8 @@ void VisualScriptEditor::reload(bool p_soft) {
 	_update_graph();
 }
 
-Array VisualScriptEditor::get_breakpoints() {
-	Array breakpoints;
+PackedInt32Array VisualScriptEditor::get_breakpoints() {
+	PackedInt32Array breakpoints;
 	List<StringName> functions;
 	script->get_function_list(&functions);
 	for (int i = 0; i < functions.size(); i++) {
@@ -2936,7 +2933,7 @@ Control *VisualScriptEditor::get_edit_menu() {
 }
 
 void VisualScriptEditor::_change_base_type() {
-	select_base_type->popup_create(true, true);
+	select_base_type->popup_create(true, true, script->get_instance_base_type());
 }
 
 void VisualScriptEditor::_toggle_tool_script() {

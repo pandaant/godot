@@ -422,9 +422,9 @@ void Control::_get_property_list(List<PropertyInfo> *p_list) const {
 	}
 }
 
-void Control::_validate_property(PropertyInfo &property) const {
+void Control::_validate_property(PropertyInfo &p_property) const {
 	// Update theme type variation options.
-	if (property.name == "theme_type_variation") {
+	if (p_property.name == "theme_type_variation") {
 		List<StringName> names;
 
 		// Only the default theme and the project theme are used for the list of options.
@@ -447,18 +447,18 @@ void Control::_validate_property(PropertyInfo &property) const {
 			unique_names.append(E);
 		}
 
-		property.hint_string = hint_string;
+		p_property.hint_string = hint_string;
 	}
 
-	if (property.name == "mouse_force_pass_scroll_events") {
+	if (p_property.name == "mouse_force_pass_scroll_events") {
 		// Disable force pass if the control is not stopping the event.
 		if (data.mouse_filter != MOUSE_FILTER_STOP) {
-			property.usage |= PROPERTY_USAGE_READ_ONLY;
+			p_property.usage |= PROPERTY_USAGE_READ_ONLY;
 		}
 	}
 
-	if (property.name == "scale") {
-		property.hint = PROPERTY_HINT_LINK;
+	if (p_property.name == "scale") {
+		p_property.hint = PROPERTY_HINT_LINK;
 	}
 
 	// Validate which positioning properties should be displayed depending on the parent and the layout mode.
@@ -467,33 +467,33 @@ void Control::_validate_property(PropertyInfo &property) const {
 		// If there is no parent, display both anchor and container options.
 
 		// Set the layout mode to be disabled with the proper value.
-		if (property.name == "layout_mode") {
-			property.hint_string = "Position,Anchors,Container,Uncontrolled";
-			property.usage |= PROPERTY_USAGE_READ_ONLY;
+		if (p_property.name == "layout_mode") {
+			p_property.hint_string = "Position,Anchors,Container,Uncontrolled";
+			p_property.usage |= PROPERTY_USAGE_READ_ONLY;
 		}
 
 		// Use the layout mode to display or hide advanced anchoring properties.
 		bool use_custom_anchors = _get_anchors_layout_preset() == -1; // Custom "preset".
-		if (!use_custom_anchors && (property.name.begins_with("anchor_") || property.name.begins_with("offset_") || property.name.begins_with("grow_"))) {
-			property.usage ^= PROPERTY_USAGE_EDITOR;
+		if (!use_custom_anchors && (p_property.name.begins_with("anchor_") || p_property.name.begins_with("offset_") || p_property.name.begins_with("grow_"))) {
+			p_property.usage ^= PROPERTY_USAGE_EDITOR;
 		}
 	} else if (Object::cast_to<Container>(parent_node)) {
 		// If the parent is a container, display only container-related properties.
-		if (property.name.begins_with("anchor_") || property.name.begins_with("offset_") || property.name.begins_with("grow_") || property.name == "anchors_preset" ||
-				property.name == "position" || property.name == "rotation" || property.name == "scale" || property.name == "size" || property.name == "pivot_offset") {
-			property.usage ^= PROPERTY_USAGE_EDITOR;
+		if (p_property.name.begins_with("anchor_") || p_property.name.begins_with("offset_") || p_property.name.begins_with("grow_") || p_property.name == "anchors_preset" ||
+				p_property.name == "position" || p_property.name == "rotation" || p_property.name == "scale" || p_property.name == "size" || p_property.name == "pivot_offset") {
+			p_property.usage ^= PROPERTY_USAGE_EDITOR;
 
-		} else if (property.name == "layout_mode") {
+		} else if (p_property.name == "layout_mode") {
 			// Set the layout mode to be disabled with the proper value.
-			property.hint_string = "Position,Anchors,Container,Uncontrolled";
-			property.usage |= PROPERTY_USAGE_READ_ONLY;
-		} else if (property.name == "size_flags_horizontal" || property.name == "size_flags_vertical") {
+			p_property.hint_string = "Position,Anchors,Container,Uncontrolled";
+			p_property.usage |= PROPERTY_USAGE_READ_ONLY;
+		} else if (p_property.name == "size_flags_horizontal" || p_property.name == "size_flags_vertical") {
 			// Filter allowed size flags based on the parent container configuration.
 			Container *parent_container = Object::cast_to<Container>(parent_node);
 			Vector<int> size_flags;
-			if (property.name == "size_flags_horizontal") {
+			if (p_property.name == "size_flags_horizontal") {
 				size_flags = parent_container->get_allowed_size_flags_horizontal();
-			} else if (property.name == "size_flags_vertical") {
+			} else if (p_property.name == "size_flags_vertical") {
 				size_flags = parent_container->get_allowed_size_flags_vertical();
 			}
 
@@ -522,30 +522,30 @@ void Control::_validate_property(PropertyInfo &property) const {
 			}
 
 			if (hint_string.is_empty()) {
-				property.hint_string = "";
-				property.usage |= PROPERTY_USAGE_READ_ONLY;
+				p_property.hint_string = "";
+				p_property.usage |= PROPERTY_USAGE_READ_ONLY;
 			} else {
-				property.hint_string = hint_string;
+				p_property.hint_string = hint_string;
 			}
 		}
 	} else {
 		// If the parent is NOT a container or not a control at all, display only anchoring-related properties.
-		if (property.name.begins_with("size_flags_")) {
-			property.usage ^= PROPERTY_USAGE_EDITOR;
+		if (p_property.name.begins_with("size_flags_")) {
+			p_property.usage ^= PROPERTY_USAGE_EDITOR;
 
-		} else if (property.name == "layout_mode") {
+		} else if (p_property.name == "layout_mode") {
 			// Set the layout mode to be enabled with proper options.
-			property.hint_string = "Position,Anchors";
+			p_property.hint_string = "Position,Anchors";
 		}
 
 		// Use the layout mode to display or hide advanced anchoring properties.
 		bool use_anchors = _get_layout_mode() == LayoutMode::LAYOUT_MODE_ANCHORS;
-		if (!use_anchors && property.name == "anchors_preset") {
-			property.usage ^= PROPERTY_USAGE_EDITOR;
+		if (!use_anchors && p_property.name == "anchors_preset") {
+			p_property.usage ^= PROPERTY_USAGE_EDITOR;
 		}
 		bool use_custom_anchors = use_anchors && _get_anchors_layout_preset() == -1; // Custom "preset".
-		if (!use_custom_anchors && (property.name.begins_with("anchor_") || property.name.begins_with("offset_") || property.name.begins_with("grow_"))) {
-			property.usage ^= PROPERTY_USAGE_EDITOR;
+		if (!use_custom_anchors && (p_property.name.begins_with("anchor_") || p_property.name.begins_with("offset_") || p_property.name.begins_with("grow_"))) {
+			p_property.usage ^= PROPERTY_USAGE_EDITOR;
 		}
 	}
 
@@ -555,14 +555,34 @@ void Control::_validate_property(PropertyInfo &property) const {
 	}
 	bool property_is_managed_by_container = false;
 	for (unsigned i = 0; i < properties_managed_by_container_count; i++) {
-		property_is_managed_by_container = properties_managed_by_container[i] == property.name;
+		property_is_managed_by_container = properties_managed_by_container[i] == p_property.name;
 		if (property_is_managed_by_container) {
 			break;
 		}
 	}
 	if (property_is_managed_by_container) {
-		property.usage |= PROPERTY_USAGE_READ_ONLY;
+		p_property.usage |= PROPERTY_USAGE_READ_ONLY;
 	}
+}
+
+bool Control::_property_can_revert(const StringName &p_name) const {
+	if (p_name == "layout_mode" || p_name == "anchors_preset") {
+		return true;
+	}
+
+	return false;
+}
+
+bool Control::_property_get_revert(const StringName &p_name, Variant &r_property) const {
+	if (p_name == "layout_mode") {
+		r_property = _get_default_layout_mode();
+		return true;
+	} else if (p_name == "anchors_preset") {
+		r_property = LayoutPreset::PRESET_TOP_LEFT;
+		return true;
+	}
+
+	return false;
 }
 
 // Global relations.
@@ -794,24 +814,15 @@ void Control::_compute_offsets(Rect2 p_rect, const real_t p_anchors[4], real_t (
 void Control::_set_layout_mode(LayoutMode p_mode) {
 	bool list_changed = false;
 
-	if (p_mode == LayoutMode::LAYOUT_MODE_POSITION || p_mode == LayoutMode::LAYOUT_MODE_ANCHORS) {
-		if ((int)get_meta("_edit_layout_mode", p_mode) != (int)p_mode) {
-			list_changed = true;
-		}
+	if (data.stored_layout_mode != p_mode) {
+		list_changed = true;
+		data.stored_layout_mode = p_mode;
+	}
 
-		set_meta("_edit_layout_mode", (int)p_mode);
-
-		if (p_mode == LayoutMode::LAYOUT_MODE_POSITION) {
-			remove_meta("_edit_layout_mode");
-			remove_meta("_edit_use_custom_anchors");
-			set_anchors_and_offsets_preset(LayoutPreset::PRESET_TOP_LEFT, LayoutPresetMode::PRESET_MODE_KEEP_SIZE);
-			set_grow_direction_preset(LayoutPreset::PRESET_TOP_LEFT);
-		}
-	} else {
-		if (has_meta("_edit_layout_mode")) {
-			remove_meta("_edit_layout_mode");
-			list_changed = true;
-		}
+	if (data.stored_layout_mode == LayoutMode::LAYOUT_MODE_POSITION) {
+		data.stored_use_custom_anchors = false;
+		set_anchors_and_offsets_preset(LayoutPreset::PRESET_TOP_LEFT, LayoutPresetMode::PRESET_MODE_KEEP_SIZE);
+		set_grow_direction_preset(LayoutPreset::PRESET_TOP_LEFT);
 	}
 
 	if (list_changed) {
@@ -832,33 +843,43 @@ Control::LayoutMode Control::_get_layout_mode() const {
 	if (_get_anchors_layout_preset() != (int)LayoutPreset::PRESET_TOP_LEFT) {
 		return LayoutMode::LAYOUT_MODE_ANCHORS;
 	}
-	// Otherwise check what was saved.
-	if (has_meta("_edit_layout_mode")) {
-		return (LayoutMode)(int)get_meta("_edit_layout_mode");
+
+	// Otherwise fallback on what's stored.
+	return data.stored_layout_mode;
+}
+
+Control::LayoutMode Control::_get_default_layout_mode() const {
+	Node *parent_node = get_parent_control();
+	// In these modes the property is read-only.
+	if (!parent_node) {
+		return LayoutMode::LAYOUT_MODE_UNCONTROLLED;
+	} else if (Object::cast_to<Container>(parent_node)) {
+		return LayoutMode::LAYOUT_MODE_CONTAINER;
 	}
-	// Or fallback on default.
+
+	// Otherwise fallback on the position mode.
 	return LayoutMode::LAYOUT_MODE_POSITION;
 }
 
 void Control::_set_anchors_layout_preset(int p_preset) {
 	bool list_changed = false;
 
-	if (get_meta("_edit_layout_mode", LayoutMode::LAYOUT_MODE_ANCHORS).operator int() != LayoutMode::LAYOUT_MODE_ANCHORS) {
+	if (data.stored_layout_mode != LayoutMode::LAYOUT_MODE_ANCHORS) {
 		list_changed = true;
-		set_meta("_edit_layout_mode", LayoutMode::LAYOUT_MODE_ANCHORS);
+		data.stored_layout_mode = LayoutMode::LAYOUT_MODE_ANCHORS;
 	}
 
 	if (p_preset == -1) {
-		if (!get_meta("_edit_use_custom_anchors", false)) {
-			set_meta("_edit_use_custom_anchors", true);
+		if (!data.stored_use_custom_anchors) {
+			data.stored_use_custom_anchors = true;
 			notify_property_list_changed();
 		}
 		return; // Keep settings as is.
 	}
 
-	if (get_meta("_edit_use_custom_anchors", true)) {
+	if (data.stored_use_custom_anchors) {
 		list_changed = true;
-		remove_meta("_edit_use_custom_anchors");
+		data.stored_use_custom_anchors = false;
 	}
 
 	LayoutPreset preset = (LayoutPreset)p_preset;
@@ -899,7 +920,7 @@ void Control::_set_anchors_layout_preset(int p_preset) {
 
 int Control::_get_anchors_layout_preset() const {
 	// If the custom preset was selected by user, use it.
-	if ((bool)get_meta("_edit_use_custom_anchors", false)) {
+	if (data.stored_use_custom_anchors) {
 		return -1;
 	}
 
@@ -2925,13 +2946,13 @@ void Control::end_bulk_theme_override() {
 
 // Internationalization.
 
-Array Control::structured_text_parser(TextServer::StructuredTextParser p_parser_type, const Array &p_args, const String &p_text) const {
+TypedArray<Vector2i> Control::structured_text_parser(TextServer::StructuredTextParser p_parser_type, const Array &p_args, const String &p_text) const {
 	if (p_parser_type == TextServer::STRUCTURED_TEXT_CUSTOM) {
-		Array ret;
+		TypedArray<Vector2i> ret;
 		if (GDVIRTUAL_CALL(_structured_text_parser, p_args, p_text, ret)) {
 			return ret;
 		} else {
-			return Array();
+			return TypedArray<Vector2i>();
 		}
 	} else {
 		return TS->parse_structured_text(p_parser_type, p_args, p_text);
@@ -3391,7 +3412,7 @@ void Control::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clip_contents"), "set_clip_contents", "is_clipping_contents");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "custom_minimum_size", PROPERTY_HINT_NONE, "suffix:px"), "set_custom_minimum_size", "get_custom_minimum_size");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "layout_direction", PROPERTY_HINT_ENUM, "Inherited,Locale,Left-to-Right,Right-to-Left"), "set_layout_direction", "get_layout_direction");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "layout_mode", PROPERTY_HINT_ENUM, "Position,Anchors,Container,Uncontrolled", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_INTERNAL), "_set_layout_mode", "_get_layout_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "layout_mode", PROPERTY_HINT_ENUM, "Position,Anchors,Container,Uncontrolled", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_INTERNAL), "_set_layout_mode", "_get_layout_mode");
 	ADD_PROPERTY_DEFAULT("layout_mode", LayoutMode::LAYOUT_MODE_POSITION);
 
 	const String anchors_presets_options = "Custom:-1,PresetFullRect:15,"
@@ -3399,7 +3420,7 @@ void Control::_bind_methods() {
 										   "PresetCenterLeft:4,PresetCenterTop:5,PresetCenterRight:6,PresetCenterBottom:7,PresetCenter:8,"
 										   "PresetLeftWide:9,PresetTopWide:10,PresetRightWide:11,PresetBottomWide:12,PresetVCenterWide:13,PresetHCenterWide:14";
 
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "anchors_preset", PROPERTY_HINT_ENUM, anchors_presets_options, PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_INTERNAL), "_set_anchors_layout_preset", "_get_anchors_layout_preset");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "anchors_preset", PROPERTY_HINT_ENUM, anchors_presets_options, PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_INTERNAL), "_set_anchors_layout_preset", "_get_anchors_layout_preset");
 	ADD_PROPERTY_DEFAULT("anchors_preset", -1);
 
 	ADD_SUBGROUP_INDENT("Anchor Points", "anchor_", 1);

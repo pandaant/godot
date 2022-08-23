@@ -101,7 +101,7 @@
 			</description>
 		</method>
 		<method name="get_open_scenes" qualifiers="const">
-			<return type="Array" />
+			<return type="PackedStringArray" />
 			<description>
 				Returns an [Array] with the file paths of the currently opened scenes.
 			</description>
@@ -166,7 +166,7 @@
 			</description>
 		</method>
 		<method name="make_mesh_previews">
-			<return type="Array" />
+			<return type="Texture2D[]" />
 			<param index="0" name="meshes" type="Array" />
 			<param index="1" name="preview_size" type="int" />
 			<description>
@@ -204,6 +204,13 @@
 			<param index="0" name="scene_filepath" type="String" />
 			<description>
 				Reloads the scene at the given path.
+			</description>
+		</method>
+		<method name="restart_editor">
+			<return type="void" />
+			<param index="0" name="save" type="bool" default="true" />
+			<description>
+				Restarts the editor. This closes the editor and then opens the same project. If [param save] is [code]true[/code], the project will be saved before restarting.
 			</description>
 		</method>
 		<method name="save_scene">

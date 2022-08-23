@@ -531,10 +531,12 @@ String &String::operator+=(const String &p_str) {
 
 	resize(lhs_len + rhs_len + 1);
 
-	const char32_t *src = p_str.get_data();
+	const char32_t *src = p_str.ptr();
 	char32_t *dst = ptrw() + lhs_len;
 
-	memcpy(dst, src, (rhs_len + 1) * sizeof(char32_t));
+	// Don't copy the terminating null with `memcpy` to avoid undefined behavior when string is being added to itself (it would overlap the destination).
+	memcpy(dst, src, rhs_len * sizeof(char32_t));
+	*(dst + rhs_len) = _null;
 
 	return *this;
 }
@@ -3449,18 +3451,19 @@ String String::replacen(const String &p_key, const String &p_with) const {
 String String::repeat(int p_count) const {
 	ERR_FAIL_COND_V_MSG(p_count < 0, "", "Parameter count should be a positive number.");
 
-	String new_string;
-	const char32_t *src = this->get_data();
+	int len = length();
+	String new_string = *this;
+	new_string.resize(p_count * len + 1);
 
-	new_string.resize(length() * p_count + 1);
-	new_string[length() * p_count] = 0;
-
-	for (int i = 0; i < p_count; i++) {
-		for (int j = 0; j < length(); j++) {
-			new_string[i * length() + j] = src[j];
-		}
+	char32_t *dst = new_string.ptrw();
+	int offset = 1;
+	int stride = 1;
+	while (offset < p_count) {
+		memcpy(dst + offset * len, dst, stride * len * sizeof(char32_t));
+		offset += stride;
+		stride = MIN(stride * 2, p_count - offset);
 	}
-
+	dst[p_count * len] = _null;
 	return new_string;
 }
 

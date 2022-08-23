@@ -349,7 +349,9 @@ void Window::_event_callback(DisplayServer::WindowEvent p_event) {
 			_propagate_window_notification(this, NOTIFICATION_WM_MOUSE_ENTER);
 			emit_signal(SNAME("mouse_entered"));
 			notification(NOTIFICATION_VP_MOUSE_ENTER);
-			DisplayServer::get_singleton()->cursor_set_shape(DisplayServer::CURSOR_ARROW); //restore cursor shape
+			if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CURSOR_SHAPE)) {
+				DisplayServer::get_singleton()->cursor_set_shape(DisplayServer::CURSOR_ARROW); //restore cursor shape
+			}
 		} break;
 		case DisplayServer::WINDOW_EVENT_MOUSE_EXIT: {
 			notification(NOTIFICATION_VP_MOUSE_EXIT);
@@ -1510,8 +1512,8 @@ bool Window::is_auto_translating() const {
 	return auto_translate;
 }
 
-void Window::_validate_property(PropertyInfo &property) const {
-	if (property.name == "theme_type_variation") {
+void Window::_validate_property(PropertyInfo &p_property) const {
+	if (p_property.name == "theme_type_variation") {
 		List<StringName> names;
 
 		// Only the default theme and the project theme are used for the list of options.
@@ -1534,7 +1536,7 @@ void Window::_validate_property(PropertyInfo &property) const {
 			unique_names.append(E);
 		}
 
-		property.hint_string = hint_string;
+		p_property.hint_string = hint_string;
 	}
 }
 

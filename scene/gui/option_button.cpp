@@ -47,7 +47,7 @@ Size2 OptionButton::get_minimum_size() const {
 		const Size2 arrow_size = Control::get_theme_icon(SNAME("arrow"))->get_size();
 
 		Size2 content_size = minsize - padding;
-		content_size.width += arrow_size.width + get_theme_constant(SNAME("h_separation"));
+		content_size.width += arrow_size.width + MAX(0, get_theme_constant(SNAME("h_separation")));
 		content_size.height = MAX(content_size.height, arrow_size.height);
 
 		minsize = content_size + padding;
@@ -471,9 +471,9 @@ void OptionButton::get_translatable_strings(List<String> *p_strings) const {
 	popup->get_translatable_strings(p_strings);
 }
 
-void OptionButton::_validate_property(PropertyInfo &property) const {
-	if (property.name == "text" || property.name == "icon") {
-		property.usage = PROPERTY_USAGE_NONE;
+void OptionButton::_validate_property(PropertyInfo &p_property) const {
+	if (p_property.name == "text" || p_property.name == "icon") {
+		p_property.usage = PROPERTY_USAGE_NONE;
 	}
 }
 
