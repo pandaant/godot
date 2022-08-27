@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  audio_effect_amplify.cpp                                             */
+/*  editor_title_bar.cpp                                                 */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,45 +28,59 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "audio_effect_amplify.h"
+#include "editor/editor_title_bar.h"
 
-void AudioEffectAmplifyInstance::process(const AudioFrame *p_src_frames, AudioFrame *p_dst_frames, int p_frame_count) {
-	//multiply volume interpolating to avoid clicks if this changes
-	float volume_db = base->volume_db;
-	float vol = Math::db_to_linear(mix_volume_db);
-	float vol_inc = (Math::db_to_linear(volume_db) - vol) / float(p_frame_count);
-
-	for (int i = 0; i < p_frame_count; i++) {
-		p_dst_frames[i] = p_src_frames[i] * vol;
-		vol += vol_inc;
+void EditorTitleBar::input(const Ref<InputEvent> &p_event) {
+	if (!can_move) {
+		return;
 	}
-	//set volume for next mix
-	mix_volume_db = volume_db;
+
+	Ref<InputEventMouseMotion> mm = p_event;
+	if (mm.is_valid() && moving) {
+		if ((mm->get_button_mask() & MouseButton::LEFT) == MouseButton::LEFT) {
+			Window *w = Object::cast_to<Window>(get_viewport());
+			if (w) {
+				Point2 mouse = DisplayServer::get_singleton()->mouse_get_position();
+				w->set_position(mouse - click_pos);
+			}
+		} else {
+			moving = false;
+		}
+	}
+
+	Ref<InputEventMouseButton> mb = p_event;
+	if (mb.is_valid() && has_point(mb->get_position())) {
+		Window *w = Object::cast_to<Window>(get_viewport());
+		if (w) {
+			if (mb->get_button_index() == MouseButton::LEFT) {
+				if (mb->is_pressed()) {
+					click_pos = DisplayServer::get_singleton()->mouse_get_position() - w->get_position();
+					moving = true;
+				} else {
+					moving = false;
+				}
+			}
+			if (mb->get_button_index() == MouseButton::LEFT && mb->is_double_click() && mb->is_pressed()) {
+				if (DisplayServer::get_singleton()->window_maximize_on_title_dbl_click()) {
+					if (w->get_mode() == Window::MODE_WINDOWED) {
+						w->set_mode(Window::MODE_MAXIMIZED);
+					} else if (w->get_mode() == Window::MODE_MAXIMIZED) {
+						w->set_mode(Window::MODE_WINDOWED);
+					}
+				} else if (DisplayServer::get_singleton()->window_minimize_on_title_dbl_click()) {
+					w->set_mode(Window::MODE_MINIMIZED);
+				}
+				moving = false;
+			}
+		}
+	}
 }
 
-Ref<AudioEffectInstance> AudioEffectAmplify::instantiate() {
-	Ref<AudioEffectAmplifyInstance> ins;
-	ins.instantiate();
-	ins->base = Ref<AudioEffectAmplify>(this);
-	ins->mix_volume_db = volume_db;
-	return ins;
+void EditorTitleBar::set_can_move_window(bool p_enabled) {
+	can_move = p_enabled;
+	set_process_input(can_move);
 }
 
-void AudioEffectAmplify::set_volume_db(float p_volume) {
-	volume_db = p_volume;
-}
-
-float AudioEffectAmplify::get_volume_db() const {
-	return volume_db;
-}
-
-void AudioEffectAmplify::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_volume_db", "volume"), &AudioEffectAmplify::set_volume_db);
-	ClassDB::bind_method(D_METHOD("get_volume_db"), &AudioEffectAmplify::get_volume_db);
-
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "volume_db", PROPERTY_HINT_RANGE, "-80,24,0.01,suffix:dB"), "set_volume_db", "get_volume_db");
-}
-
-AudioEffectAmplify::AudioEffectAmplify() {
-	volume_db = 0;
+bool EditorTitleBar::get_can_move_window() const {
+	return can_move;
 }

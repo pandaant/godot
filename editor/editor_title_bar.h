@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  audio_effect_amplify.cpp                                             */
+/*  editor_title_bar.h                                                   */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,45 +28,26 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "audio_effect_amplify.h"
+#ifndef EDITOR_TITLE_BAR_H
+#define EDITOR_TITLE_BAR_H
 
-void AudioEffectAmplifyInstance::process(const AudioFrame *p_src_frames, AudioFrame *p_dst_frames, int p_frame_count) {
-	//multiply volume interpolating to avoid clicks if this changes
-	float volume_db = base->volume_db;
-	float vol = Math::db_to_linear(mix_volume_db);
-	float vol_inc = (Math::db_to_linear(volume_db) - vol) / float(p_frame_count);
+#include "scene/gui/box_container.h"
+#include "scene/main/window.h"
 
-	for (int i = 0; i < p_frame_count; i++) {
-		p_dst_frames[i] = p_src_frames[i] * vol;
-		vol += vol_inc;
-	}
-	//set volume for next mix
-	mix_volume_db = volume_db;
-}
+class EditorTitleBar : public HBoxContainer {
+	GDCLASS(EditorTitleBar, HBoxContainer);
 
-Ref<AudioEffectInstance> AudioEffectAmplify::instantiate() {
-	Ref<AudioEffectAmplifyInstance> ins;
-	ins.instantiate();
-	ins->base = Ref<AudioEffectAmplify>(this);
-	ins->mix_volume_db = volume_db;
-	return ins;
-}
+	Point2i click_pos;
+	bool moving = false;
+	bool can_move = false;
 
-void AudioEffectAmplify::set_volume_db(float p_volume) {
-	volume_db = p_volume;
-}
+protected:
+	virtual void input(const Ref<InputEvent> &p_event) override;
+	static void _bind_methods(){};
 
-float AudioEffectAmplify::get_volume_db() const {
-	return volume_db;
-}
+public:
+	void set_can_move_window(bool p_enabled);
+	bool get_can_move_window() const;
+};
 
-void AudioEffectAmplify::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_volume_db", "volume"), &AudioEffectAmplify::set_volume_db);
-	ClassDB::bind_method(D_METHOD("get_volume_db"), &AudioEffectAmplify::get_volume_db);
-
-	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "volume_db", PROPERTY_HINT_RANGE, "-80,24,0.01,suffix:dB"), "set_volume_db", "get_volume_db");
-}
-
-AudioEffectAmplify::AudioEffectAmplify() {
-	volume_db = 0;
-}
+#endif // EDITOR_TITLE_BAR_H
