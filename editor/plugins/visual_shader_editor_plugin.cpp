@@ -754,7 +754,7 @@ void VisualShaderGraphPlugin::add_node(VisualShader::Type p_type, int p_id) {
 
 					Button *remove_btn = memnew(Button);
 					remove_btn->set_icon(EditorNode::get_singleton()->get_gui_base()->get_theme_icon(SNAME("Remove"), SNAME("EditorIcons")));
-					remove_btn->set_tooltip(TTR("Remove") + " " + name_left);
+					remove_btn->set_tooltip_text(TTR("Remove") + " " + name_left);
 					remove_btn->connect("pressed", callable_mp(editor, &VisualShaderEditor::_remove_input_port).bind(p_id, i), CONNECT_DEFERRED);
 					hb->add_child(remove_btn);
 				} else {
@@ -781,7 +781,7 @@ void VisualShaderGraphPlugin::add_node(VisualShader::Type p_type, int p_id) {
 				if (is_group) {
 					Button *remove_btn = memnew(Button);
 					remove_btn->set_icon(EditorNode::get_singleton()->get_gui_base()->get_theme_icon(SNAME("Remove"), SNAME("EditorIcons")));
-					remove_btn->set_tooltip(TTR("Remove") + " " + name_left);
+					remove_btn->set_tooltip_text(TTR("Remove") + " " + name_left);
 					remove_btn->connect("pressed", callable_mp(editor, &VisualShaderEditor::_remove_output_port).bind(p_id, i), CONNECT_DEFERRED);
 					hb->add_child(remove_btn);
 
@@ -4827,7 +4827,7 @@ VisualShaderEditor::VisualShaderEditor() {
 	preview_shader = memnew(Button);
 	preview_shader->set_flat(true);
 	preview_shader->set_toggle_mode(true);
-	preview_shader->set_tooltip(TTR("Show generated shader code."));
+	preview_shader->set_tooltip_text(TTR("Show generated shader code."));
 	graph->get_zoom_hbox()->add_child(preview_shader);
 	preview_shader->connect("pressed", callable_mp(this, &VisualShaderEditor::_show_preview_text));
 
@@ -4897,7 +4897,7 @@ VisualShaderEditor::VisualShaderEditor() {
 
 	tools = memnew(MenuButton);
 	filter_hb->add_child(tools);
-	tools->set_tooltip(TTR("Options"));
+	tools->set_tooltip_text(TTR("Options"));
 	tools->get_popup()->connect("id_pressed", callable_mp(this, &VisualShaderEditor::_tools_menu_option));
 	tools->get_popup()->add_item(TTR("Expand All"), EXPAND_ALL);
 	tools->get_popup()->add_item(TTR("Collapse All"), COLLAPSE_ALL);
@@ -4929,7 +4929,7 @@ VisualShaderEditor::VisualShaderEditor() {
 	highend_label->set_visible(false);
 	highend_label->set_text("Vulkan");
 	highend_label->set_mouse_filter(Control::MOUSE_FILTER_STOP);
-	highend_label->set_tooltip(TTR("High-end node"));
+	highend_label->set_tooltip_text(TTR("High-end node"));
 
 	node_desc = memnew(RichTextLabel);
 	members_vb->add_child(node_desc);
@@ -5420,6 +5420,7 @@ VisualShaderEditor::VisualShaderEditor() {
 	add_options.push_back(AddOption("CurveTexture", "Textures", "Functions", "VisualShaderNodeCurveTexture", TTR("Perform the curve texture lookup."), {}, VisualShaderNode::PORT_TYPE_SCALAR));
 	curve_xyz_node_option_idx = add_options.size();
 	add_options.push_back(AddOption("CurveXYZTexture", "Textures", "Functions", "VisualShaderNodeCurveXYZTexture", TTR("Perform the three components curve texture lookup."), {}, VisualShaderNode::PORT_TYPE_VECTOR_3D));
+	add_options.push_back(AddOption("LinearSceneDepth", "Textures", "Functions", "VisualShaderNodeLinearSceneDepth", TTR("Returns the depth value of the DEPTH_TEXTURE node in a linear space."), {}, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_FRAGMENT, Shader::MODE_SPATIAL));
 	texture2d_node_option_idx = add_options.size();
 	add_options.push_back(AddOption("Texture2D", "Textures", "Functions", "VisualShaderNodeTexture", TTR("Perform the 2D texture lookup."), {}, VisualShaderNode::PORT_TYPE_VECTOR_4D));
 	texture2d_array_node_option_idx = add_options.size();
@@ -5434,8 +5435,6 @@ VisualShaderEditor::VisualShaderEditor() {
 	add_options.push_back(AddOption("TextureUniformTriplanar", "Textures", "Variables", "VisualShaderNodeTextureUniformTriplanar", TTR("2D texture uniform lookup with triplanar."), {}, -1, TYPE_FLAGS_FRAGMENT | TYPE_FLAGS_LIGHT, Shader::MODE_SPATIAL));
 	add_options.push_back(AddOption("Texture2DArrayUniform", "Textures", "Variables", "VisualShaderNodeTexture2DArrayUniform", TTR("2D array of textures uniform lookup."), {}, VisualShaderNode::PORT_TYPE_SAMPLER));
 	add_options.push_back(AddOption("Texture3DUniform", "Textures", "Variables", "VisualShaderNodeTexture3DUniform", TTR("3D texture uniform lookup."), {}, VisualShaderNode::PORT_TYPE_SAMPLER));
-
-	add_options.push_back(AddOption("LinearSceneDepth", "Textures", "Depth", "VisualShaderNodeLinearSceneDepth", TTR("Returns the depth value of the DEPTH_TEXTURE node in a linear space."), {}, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_FRAGMENT, Shader::MODE_SPATIAL));
 
 	// TRANSFORM
 
@@ -5460,6 +5459,13 @@ VisualShaderEditor::VisualShaderEditor() {
 
 	add_options.push_back(AddOption("TransformConstant", "Transform", "Variables", "VisualShaderNodeTransformConstant", TTR("Transform constant."), {}, VisualShaderNode::PORT_TYPE_TRANSFORM));
 	add_options.push_back(AddOption("TransformUniform", "Transform", "Variables", "VisualShaderNodeTransformUniform", TTR("Transform uniform."), {}, VisualShaderNode::PORT_TYPE_TRANSFORM));
+
+	// UTILITY
+
+	add_options.push_back(AddOption("DistanceFade", "Utility", "", "VisualShaderNodeDistanceFade", TTR("The distance fade effect fades out each pixel based on its distance to another object."), {}, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_FRAGMENT, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("ProximityFade", "Utility", "", "VisualShaderNodeProximityFade", TTR("The proximity fade effect fades out each pixel based on its distance to another object."), {}, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_FRAGMENT, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("RandomRange", "Utility", "", "VisualShaderNodeRandomRange", TTR("Returns a random value between the minimum and maximum input values."), {}, VisualShaderNode::PORT_TYPE_SCALAR));
+	add_options.push_back(AddOption("Remap", "Utility", "", "VisualShaderNodeRemap", TTR("Remaps a given input from the input range to the output range."), {}, VisualShaderNode::PORT_TYPE_SCALAR));
 
 	// VECTOR
 
@@ -5659,19 +5665,6 @@ VisualShaderEditor::VisualShaderEditor() {
 	add_options.push_back(AddOption("Vector3Uniform", "Vector", "Variables", "VisualShaderNodeVec3Uniform", TTR("3D vector uniform."), {}, VisualShaderNode::PORT_TYPE_VECTOR_3D));
 	add_options.push_back(AddOption("Vector4Constant", "Vector", "Variables", "VisualShaderNodeVec4Constant", TTR("4D vector constant."), {}, VisualShaderNode::PORT_TYPE_VECTOR_4D));
 	add_options.push_back(AddOption("Vector4Uniform", "Vector", "Variables", "VisualShaderNodeVec4Uniform", TTR("4D vector uniform."), {}, VisualShaderNode::PORT_TYPE_VECTOR_4D));
-
-	// FADE
-
-	add_options.push_back(AddOption("DistanceFace", "Fade", "Distance", "VisualShaderNodeDistanceFade", TTR(""), {}, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_FRAGMENT, Shader::MODE_SPATIAL));
-	add_options.push_back(AddOption("ProximityFade", "Fade", "", "VisualShaderNodeProximityFade", TTR("The proximity fade effect fades out each pixel based on its distance to another object."), {}, VisualShaderNode::PORT_TYPE_SCALAR, TYPE_FLAGS_FRAGMENT, Shader::MODE_SPATIAL));
-
-	// RANDOM
-
-	add_options.push_back(AddOption("RandomRange", "Random", "", "VisualShaderNodeRandomRange", TTR("Returns a random value between the minimum and maximum input values."), {}, VisualShaderNode::PORT_TYPE_SCALAR));
-
-	// UTILITY
-
-	add_options.push_back(AddOption("Remap", "Utility", "", "VisualShaderNodeRemap", TTR("Remaps a given input from the input range to the output range."), {}, VisualShaderNode::PORT_TYPE_SCALAR));
 
 	// SPECIAL
 

@@ -342,7 +342,7 @@ namespace GodotTools
                 DotNetSolution.MigrateFromOldConfigNames(GodotSharpDirs.ProjectSlnPath);
 
                 var msbuildProject = ProjectUtils.Open(GodotSharpDirs.ProjectCsProjPath)
-                                     ?? throw new Exception("Cannot open C# project");
+                                     ?? throw new InvalidOperationException("Cannot open C# project.");
 
                 // NOTE: The order in which changes are made to the project is important
 
@@ -433,7 +433,7 @@ namespace GodotTools
             _toolBarBuildButton = new Button
             {
                 Text = "Build",
-                HintTooltip = "Build Solution".TTR(),
+                TooltipText = "Build Solution".TTR(),
                 FocusMode = Control.FocusModeEnum.None,
                 Shortcut = buildSolutionShortcut,
                 ShortcutInTooltip = true

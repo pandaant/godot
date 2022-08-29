@@ -206,10 +206,10 @@ namespace GodotTools.Utils
                 return searchDirs.Select(dir => Path.Combine(dir, name)).FirstOrDefault(File.Exists);
 
             return (from dir in searchDirs
-                select Path.Combine(dir, name)
+                    select Path.Combine(dir, name)
                 into path
-                from ext in windowsExts
-                select path + ext).FirstOrDefault(File.Exists);
+                    from ext in windowsExts
+                    select path + ext).FirstOrDefault(File.Exists);
         }
 
         [return: MaybeNull]
@@ -257,7 +257,7 @@ namespace GodotTools.Utils
             using Process process = Process.Start(startInfo);
 
             if (process == null)
-                throw new Exception("No process was started");
+                throw new InvalidOperationException("No process was started.");
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
