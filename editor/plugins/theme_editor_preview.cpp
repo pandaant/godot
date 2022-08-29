@@ -40,6 +40,7 @@
 #include "scene/gui/color_picker.h"
 #include "scene/gui/progress_bar.h"
 #include "scene/resources/packed_scene.h"
+#include "scene/theme/theme_db.h"
 
 constexpr double REFRESH_TIMER = 1.5;
 
@@ -193,8 +194,8 @@ void ThemeEditorPreview::_notification(int p_what) {
 			}
 
 			connect("visibility_changed", callable_mp(this, &ThemeEditorPreview::_preview_visibility_changed));
-		} break;
-
+			[[fallthrough]];
+		}
 		case NOTIFICATION_THEME_CHANGED: {
 			picker_button->set_icon(get_theme_icon(SNAME("ColorPick"), SNAME("EditorIcons")));
 
@@ -240,7 +241,7 @@ ThemeEditorPreview::ThemeEditorPreview() {
 
 	MarginContainer *preview_root = memnew(MarginContainer);
 	preview_container->add_child(preview_root);
-	preview_root->set_theme(Theme::get_default());
+	preview_root->set_theme(ThemeDB::get_singleton()->get_default_theme());
 	preview_root->set_clip_contents(true);
 	preview_root->set_custom_minimum_size(Size2(450, 0) * EDSCALE);
 	preview_root->set_v_size_flags(SIZE_EXPAND_FILL);
@@ -272,6 +273,7 @@ ThemeEditorPreview::ThemeEditorPreview() {
 
 void DefaultThemeEditorPreview::_notification(int p_what) {
 	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE:
 		case NOTIFICATION_THEME_CHANGED: {
 			test_color_picker_button->set_custom_minimum_size(Size2(0, get_theme_constant(SNAME("color_picker_button_height"), SNAME("Editor"))));
 		} break;
@@ -474,6 +476,7 @@ void SceneThemeEditorPreview::_reload_scene() {
 
 void SceneThemeEditorPreview::_notification(int p_what) {
 	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE:
 		case NOTIFICATION_THEME_CHANGED: {
 			reload_scene_button->set_icon(get_theme_icon(SNAME("Reload"), SNAME("EditorIcons")));
 		} break;
