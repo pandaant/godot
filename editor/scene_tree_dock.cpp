@@ -240,7 +240,7 @@ void SceneTreeDock::_perform_instantiate_scenes(const Vector<String> &p_files, N
 		String new_name = parent->validate_child_name(instantiated_scene);
 		EditorDebuggerNode *ed = EditorDebuggerNode::get_singleton();
 		editor_data->get_undo_redo()->add_do_method(ed, "live_debug_instance_node", edited_scene->get_path_to(parent), p_files[i], new_name);
-		editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_remove_node", NodePath(String(edited_scene->get_path_to(parent)).plus_file(new_name)));
+		editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_remove_node", NodePath(String(edited_scene->get_path_to(parent)).path_join(new_name)));
 	}
 
 	editor_data->get_undo_redo()->commit_action();
@@ -691,7 +691,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 				EditorDebuggerNode *ed = EditorDebuggerNode::get_singleton();
 
 				editor_data->get_undo_redo()->add_do_method(ed, "live_debug_duplicate_node", edited_scene->get_path_to(node), dup->get_name());
-				editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_remove_node", NodePath(String(edited_scene->get_path_to(parent)).plus_file(dup->get_name())));
+				editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_remove_node", NodePath(String(edited_scene->get_path_to(parent)).path_join(dup->get_name())));
 
 				add_below_node = dup;
 			}
@@ -1068,24 +1068,61 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 			}
 		} break;
 		case TOOL_TOGGLE_SCENE_UNIQUE_NAME: {
-			List<Node *> selection = editor_selection->get_selected_node_list();
-			List<Node *>::Element *e = selection.front();
-			if (e) {
-				Ref<EditorUndoRedoManager> undo_redo = editor_data->get_undo_redo();
-				Node *node = e->get();
-				bool enabled = node->is_unique_name_in_owner();
-				if (!enabled && get_tree()->get_edited_scene_root()->get_node_or_null(UNIQUE_NODE_PREFIX + String(node->get_name())) != nullptr) {
-					accept->set_text(TTR("Another node already uses this unique name in the scene."));
+			// Enabling/disabling based on the same node based on which the checkbox in the menu is checked/unchecked.
+			List<Node *>::Element *first_selected = editor_selection->get_selected_node_list().front();
+			if (first_selected == nullptr) {
+				return;
+			}
+			bool enabling = !first_selected->get()->is_unique_name_in_owner();
+
+			List<Node *> full_selection = editor_selection->get_full_selected_node_list();
+			Ref<EditorUndoRedoManager> undo_redo = editor_data->get_undo_redo();
+
+			if (enabling) {
+				Vector<Node *> new_unique_nodes;
+				Vector<StringName> new_unique_names;
+				Vector<StringName> cant_be_set_unique_names;
+
+				for (Node *node : full_selection) {
+					if (node->is_unique_name_in_owner()) {
+						continue;
+					}
+					StringName name = node->get_name();
+					if (new_unique_names.find(name) != -1 || get_tree()->get_edited_scene_root()->get_node_or_null(UNIQUE_NODE_PREFIX + String(name)) != nullptr) {
+						cant_be_set_unique_names.push_back(name);
+					} else {
+						new_unique_nodes.push_back(node);
+						new_unique_names.push_back(name);
+					}
+				}
+
+				if (new_unique_nodes.size()) {
+					undo_redo->create_action(TTR("Enable Scene Unique Name(s)"));
+					for (Node *node : new_unique_nodes) {
+						undo_redo->add_do_method(node, "set_unique_name_in_owner", true);
+						undo_redo->add_undo_method(node, "set_unique_name_in_owner", false);
+					}
+					undo_redo->commit_action();
+				}
+
+				if (cant_be_set_unique_names.size()) {
+					String popup_text = TTR("Unique names already used by another node in the scene:");
+					popup_text += "\n";
+					for (StringName name : cant_be_set_unique_names) {
+						popup_text += "\n" + String(name);
+					}
+					accept->set_text(popup_text);
 					accept->popup_centered();
-					return;
 				}
-				if (!enabled) {
-					undo_redo->create_action(TTR("Enable Scene Unique Name"));
-				} else {
-					undo_redo->create_action(TTR("Disable Scene Unique Name"));
+			} else { // Disabling.
+				undo_redo->create_action(TTR("Disable Scene Unique Name(s)"));
+				for (Node *node : full_selection) {
+					if (!node->is_unique_name_in_owner()) {
+						continue;
+					}
+					undo_redo->add_do_method(node, "set_unique_name_in_owner", false);
+					undo_redo->add_undo_method(node, "set_unique_name_in_owner", true);
 				}
-				undo_redo->add_do_method(node, "set_unique_name_in_owner", !enabled);
-				undo_redo->add_undo_method(node, "set_unique_name_in_owner", enabled);
 				undo_redo->commit_action();
 			}
 		} break;
@@ -1469,7 +1506,7 @@ bool SceneTreeDock::_update_node_path(Node *p_root_node, NodePath &r_node_path, 
 	if (found_root_path) {
 		NodePath root_path_new = found_root_path->value;
 		if (!root_path_new.is_empty()) {
-			NodePath old_abs_path = NodePath(String(p_root_node->get_path()).plus_file(r_node_path));
+			NodePath old_abs_path = NodePath(String(p_root_node->get_path()).path_join(r_node_path));
 			old_abs_path.simplify();
 			r_node_path = root_path_new.rel_path_to(old_abs_path);
 		}
@@ -1839,7 +1876,7 @@ void SceneTreeDock::_do_reparent(Node *p_new_parent, int p_position_in_parent, V
 		}
 
 		editor_data->get_undo_redo()->add_do_method(ed, "live_debug_reparent_node", edited_scene->get_path_to(node), edited_scene->get_path_to(new_parent), new_name, p_position_in_parent + inc);
-		editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_reparent_node", NodePath(String(edited_scene->get_path_to(new_parent)).plus_file(new_name)), edited_scene->get_path_to(node->get_parent()), node->get_name(), node->get_index());
+		editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_reparent_node", NodePath(String(edited_scene->get_path_to(new_parent)).path_join(new_name)), edited_scene->get_path_to(node->get_parent()), node->get_name(), node->get_index());
 
 		if (p_keep_global_xform) {
 			if (Object::cast_to<Node2D>(node)) {
@@ -2202,7 +2239,7 @@ void SceneTreeDock::_do_create(Node *p_parent) {
 		String new_name = p_parent->validate_child_name(child);
 		EditorDebuggerNode *ed = EditorDebuggerNode::get_singleton();
 		editor_data->get_undo_redo()->add_do_method(ed, "live_debug_create_node", edited_scene->get_path_to(p_parent), child->get_class(), new_name);
-		editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_remove_node", NodePath(String(edited_scene->get_path_to(p_parent)).plus_file(new_name)));
+		editor_data->get_undo_redo()->add_undo_method(ed, "live_debug_remove_node", NodePath(String(edited_scene->get_path_to(p_parent)).path_join(new_name)));
 
 	} else {
 		editor_data->get_undo_redo()->add_do_method(EditorNode::get_singleton(), "set_edited_scene", child);
@@ -2821,14 +2858,26 @@ void SceneTreeDock::_tree_rmb(const Vector2 &p_menu_pos) {
 			menu->add_separator();
 			menu->add_icon_shortcut(get_theme_icon(SNAME("CopyNodePath"), SNAME("EditorIcons")), ED_GET_SHORTCUT("scene_tree/copy_node_path"), TOOL_COPY_NODE_PATH);
 		}
+	}
 
-		if (selection[0]->get_owner() == EditorNode::get_singleton()->get_edited_scene()) {
-			// Only for nodes owned by the edited scene root.
+	if (profile_allow_editing) {
+		// Allow multi-toggling scene unique names but only if all selected nodes are owned by the edited scene root.
+		bool all_owned = true;
+		for (Node *node : full_selection) {
+			if (node->get_owner() != EditorNode::get_singleton()->get_edited_scene()) {
+				all_owned = false;
+				break;
+			}
+		}
+		if (all_owned) {
 			menu->add_separator();
 			menu->add_icon_check_item(get_theme_icon(SNAME("SceneUniqueName"), SNAME("EditorIcons")), TTR("Access as Scene Unique Name"), TOOL_TOGGLE_SCENE_UNIQUE_NAME);
+			// Checked based on `selection[0]` because `full_selection` has undesired ordering.
 			menu->set_item_checked(menu->get_item_index(TOOL_TOGGLE_SCENE_UNIQUE_NAME), selection[0]->is_unique_name_in_owner());
 		}
+	}
 
+	if (selection.size() == 1) {
 		bool is_external = (!selection[0]->get_scene_file_path().is_empty());
 		if (is_external) {
 			bool is_inherited = selection[0]->get_scene_inherited_state() != nullptr;
@@ -2938,9 +2987,9 @@ void SceneTreeDock::attach_script_to_selected(bool p_extend) {
 	if (path.is_empty()) {
 		String root_path = editor_data->get_edited_scene_root()->get_scene_file_path();
 		if (root_path.is_empty()) {
-			path = String("res://").plus_file(selected->get_name());
+			path = String("res://").path_join(selected->get_name());
 		} else {
-			path = root_path.get_base_dir().plus_file(selected->get_name());
+			path = root_path.get_base_dir().path_join(selected->get_name());
 		}
 	}
 
@@ -2997,9 +3046,9 @@ void SceneTreeDock::attach_shader_to_selected(int p_preferred_mode) {
 			shader_name = selected_shader_material->get_name();
 		}
 		if (root_path.is_empty()) {
-			path = String("res://").plus_file(shader_name);
+			path = String("res://").path_join(shader_name);
 		} else {
-			path = root_path.get_base_dir().plus_file(shader_name);
+			path = root_path.get_base_dir().path_join(shader_name);
 		}
 	}
 
@@ -3199,7 +3248,7 @@ void SceneTreeDock::_update_create_root_dialog() {
 			favorite_nodes->get_child(i)->queue_delete();
 		}
 
-		Ref<FileAccess> f = FileAccess::open(EditorPaths::get_singleton()->get_project_settings_dir().plus_file("favorites.Node"), FileAccess::READ);
+		Ref<FileAccess> f = FileAccess::open(EditorPaths::get_singleton()->get_project_settings_dir().path_join("favorites.Node"), FileAccess::READ);
 		if (f.is_valid()) {
 			while (!f->eof_reached()) {
 				String l = f->get_line().strip_edges();
