@@ -216,6 +216,8 @@ EditorNode *EditorNode::singleton = nullptr;
 static const String META_TEXT_TO_COPY = "text_to_copy";
 
 void EditorNode::disambiguate_filenames(const Vector<String> p_full_paths, Vector<String> &r_filenames) {
+	ERR_FAIL_COND_MSG(p_full_paths.size() != r_filenames.size(), vformat("disambiguate_filenames requires two string vectors of same length (%d != %d).", p_full_paths.size(), r_filenames.size()));
+
 	// Keep track of a list of "index sets," i.e. sets of indices
 	// within disambiguated_scene_names which contain the same name.
 	Vector<RBSet<int>> index_sets;
@@ -249,6 +251,10 @@ void EditorNode::disambiguate_filenames(const Vector<String> p_full_paths, Vecto
 				if (full_path.rfind(".") >= 0) {
 					full_path = full_path.substr(0, full_path.rfind("."));
 				}
+
+				// Normalize trailing slashes when normalizing directory names.
+				scene_name = scene_name.trim_suffix("/");
+				full_path = full_path.trim_suffix("/");
 
 				int scene_name_size = scene_name.size();
 				int full_path_size = full_path.size();
@@ -292,17 +298,23 @@ void EditorNode::disambiguate_filenames(const Vector<String> p_full_paths, Vecto
 				// and the scene name first to remove extensions so that this
 				// comparison actually works.
 				String path = p_full_paths[E->get()];
+
+				// Get rid of file extensions and res:// prefixes.
+				if (scene_name.rfind(".") >= 0) {
+					scene_name = scene_name.substr(0, scene_name.rfind("."));
+				}
 				if (path.begins_with("res://")) {
 					path = path.substr(6);
 				}
 				if (path.rfind(".") >= 0) {
 					path = path.substr(0, path.rfind("."));
 				}
-				if (scene_name.rfind(".") >= 0) {
-					scene_name = scene_name.substr(0, scene_name.rfind("."));
-				}
 
-				// We can proceed iff the full path is longer than the scene name,
+				// Normalize trailing slashes when normalizing directory names.
+				scene_name = scene_name.trim_suffix("/");
+				path = path.trim_suffix("/");
+
+				// We can proceed if the full path is longer than the scene name,
 				// meaning that there is at least one more parent folder we can
 				// tack onto the name.
 				can_proceed = can_proceed || (path.size() - scene_name.size()) >= 1;
@@ -410,9 +422,6 @@ void EditorNode::_version_control_menu_option(int p_idx) {
 		} break;
 		case RUN_VCS_SETTINGS: {
 			VersionControlEditorPlugin::get_singleton()->popup_vcs_set_up_dialog(gui_base);
-		} break;
-		case RUN_VCS_SHUT_DOWN: {
-			VersionControlEditorPlugin::get_singleton()->shut_down();
 		} break;
 	}
 }
@@ -543,6 +552,9 @@ void EditorNode::_update_from_settings() {
 	scene_root->set_sdf_oversize(sdf_oversize);
 	Viewport::SDFScale sdf_scale = Viewport::SDFScale(int(GLOBAL_GET("rendering/2d/sdf/scale")));
 	scene_root->set_sdf_scale(sdf_scale);
+
+	Viewport::MSAA msaa = Viewport::MSAA(int(GLOBAL_GET("rendering/anti_aliasing/quality/msaa_2d")));
+	scene_root->set_msaa_2d(msaa);
 
 	float mesh_lod_threshold = GLOBAL_GET("rendering/mesh_lod/lod_change/threshold_pixels");
 	scene_root->set_mesh_lod_threshold(mesh_lod_threshold);
@@ -750,6 +762,8 @@ void EditorNode::_notification(int p_what) {
 				gui_base->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("Background"), SNAME("EditorStyles")));
 				scene_root_parent->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("Content"), SNAME("EditorStyles")));
 				bottom_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("panel"), SNAME("TabContainer")));
+
+				tabbar_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("tabbar_background"), SNAME("TabContainer")));
 				scene_tabs->add_theme_style_override("tab_selected", gui_base->get_theme_stylebox(SNAME("SceneTabFG"), SNAME("EditorStyles")));
 				scene_tabs->add_theme_style_override("tab_unselected", gui_base->get_theme_stylebox(SNAME("SceneTabBG"), SNAME("EditorStyles")));
 
@@ -780,6 +794,14 @@ void EditorNode::_notification(int p_what) {
 			}
 
 			_build_icon_type_cache();
+
+			if (write_movie_button->is_pressed()) {
+				launch_pad->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("LaunchPadMovieMode"), SNAME("EditorStyles")));
+				write_movie_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("MovieWriterButtonPressed"), SNAME("EditorStyles")));
+			} else {
+				launch_pad->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("LaunchPadNormal"), SNAME("EditorStyles")));
+				write_movie_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("MovieWriterButtonNormal"), SNAME("EditorStyles")));
+			}
 
 			play_button->set_icon(gui_base->get_theme_icon(SNAME("MainPlay"), SNAME("EditorIcons")));
 			play_scene_button->set_icon(gui_base->get_theme_icon(SNAME("PlayScene"), SNAME("EditorIcons")));
@@ -1314,7 +1336,7 @@ void EditorNode::save_resource_as(const Ref<Resource> &p_resource, const String 
 			file->set_current_file(p_resource->get_path().get_file());
 		} else {
 			if (extensions.size()) {
-				String resource_name_snake_case = p_resource->get_class().camelcase_to_underscore();
+				String resource_name_snake_case = p_resource->get_class().to_snake_case();
 				file->set_current_file("new_" + resource_name_snake_case + "." + preferred.front()->get().to_lower());
 			} else {
 				file->set_current_file(String());
@@ -1331,7 +1353,7 @@ void EditorNode::save_resource_as(const Ref<Resource> &p_resource, const String 
 	} else if (preferred.size()) {
 		String existing;
 		if (extensions.size()) {
-			String resource_name_snake_case = p_resource->get_class().camelcase_to_underscore();
+			String resource_name_snake_case = p_resource->get_class().to_snake_case();
 			existing = "new_" + resource_name_snake_case + "." + preferred.front()->get().to_lower();
 		}
 		file->set_current_path(existing);
@@ -2402,6 +2424,16 @@ void EditorNode::_edit_current(bool p_skip_foreign) {
 	InspectorDock::get_singleton()->update(current_obj);
 }
 
+void EditorNode::_write_movie_toggled(bool p_enabled) {
+	if (p_enabled) {
+		launch_pad->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("LaunchPadMovieMode"), SNAME("EditorStyles")));
+		write_movie_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("MovieWriterButtonPressed"), SNAME("EditorStyles")));
+	} else {
+		launch_pad->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("LaunchPadNormal"), SNAME("EditorStyles")));
+		write_movie_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("MovieWriterButtonNormal"), SNAME("EditorStyles")));
+	}
+}
+
 void EditorNode::_run(bool p_current, const String &p_custom) {
 	if (editor_run.get_status() == EditorRun::STATUS_PLAY) {
 		play_button->set_pressed(!_playing_edited);
@@ -2730,10 +2762,10 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 						// Use casing of the root node.
 						break;
 					case SCENE_NAME_CASING_PASCAL_CASE: {
-						root_name = root_name.capitalize().replace(" ", "");
+						root_name = root_name.to_pascal_case();
 					} break;
 					case SCENE_NAME_CASING_SNAKE_CASE:
-						root_name = root_name.capitalize().replace(" ", "").replace("-", "_").camelcase_to_underscore();
+						root_name = root_name.replace("-", "_").to_snake_case();
 						break;
 				}
 				file->set_current_path(root_name + "." + extensions.front()->get().to_lower());
@@ -4563,7 +4595,7 @@ void EditorNode::_dock_select_input(const Ref<InputEvent> &p_input) {
 		}
 
 		if (nrect != dock_select_rect_over_idx) {
-			dock_select->update();
+			dock_select->queue_redraw();
 			dock_select_rect_over_idx = nrect;
 		}
 
@@ -4589,7 +4621,7 @@ void EditorNode::_dock_select_input(const Ref<InputEvent> &p_input) {
 			dock_popup_selected_idx = nrect;
 			dock_slot[nrect]->set_current_tab(dock_slot[nrect]->get_tab_count() - 1);
 			dock_slot[nrect]->show();
-			dock_select->update();
+			dock_select->queue_redraw();
 
 			_update_dock_containers();
 
@@ -4601,7 +4633,7 @@ void EditorNode::_dock_select_input(const Ref<InputEvent> &p_input) {
 
 void EditorNode::_dock_popup_exit() {
 	dock_select_rect_over_idx = -1;
-	dock_select->update();
+	dock_select->queue_redraw();
 }
 
 void EditorNode::_dock_pre_popup(int p_which) {
@@ -4619,7 +4651,7 @@ void EditorNode::_dock_move_left() {
 	}
 	dock_slot[dock_popup_selected_idx]->move_child(current, prev->get_index());
 	dock_slot[dock_popup_selected_idx]->set_current_tab(dock_slot[dock_popup_selected_idx]->get_current_tab() - 1);
-	dock_select->update();
+	dock_select->queue_redraw();
 	_edit_current();
 	_save_docks();
 }
@@ -4632,7 +4664,7 @@ void EditorNode::_dock_move_right() {
 	}
 	dock_slot[dock_popup_selected_idx]->move_child(next, current->get_index());
 	dock_slot[dock_popup_selected_idx]->set_current_tab(dock_slot[dock_popup_selected_idx]->get_current_tab() + 1);
-	dock_select->update();
+	dock_select->queue_redraw();
 	_edit_current();
 	_save_docks();
 }
@@ -6487,8 +6519,11 @@ EditorNode::EditorNode() {
 	tab_preview->set_position(Point2(2, 2) * EDSCALE);
 	tab_preview_panel->add_child(tab_preview);
 
+	tabbar_panel = memnew(PanelContainer);
+	tabbar_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("tabbar_background"), SNAME("TabContainer")));
+	srt->add_child(tabbar_panel);
 	tabbar_container = memnew(HBoxContainer);
-	srt->add_child(tabbar_container);
+	tabbar_panel->add_child(tabbar_container);
 
 	scene_tabs = memnew(TabBar);
 	scene_tabs->add_theme_style_override("tab_selected", gui_base->get_theme_stylebox(SNAME("SceneTabFG"), SNAME("EditorStyles")));
@@ -6706,8 +6741,7 @@ EditorNode::EditorNode() {
 	project_menu->add_child(vcs_actions_menu);
 	project_menu->add_submenu_item(TTR("Version Control"), "Version Control");
 	vcs_actions_menu->add_item(TTR("Create Version Control Metadata"), RUN_VCS_METADATA);
-	vcs_actions_menu->add_item(TTR("Set Up Version Control"), RUN_VCS_SETTINGS);
-	vcs_actions_menu->add_item(TTR("Shut Down Version Control"), RUN_VCS_SHUT_DOWN);
+	vcs_actions_menu->add_item(TTR("Version Control Settings"), RUN_VCS_SETTINGS);
 
 	project_menu->add_separator();
 	project_menu->add_shortcut(ED_SHORTCUT_AND_COMMAND("editor/export", TTR("Export..."), Key::NONE, TTR("Export")), FILE_EXPORT_PROJECT);
@@ -6822,12 +6856,16 @@ EditorNode::EditorNode() {
 	right_spacer->set_mouse_filter(Control::MOUSE_FILTER_PASS);
 	menu_hb->add_child(right_spacer);
 
-	HBoxContainer *play_hb = memnew(HBoxContainer);
-	menu_hb->add_child(play_hb);
+	launch_pad = memnew(PanelContainer);
+	launch_pad->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("LaunchPadNormal"), SNAME("EditorStyles")));
+	menu_hb->add_child(launch_pad);
+
+	HBoxContainer *launch_pad_hb = memnew(HBoxContainer);
+	launch_pad->add_child(launch_pad_hb);
 
 	play_button = memnew(Button);
 	play_button->set_flat(true);
-	play_hb->add_child(play_button);
+	launch_pad_hb->add_child(play_button);
 	play_button->set_toggle_mode(true);
 	play_button->set_focus_mode(Control::FOCUS_NONE);
 	play_button->connect("pressed", callable_mp(this, &EditorNode::_menu_option).bind(RUN_PLAY));
@@ -6843,7 +6881,7 @@ EditorNode::EditorNode() {
 	pause_button->set_focus_mode(Control::FOCUS_NONE);
 	pause_button->set_tooltip_text(TTR("Pause the scene execution for debugging."));
 	pause_button->set_disabled(true);
-	play_hb->add_child(pause_button);
+	launch_pad_hb->add_child(pause_button);
 
 	ED_SHORTCUT("editor/pause_scene", TTR("Pause Scene"), Key::F7);
 	ED_SHORTCUT_OVERRIDE("editor/pause_scene", "macos", KeyModifierMask::CMD | KeyModifierMask::CTRL | Key::Y);
@@ -6851,7 +6889,7 @@ EditorNode::EditorNode() {
 
 	stop_button = memnew(Button);
 	stop_button->set_flat(true);
-	play_hb->add_child(stop_button);
+	launch_pad_hb->add_child(stop_button);
 	stop_button->set_focus_mode(Control::FOCUS_NONE);
 	stop_button->set_icon(gui_base->get_theme_icon(SNAME("Stop"), SNAME("EditorIcons")));
 	stop_button->connect("pressed", callable_mp(this, &EditorNode::_menu_option).bind(RUN_STOP));
@@ -6863,12 +6901,12 @@ EditorNode::EditorNode() {
 	stop_button->set_shortcut(ED_GET_SHORTCUT("editor/stop"));
 
 	run_native = memnew(EditorRunNative);
-	play_hb->add_child(run_native);
+	launch_pad_hb->add_child(run_native);
 	run_native->connect("native_run", callable_mp(this, &EditorNode::_run_native));
 
 	play_scene_button = memnew(Button);
 	play_scene_button->set_flat(true);
-	play_hb->add_child(play_scene_button);
+	launch_pad_hb->add_child(play_scene_button);
 	play_scene_button->set_toggle_mode(true);
 	play_scene_button->set_focus_mode(Control::FOCUS_NONE);
 	play_scene_button->connect("pressed", callable_mp(this, &EditorNode::_menu_option).bind(RUN_PLAY_SCENE));
@@ -6879,7 +6917,7 @@ EditorNode::EditorNode() {
 
 	play_custom_scene_button = memnew(Button);
 	play_custom_scene_button->set_flat(true);
-	play_hb->add_child(play_custom_scene_button);
+	launch_pad_hb->add_child(play_custom_scene_button);
 	play_custom_scene_button->set_toggle_mode(true);
 	play_custom_scene_button->set_focus_mode(Control::FOCUS_NONE);
 	play_custom_scene_button->connect("pressed", callable_mp(this, &EditorNode::_menu_option).bind(RUN_PLAY_CUSTOM_SCENE));
@@ -6890,18 +6928,23 @@ EditorNode::EditorNode() {
 	ED_SHORTCUT_OVERRIDE("editor/play_custom_scene", "macos", KeyModifierMask::CMD | KeyModifierMask::SHIFT | Key::R);
 	play_custom_scene_button->set_shortcut(ED_GET_SHORTCUT("editor/play_custom_scene"));
 
+	write_movie_panel = memnew(PanelContainer);
+	write_movie_panel->add_theme_style_override("panel", gui_base->get_theme_stylebox(SNAME("MovieWriterButtonNormal"), SNAME("EditorStyles")));
+	launch_pad_hb->add_child(write_movie_panel);
+
 	write_movie_button = memnew(Button);
 	write_movie_button->set_flat(true);
 	write_movie_button->set_toggle_mode(true);
-	play_hb->add_child(write_movie_button);
+	write_movie_panel->add_child(write_movie_button);
 	write_movie_button->set_pressed(false);
 	write_movie_button->set_icon(gui_base->get_theme_icon(SNAME("MainMovieWrite"), SNAME("EditorIcons")));
 	write_movie_button->set_focus_mode(Control::FOCUS_NONE);
+	write_movie_button->connect("toggled", callable_mp(this, &EditorNode::_write_movie_toggled));
 	write_movie_button->set_tooltip_text(TTR("Enable Movie Maker mode.\nThe project will run at stable FPS and the visual and audio output will be recorded to a video file."));
 
 	// This button behaves differently, so color it as such.
 	write_movie_button->add_theme_color_override("icon_normal_color", Color(1, 1, 1, 0.7));
-	write_movie_button->add_theme_color_override("icon_pressed_color", gui_base->get_theme_color(SNAME("error_color"), SNAME("Editor")));
+	write_movie_button->add_theme_color_override("icon_pressed_color", Color(0, 0, 0, 0.84));
 	write_movie_button->add_theme_color_override("icon_hover_color", Color(1, 1, 1, 0.9));
 
 	HBoxContainer *right_menu_hb = memnew(HBoxContainer);
@@ -7486,9 +7529,9 @@ EditorNode::EditorNode() {
 	screenshot_timer->set_owner(get_owner());
 
 	// Adjust spacers to center 2D / 3D / Script buttons.
-	int max_w = MAX(play_hb->get_minimum_size().x + right_menu_hb->get_minimum_size().x, main_menu->get_minimum_size().x);
+	int max_w = MAX(launch_pad_hb->get_minimum_size().x + right_menu_hb->get_minimum_size().x, main_menu->get_minimum_size().x);
 	left_spacer->set_custom_minimum_size(Size2(MAX(0, max_w - main_menu->get_minimum_size().x), 0));
-	right_spacer->set_custom_minimum_size(Size2(MAX(0, max_w - play_hb->get_minimum_size().x - right_menu_hb->get_minimum_size().x), 0));
+	right_spacer->set_custom_minimum_size(Size2(MAX(0, max_w - launch_pad_hb->get_minimum_size().x - right_menu_hb->get_minimum_size().x), 0));
 
 	// Extend menu bar to window title.
 	if (can_expand) {

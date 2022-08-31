@@ -1096,6 +1096,18 @@ void godotsharp_string_simplify_path(const String *p_self, String *r_simplified_
 	memnew_placement(r_simplified_path, String(p_self->simplify_path()));
 }
 
+void godotsharp_string_to_camel_case(const String *p_self, String *r_camel_case) {
+	memnew_placement(r_camel_case, String(p_self->to_camel_case()));
+}
+
+void godotsharp_string_to_pascal_case(const String *p_self, String *r_pascal_case) {
+	memnew_placement(r_pascal_case, String(p_self->to_pascal_case()));
+}
+
+void godotsharp_string_to_snake_case(const String *p_self, String *r_snake_case) {
+	memnew_placement(r_snake_case, String(p_self->to_snake_case()));
+}
+
 void godotsharp_node_path_get_as_property_path(const NodePath *p_ptr, NodePath *r_dest) {
 	memnew_placement(r_dest, NodePath(p_ptr->get_as_property_path()));
 }
@@ -1307,7 +1319,7 @@ void godotsharp_object_to_string(Object *p_ptr, godot_string *r_str) {
 #endif
 	// Can't call 'Object::to_string()' here, as that can end up calling 'ToString' again resulting in an endless circular loop.
 	memnew_placement(r_str,
-			String("[" + p_ptr->get_class() + ":" + itos(p_ptr->get_instance_id()) + "]"));
+			String("<" + p_ptr->get_class() + "#" + itos(p_ptr->get_instance_id()) + ">"));
 }
 
 #ifdef __cplusplus
@@ -1471,6 +1483,9 @@ static const void *unmanaged_callbacks[]{
 	(void *)godotsharp_string_sha256_buffer,
 	(void *)godotsharp_string_sha256_text,
 	(void *)godotsharp_string_simplify_path,
+	(void *)godotsharp_string_to_camel_case,
+	(void *)godotsharp_string_to_pascal_case,
+	(void *)godotsharp_string_to_snake_case,
 	(void *)godotsharp_node_path_get_as_property_path,
 	(void *)godotsharp_node_path_get_concatenated_names,
 	(void *)godotsharp_node_path_get_concatenated_subnames,

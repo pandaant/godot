@@ -211,13 +211,13 @@ void CPUParticles2D::set_texture(const Ref<Texture2D> &p_texture) {
 		texture->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &CPUParticles2D::_texture_changed));
 	}
 
-	update();
+	queue_redraw();
 	_update_mesh_texture();
 }
 
 void CPUParticles2D::_texture_changed() {
 	if (texture.is_valid()) {
-		update();
+		queue_redraw();
 		_update_mesh_texture();
 	}
 }
@@ -556,7 +556,7 @@ static real_t rand_from_seed(uint32_t &seed) {
 
 void CPUParticles2D::_update_internal() {
 	if (particles.size() == 0 || !is_visible_in_tree()) {
-		_set_redraw(false);
+		_set_do_redraw(false);
 		return;
 	}
 
@@ -567,7 +567,7 @@ void CPUParticles2D::_update_internal() {
 		inactive_time += delta;
 		if (inactive_time > lifetime * 1.2) {
 			set_process_internal(false);
-			_set_redraw(false);
+			_set_do_redraw(false);
 
 			//reset variables
 			time = 0;
@@ -577,7 +577,7 @@ void CPUParticles2D::_update_internal() {
 			return;
 		}
 	}
-	_set_redraw(true);
+	_set_do_redraw(true);
 
 	if (time == 0 && pre_process_time > 0.0) {
 		double frame_time;
@@ -719,17 +719,17 @@ void CPUParticles2D::_particles_process(double p_delta) {
 
 			/*real_t tex_linear_velocity = 0;
 			if (curve_parameters[PARAM_INITIAL_LINEAR_VELOCITY].is_valid()) {
-				tex_linear_velocity = curve_parameters[PARAM_INITIAL_LINEAR_VELOCITY]->interpolate(0);
+				tex_linear_velocity = curve_parameters[PARAM_INITIAL_LINEAR_VELOCITY]->sample(0);
 			}*/
 
 			real_t tex_angle = 0.0;
 			if (curve_parameters[PARAM_ANGLE].is_valid()) {
-				tex_angle = curve_parameters[PARAM_ANGLE]->interpolate(tv);
+				tex_angle = curve_parameters[PARAM_ANGLE]->sample(tv);
 			}
 
 			real_t tex_anim_offset = 0.0;
 			if (curve_parameters[PARAM_ANGLE].is_valid()) {
-				tex_anim_offset = curve_parameters[PARAM_ANGLE]->interpolate(tv);
+				tex_anim_offset = curve_parameters[PARAM_ANGLE]->sample(tv);
 			}
 
 			p.seed = Math::rand();
@@ -825,51 +825,51 @@ void CPUParticles2D::_particles_process(double p_delta) {
 
 			real_t tex_linear_velocity = 1.0;
 			if (curve_parameters[PARAM_INITIAL_LINEAR_VELOCITY].is_valid()) {
-				tex_linear_velocity = curve_parameters[PARAM_INITIAL_LINEAR_VELOCITY]->interpolate(tv);
+				tex_linear_velocity = curve_parameters[PARAM_INITIAL_LINEAR_VELOCITY]->sample(tv);
 			}
 
 			real_t tex_orbit_velocity = 1.0;
 			if (curve_parameters[PARAM_ORBIT_VELOCITY].is_valid()) {
-				tex_orbit_velocity = curve_parameters[PARAM_ORBIT_VELOCITY]->interpolate(tv);
+				tex_orbit_velocity = curve_parameters[PARAM_ORBIT_VELOCITY]->sample(tv);
 			}
 
 			real_t tex_angular_velocity = 1.0;
 			if (curve_parameters[PARAM_ANGULAR_VELOCITY].is_valid()) {
-				tex_angular_velocity = curve_parameters[PARAM_ANGULAR_VELOCITY]->interpolate(tv);
+				tex_angular_velocity = curve_parameters[PARAM_ANGULAR_VELOCITY]->sample(tv);
 			}
 
 			real_t tex_linear_accel = 1.0;
 			if (curve_parameters[PARAM_LINEAR_ACCEL].is_valid()) {
-				tex_linear_accel = curve_parameters[PARAM_LINEAR_ACCEL]->interpolate(tv);
+				tex_linear_accel = curve_parameters[PARAM_LINEAR_ACCEL]->sample(tv);
 			}
 
 			real_t tex_tangential_accel = 1.0;
 			if (curve_parameters[PARAM_TANGENTIAL_ACCEL].is_valid()) {
-				tex_tangential_accel = curve_parameters[PARAM_TANGENTIAL_ACCEL]->interpolate(tv);
+				tex_tangential_accel = curve_parameters[PARAM_TANGENTIAL_ACCEL]->sample(tv);
 			}
 
 			real_t tex_radial_accel = 1.0;
 			if (curve_parameters[PARAM_RADIAL_ACCEL].is_valid()) {
-				tex_radial_accel = curve_parameters[PARAM_RADIAL_ACCEL]->interpolate(tv);
+				tex_radial_accel = curve_parameters[PARAM_RADIAL_ACCEL]->sample(tv);
 			}
 
 			real_t tex_damping = 1.0;
 			if (curve_parameters[PARAM_DAMPING].is_valid()) {
-				tex_damping = curve_parameters[PARAM_DAMPING]->interpolate(tv);
+				tex_damping = curve_parameters[PARAM_DAMPING]->sample(tv);
 			}
 
 			real_t tex_angle = 1.0;
 			if (curve_parameters[PARAM_ANGLE].is_valid()) {
-				tex_angle = curve_parameters[PARAM_ANGLE]->interpolate(tv);
+				tex_angle = curve_parameters[PARAM_ANGLE]->sample(tv);
 			}
 			real_t tex_anim_speed = 1.0;
 			if (curve_parameters[PARAM_ANIM_SPEED].is_valid()) {
-				tex_anim_speed = curve_parameters[PARAM_ANIM_SPEED]->interpolate(tv);
+				tex_anim_speed = curve_parameters[PARAM_ANIM_SPEED]->sample(tv);
 			}
 
 			real_t tex_anim_offset = 1.0;
 			if (curve_parameters[PARAM_ANIM_OFFSET].is_valid()) {
-				tex_anim_offset = curve_parameters[PARAM_ANIM_OFFSET]->interpolate(tv);
+				tex_anim_offset = curve_parameters[PARAM_ANIM_OFFSET]->sample(tv);
 			}
 
 			Vector2 force = gravity;
@@ -921,18 +921,18 @@ void CPUParticles2D::_particles_process(double p_delta) {
 		Vector2 tex_scale = Vector2(1.0, 1.0);
 		if (split_scale) {
 			if (scale_curve_x.is_valid()) {
-				tex_scale.x = scale_curve_x->interpolate(tv);
+				tex_scale.x = scale_curve_x->sample(tv);
 			} else {
 				tex_scale.x = 1.0;
 			}
 			if (scale_curve_y.is_valid()) {
-				tex_scale.y = scale_curve_y->interpolate(tv);
+				tex_scale.y = scale_curve_y->sample(tv);
 			} else {
 				tex_scale.y = 1.0;
 			}
 		} else {
 			if (curve_parameters[PARAM_SCALE].is_valid()) {
-				real_t tmp_scale = curve_parameters[PARAM_SCALE]->interpolate(tv);
+				real_t tmp_scale = curve_parameters[PARAM_SCALE]->sample(tv);
 				tex_scale.x = tmp_scale;
 				tex_scale.y = tmp_scale;
 			}
@@ -940,7 +940,7 @@ void CPUParticles2D::_particles_process(double p_delta) {
 
 		real_t tex_hue_variation = 0.0;
 		if (curve_parameters[PARAM_HUE_VARIATION].is_valid()) {
-			tex_hue_variation = curve_parameters[PARAM_HUE_VARIATION]->interpolate(tv);
+			tex_hue_variation = curve_parameters[PARAM_HUE_VARIATION]->sample(tv);
 		}
 
 		real_t hue_rot_angle = (tex_hue_variation)*Math_TAU * Math::lerp(parameters_min[PARAM_HUE_VARIATION], parameters_max[PARAM_HUE_VARIATION], p.hue_rot_rand);
@@ -1062,16 +1062,16 @@ void CPUParticles2D::_update_particle_data_buffer() {
 	}
 }
 
-void CPUParticles2D::_set_redraw(bool p_redraw) {
-	if (redraw == p_redraw) {
+void CPUParticles2D::_set_do_redraw(bool p_do_redraw) {
+	if (do_redraw == p_do_redraw) {
 		return;
 	}
-	redraw = p_redraw;
+	do_redraw = p_do_redraw;
 
 	{
 		MutexLock lock(update_mutex);
 
-		if (redraw) {
+		if (do_redraw) {
 			RS::get_singleton()->connect("frame_pre_draw", callable_mp(this, &CPUParticles2D::_update_render_thread));
 			RS::get_singleton()->canvas_item_set_update_when_visible(get_canvas_item(), true);
 
@@ -1086,7 +1086,7 @@ void CPUParticles2D::_set_redraw(bool p_redraw) {
 		}
 	}
 
-	update(); // redraw to update render list
+	queue_redraw(); // redraw to update render list
 }
 
 void CPUParticles2D::_update_render_thread() {
@@ -1102,7 +1102,7 @@ void CPUParticles2D::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
-			_set_redraw(false);
+			_set_do_redraw(false);
 		} break;
 
 		case NOTIFICATION_DRAW: {
@@ -1111,7 +1111,7 @@ void CPUParticles2D::_notification(int p_what) {
 				_update_internal();
 			}
 
-			if (!redraw) {
+			if (!do_redraw) {
 				return; // don't add to render list
 			}
 
