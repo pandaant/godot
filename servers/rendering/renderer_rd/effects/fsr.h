@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  gradient_edit.h                                                      */
+/*  fsr.h                                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,59 +28,46 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef GRADIENT_EDIT_H
-#define GRADIENT_EDIT_H
+#ifndef FSR_RD_H
+#define FSR_RD_H
 
-#include "scene/gui/color_picker.h"
-#include "scene/gui/popup.h"
-#include "scene/resources/gradient.h"
+#include "servers/rendering/renderer_rd/pipeline_cache_rd.h"
+#include "servers/rendering/renderer_rd/shaders/effects/fsr_upscale.glsl.gen.h"
+#include "servers/rendering/renderer_rd/storage_rd/render_scene_buffers_rd.h"
+#include "servers/rendering/renderer_scene_render.h"
 
-class GradientEdit : public Control {
-	GDCLASS(GradientEdit, Control);
+#include "servers/rendering_server.h"
 
-	PopupPanel *popup = nullptr;
-	ColorPicker *picker = nullptr;
+namespace RendererRD {
 
-	bool grabbing = false;
-	int grabbed = -1;
-	Vector<Gradient::Point> points;
-	Gradient::InterpolationMode interpolation_mode = Gradient::GRADIENT_INTERPOLATE_LINEAR;
-
-	Ref<Gradient> gradient_cache;
-	Ref<GradientTexture1D> preview_texture;
-
-	// Make sure to use the scaled value below.
-	const int BASE_SPACING = 3;
-	const int BASE_POINT_WIDTH = 8;
-
-	int draw_spacing = BASE_SPACING;
-	int draw_point_width = BASE_POINT_WIDTH;
-
-	void _draw_checker(int x, int y, int w, int h);
-	void _color_changed(const Color &p_color);
-	int _get_point_from_pos(int x);
-	void _show_color_picker();
-
-protected:
-	virtual void gui_input(const Ref<InputEvent> &p_event) override;
-	void _notification(int p_what);
-	static void _bind_methods();
-
+class FSR {
 public:
-	void set_ramp(const Vector<float> &p_offsets, const Vector<Color> &p_colors);
-	Vector<float> get_offsets() const;
-	Vector<Color> get_colors() const;
-	void set_points(Vector<Gradient::Point> &p_points);
-	Vector<Gradient::Point> &get_points();
-	void set_interpolation_mode(Gradient::InterpolationMode p_interp_mode);
-	Gradient::InterpolationMode get_interpolation_mode();
-	ColorPicker *get_picker();
-	PopupPanel *get_popup();
+	FSR();
+	~FSR();
 
-	virtual Size2 get_minimum_size() const override;
+	void fsr_upscale(Ref<RenderSceneBuffersRD> p_render_buffers, RID p_source_rd_texture, RID p_destination_texture);
 
-	GradientEdit();
-	virtual ~GradientEdit();
+private:
+	enum FSRUpscalePass {
+		FSR_UPSCALE_PASS_EASU = 0,
+		FSR_UPSCALE_PASS_RCAS = 1
+	};
+
+	struct FSRUpscalePushConstant {
+		float resolution_width;
+		float resolution_height;
+		float upscaled_width;
+		float upscaled_height;
+		float sharpness;
+		int pass;
+		int _unused0, _unused1;
+	};
+
+	FsrUpscaleShaderRD fsr_shader;
+	RID shader_version;
+	RID pipeline;
 };
 
-#endif // GRADIENT_EDIT_H
+} // namespace RendererRD
+
+#endif // FSR_RD_H

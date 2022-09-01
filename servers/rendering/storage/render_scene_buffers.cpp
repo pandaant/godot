@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  camera_effects.h                                                     */
+/*  render_scene_buffers.cpp                                             */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,68 +28,24 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef CAMERA_EFFECTS_H
-#define CAMERA_EFFECTS_H
+#include "render_scene_buffers.h"
 
-#include "core/io/resource.h"
-#include "core/templates/rid.h"
+void RenderSceneBuffers::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("configure", "render_target", "internal_size", "target_size", "fsr_sharpness", "texture_mipmap_bias", "msaa", "screen_space_aa", "use_taa", "use_debanding", "view_count"), &RenderSceneBuffers::configure);
+}
 
-class CameraEffects : public Resource {
-	GDCLASS(CameraEffects, Resource);
-
-private:
-	RID camera_effects;
-
-	// DOF blur
-	bool dof_blur_far_enabled = false;
-	float dof_blur_far_distance = 10.0;
-	float dof_blur_far_transition = 5.0;
-
-	bool dof_blur_near_enabled = false;
-	float dof_blur_near_distance = 2.0;
-	float dof_blur_near_transition = 1.0;
-
-	float dof_blur_amount = 0.1;
-	void _update_dof_blur();
-
-	// Override exposure
-	bool override_exposure_enabled = false;
-	float override_exposure = 1.0;
-	void _update_override_exposure();
-
-protected:
-	static void _bind_methods();
-	void _validate_property(PropertyInfo &p_property) const;
-
-public:
-	virtual RID get_rid() const override;
-
-	// DOF blur
-	void set_dof_blur_far_enabled(bool p_enabled);
-	bool is_dof_blur_far_enabled() const;
-	void set_dof_blur_far_distance(float p_distance);
-	float get_dof_blur_far_distance() const;
-	void set_dof_blur_far_transition(float p_distance);
-	float get_dof_blur_far_transition() const;
-
-	void set_dof_blur_near_enabled(bool p_enabled);
-	bool is_dof_blur_near_enabled() const;
-	void set_dof_blur_near_distance(float p_distance);
-	float get_dof_blur_near_distance() const;
-	void set_dof_blur_near_transition(float p_distance);
-	float get_dof_blur_near_transition() const;
-
-	void set_dof_blur_amount(float p_amount);
-	float get_dof_blur_amount() const;
-
-	// Override exposure
-	void set_override_exposure_enabled(bool p_enabled);
-	bool is_override_exposure_enabled() const;
-	void set_override_exposure(float p_exposure);
-	float get_override_exposure() const;
-
-	CameraEffects();
-	~CameraEffects();
+void RenderSceneBuffers::configure(RID p_render_target, const Size2i p_internal_size, const Size2i p_target_size, float p_fsr_sharpness, float p_texture_mipmap_bias, RS::ViewportMSAA p_msaa, RenderingServer::ViewportScreenSpaceAA p_screen_space_aa, bool p_use_taa, bool p_use_debanding, uint32_t p_view_count) {
+	GDVIRTUAL_CALL(_configure, p_render_target, p_internal_size, p_target_size, p_fsr_sharpness, p_texture_mipmap_bias, p_msaa, p_screen_space_aa, p_use_taa, p_use_debanding, p_view_count);
 };
 
-#endif // CAMERA_EFFECTS_H
+void RenderSceneBuffers::set_fsr_sharpness(float p_fsr_sharpness) {
+	GDVIRTUAL_CALL(_set_fsr_sharpness, p_fsr_sharpness);
+}
+
+void RenderSceneBuffers::set_texture_mipmap_bias(float p_texture_mipmap_bias) {
+	GDVIRTUAL_CALL(_set_texture_mipmap_bias, p_texture_mipmap_bias);
+}
+
+void RenderSceneBuffers::set_use_debanding(bool p_use_debanding) {
+	GDVIRTUAL_CALL(_set_use_debanding, p_use_debanding);
+}
