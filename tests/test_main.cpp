@@ -85,6 +85,7 @@
 #include "tests/core/variant/test_variant.h"
 #include "tests/scene/test_animation.h"
 #include "tests/scene/test_audio_stream_wav.h"
+#include "tests/scene/test_bit_map.h"
 #include "tests/scene/test_code_edit.h"
 #include "tests/scene/test_curve.h"
 #include "tests/scene/test_gradient.h"
@@ -282,7 +283,7 @@ struct GodotTestCaseListener : public doctest::IReporter {
 
 		if (RenderingServer::get_singleton()) {
 			RenderingServer::get_singleton()->sync();
-			RenderingServer::get_singleton()->global_shader_uniforms_clear();
+			RenderingServer::get_singleton()->global_shader_parameters_clear();
 			RenderingServer::get_singleton()->finish();
 			memdelete(RenderingServer::get_singleton());
 		}

@@ -182,7 +182,7 @@ static Ref<StyleBoxFlat> make_flat_stylebox(Color p_color, float p_margin_left =
 	Ref<StyleBoxFlat> style(memnew(StyleBoxFlat));
 	style->set_bg_color(p_color);
 	// Adjust level of detail based on the corners' effective sizes.
-	style->set_corner_detail(Math::ceil(1.5 * p_corner_width * EDSCALE));
+	style->set_corner_detail(Math::ceil(0.8 * p_corner_width * EDSCALE));
 	style->set_corner_radius_all(p_corner_width * EDSCALE);
 	style->set_default_margin(SIDE_LEFT, p_margin_left * EDSCALE);
 	style->set_default_margin(SIDE_RIGHT, p_margin_right * EDSCALE);
@@ -593,7 +593,6 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	Ref<StyleBoxFlat> style_default = make_flat_stylebox(base_color, default_margin_size, default_margin_size, default_margin_size, default_margin_size, corner_width);
 	style_default->set_border_width_all(border_width);
 	style_default->set_border_color(base_color);
-	style_default->set_draw_center(true);
 
 	// Button and widgets
 	const float extra_spacing = EDITOR_GET("interface/theme/additional_spacing");
@@ -635,6 +634,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	const Color shadow_color = Color(0, 0, 0, dark_theme ? 0.3 : 0.1);
 	style_popup->set_shadow_color(shadow_color);
 	style_popup->set_shadow_size(4 * EDSCALE);
+	// Popups are separate windows by default in the editor. Windows currently don't support per-pixel transparency
+	// in 4.0, and even if it was, it may not always work in practice (e.g. running with compositing disabled).
+	style_popup->set_corner_radius_all(0);
 
 	Ref<StyleBoxLine> style_popup_separator(memnew(StyleBoxLine));
 	style_popup_separator->set_color(separator_color);
@@ -661,10 +663,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	style_tab_base->set_border_width_all(0);
 	// Don't round the top corners to avoid creating a small blank space between the tabs and the main panel.
 	// This also makes the top highlight look better.
-	style_tab_base->set_corner_detail(corner_width);
-	style_tab_base->set_corner_radius_all(0);
-	style_tab_base->set_corner_radius(CORNER_TOP_LEFT, corner_radius * EDSCALE);
-	style_tab_base->set_corner_radius(CORNER_TOP_RIGHT, corner_radius * EDSCALE);
+	style_tab_base->set_corner_radius(CORNER_BOTTOM_LEFT, 0);
+	style_tab_base->set_corner_radius(CORNER_BOTTOM_RIGHT, 0);
 
 	// Prevent visible artifacts and cover the top-left rounded corner of the panel below the tab if selected
 	// We can't prevent them with both rounded corners and non-zero border width, though
@@ -975,9 +975,6 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	// Always display a border for PopupMenus so they can be distinguished from their background.
 	style_popup_menu->set_border_width_all(EDSCALE);
 	style_popup_menu->set_border_color(dark_color_2);
-	// Popups are separate windows by default in the editor. Windows currently don't support per-pixel transparency
-	// in 4.0, and even if it was, it may not always work in practice (e.g. running with compositing disabled).
-	style_popup_menu->set_corner_radius_all(0);
 	theme->set_stylebox("panel", "PopupMenu", style_popup_menu);
 
 	Ref<StyleBoxFlat> style_menu_hover = style_widget_hover->duplicate();
@@ -1358,6 +1355,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("selection_color", "TextEdit", selection_color);
 	theme->set_constant("line_spacing", "TextEdit", 4 * EDSCALE);
 
+	theme->set_icon("h_grabber", "SplitContainer", theme->get_icon(SNAME("GuiHsplitter"), SNAME("EditorIcons")));
+	theme->set_icon("v_grabber", "SplitContainer", theme->get_icon(SNAME("GuiVsplitter"), SNAME("EditorIcons")));
 	theme->set_icon("grabber", "VSplitContainer", theme->get_icon(SNAME("GuiVsplitter"), SNAME("EditorIcons")));
 	theme->set_icon("grabber", "HSplitContainer", theme->get_icon(SNAME("GuiHsplitter"), SNAME("EditorIcons")));
 
@@ -1650,6 +1649,11 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	graphsbselected->set_border_width(SIDE_TOP, 24 * EDSCALE);
 	graphsbcomment->set_border_width(SIDE_TOP, 24 * EDSCALE);
 	graphsbcommentselected->set_border_width(SIDE_TOP, 24 * EDSCALE);
+
+	graphsb->set_corner_detail(corner_radius * EDSCALE);
+	graphsbselected->set_corner_detail(corner_radius * EDSCALE);
+	graphsbcomment->set_corner_detail(corner_radius * EDSCALE);
+	graphsbcommentselected->set_corner_detail(corner_radius * EDSCALE);
 
 	theme->set_stylebox("frame", "GraphNode", graphsb);
 	theme->set_stylebox("selected_frame", "GraphNode", graphsbselected);

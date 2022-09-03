@@ -130,10 +130,10 @@ private:
 
 		virtual void set_code(const String &p_Code);
 		virtual void set_path_hint(const String &p_hint);
-		virtual void set_default_texture_param(const StringName &p_name, RID p_texture, int p_index);
+		virtual void set_default_texture_parameter(const StringName &p_name, RID p_texture, int p_index);
 		virtual void get_shader_uniform_list(List<PropertyInfo> *p_param_list) const;
 		virtual void get_instance_param_list(List<RendererMaterialStorage::InstanceShaderParam> *p_param_list) const;
-		virtual bool is_param_texture(const StringName &p_param) const;
+		virtual bool is_parameter_texture(const StringName &p_param) const;
 		virtual bool is_animated() const;
 		virtual bool casts_shadows() const;
 		virtual Variant get_default_parameter(const StringName &p_parameter) const;
@@ -148,20 +148,23 @@ private:
 public:
 	struct SkySceneState {
 		struct UBO {
-			uint32_t volumetric_fog_enabled;
-			float volumetric_fog_inv_length;
-			float volumetric_fog_detail_spread;
+			uint32_t volumetric_fog_enabled; // 4 - 4
+			float volumetric_fog_inv_length; // 4 - 8
+			float volumetric_fog_detail_spread; // 4 - 12
+			float volumetric_fog_sky_affect; // 4 - 16
 
-			float fog_aerial_perspective;
+			uint32_t fog_enabled; // 4 - 20
+			float fog_sky_affect; // 4 - 24
+			float fog_density; // 4 - 28
+			float fog_sun_scatter; // 4 - 32
 
-			float fog_light_color[3];
-			float fog_sun_scatter;
+			float fog_light_color[3]; // 12 - 44
+			float fog_aerial_perspective; // 4 - 48
 
-			uint32_t fog_enabled;
-			float fog_density;
-
-			float z_far;
-			uint32_t directional_light_count;
+			float z_far; // 4 - 52
+			uint32_t directional_light_count; // 4 - 56
+			uint32_t pad1; // 4 - 60
+			uint32_t pad2; // 4 - 64
 		};
 
 		UBO ubo;

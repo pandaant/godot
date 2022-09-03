@@ -101,10 +101,10 @@ public:
 	virtual void instance_geometry_set_visibility_range(RID p_instance, float p_min, float p_max, float p_min_margin, float p_max_margin, RS::VisibilityRangeFadeMode p_fade_mode) = 0;
 	virtual void instance_geometry_set_lightmap(RID p_instance, RID p_lightmap, const Rect2 &p_lightmap_uv_scale, int p_slice_index) = 0;
 	virtual void instance_geometry_set_lod_bias(RID p_instance, float p_lod_bias) = 0;
-	virtual void instance_geometry_set_shader_uniform(RID p_instance, const StringName &p_parameter, const Variant &p_value) = 0;
-	virtual void instance_geometry_get_shader_uniform_list(RID p_instance, List<PropertyInfo> *p_parameters) const = 0;
-	virtual Variant instance_geometry_get_shader_uniform(RID p_instance, const StringName &p_parameter) const = 0;
-	virtual Variant instance_geometry_get_shader_uniform_default_value(RID p_instance, const StringName &p_parameter) const = 0;
+	virtual void instance_geometry_set_shader_parameter(RID p_instance, const StringName &p_parameter, const Variant &p_value) = 0;
+	virtual void instance_geometry_get_shader_parameter_list(RID p_instance, List<PropertyInfo> *p_parameters) const = 0;
+	virtual Variant instance_geometry_get_shader_parameter(RID p_instance, const StringName &p_parameter) const = 0;
+	virtual Variant instance_geometry_get_shader_parameter_default_value(RID p_instance, const StringName &p_parameter) const = 0;
 
 	virtual void directional_shadow_atlas_set_size(int p_size, bool p_16_bits = true) = 0;
 
@@ -155,7 +155,7 @@ public:
 	virtual float environment_get_white(RID p_env) const = 0;
 
 	// Fog
-	virtual void environment_set_fog(RID p_env, bool p_enable, const Color &p_light_color, float p_light_energy, float p_sun_scatter, float p_density, float p_height, float p_height_density, float p_aerial_perspective) = 0;
+	virtual void environment_set_fog(RID p_env, bool p_enable, const Color &p_light_color, float p_light_energy, float p_sun_scatter, float p_density, float p_height, float p_height_density, float p_aerial_perspective, float p_sky_affect) = 0;
 
 	virtual bool environment_get_fog_enabled(RID p_env) const = 0;
 	virtual Color environment_get_fog_light_color(RID p_env) const = 0;
@@ -165,9 +165,10 @@ public:
 	virtual float environment_get_fog_height(RID p_env) const = 0;
 	virtual float environment_get_fog_height_density(RID p_env) const = 0;
 	virtual float environment_get_fog_aerial_perspective(RID p_env) const = 0;
+	virtual float environment_get_fog_sky_affect(RID p_env) const = 0;
 
 	// Volumetric Fog
-	virtual void environment_set_volumetric_fog(RID p_env, bool p_enable, float p_density, const Color &p_albedo, const Color &p_emission, float p_emission_energy, float p_anisotropy, float p_length, float p_detail_spread, float p_gi_inject, bool p_temporal_reprojection, float p_temporal_reprojection_amount, float p_ambient_inject) = 0;
+	virtual void environment_set_volumetric_fog(RID p_env, bool p_enable, float p_density, const Color &p_albedo, const Color &p_emission, float p_emission_energy, float p_anisotropy, float p_length, float p_detail_spread, float p_gi_inject, bool p_temporal_reprojection, float p_temporal_reprojection_amount, float p_ambient_inject, float p_sky_affect) = 0;
 
 	virtual bool environment_get_volumetric_fog_enabled(RID p_env) const = 0;
 	virtual float environment_get_volumetric_fog_density(RID p_env) const = 0;
@@ -178,6 +179,7 @@ public:
 	virtual float environment_get_volumetric_fog_length(RID p_env) const = 0;
 	virtual float environment_get_volumetric_fog_detail_spread(RID p_env) const = 0;
 	virtual float environment_get_volumetric_fog_gi_inject(RID p_env) const = 0;
+	virtual float environment_get_volumetric_fog_sky_affect(RID p_env) const = 0;
 	virtual bool environment_get_volumetric_fog_temporal_reprojection(RID p_env) const = 0;
 	virtual float environment_get_volumetric_fog_temporal_reprojection_amount(RID p_env) const = 0;
 	virtual float environment_get_volumetric_fog_ambient_inject(RID p_env) const = 0;
@@ -294,7 +296,7 @@ public:
 
 	virtual void set_debug_draw_mode(RS::ViewportDebugDraw p_debug_draw) = 0;
 
-	virtual TypedArray<Image> bake_render_uv2(RID p_base, const Vector<RID> &p_material_overrides, const Size2i &p_image_size) = 0;
+	virtual TypedArray<Image> bake_render_uv2(RID p_base, const TypedArray<RID> &p_material_overrides, const Size2i &p_image_size) = 0;
 	virtual void voxel_gi_set_quality(RS::VoxelGIQuality) = 0;
 
 	virtual void sdfgi_set_debug_probe_select(const Vector3 &p_position, const Vector3 &p_dir) = 0;

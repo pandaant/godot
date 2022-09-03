@@ -433,7 +433,7 @@ PhysicalBone3D *Skeleton3DEditor::create_physical_bone(int bone_id, int bone_chi
 
 	/// Get an up vector not collinear with child rest origin
 	Vector3 up = Vector3(0, 1, 0);
-	if (up.cross(child_rest.origin).is_equal_approx(Vector3())) {
+	if (up.cross(child_rest.origin).is_zero_approx()) {
 		up = Vector3(0, 0, 1);
 	}
 
@@ -921,8 +921,8 @@ void fragment() {
 )");
 	handle_material->set_shader(handle_shader);
 	Ref<Texture2D> handle = EditorNode::get_singleton()->get_gui_base()->get_theme_icon(SNAME("EditorBoneHandle"), SNAME("EditorIcons"));
-	handle_material->set_shader_uniform("point_size", handle->get_width());
-	handle_material->set_shader_uniform("texture_albedo", handle);
+	handle_material->set_shader_parameter("point_size", handle->get_width());
+	handle_material->set_shader_parameter("texture_albedo", handle);
 
 	handles_mesh_instance = memnew(MeshInstance3D);
 	handles_mesh_instance->set_cast_shadows_setting(GeometryInstance3D::SHADOW_CASTING_SETTING_OFF);

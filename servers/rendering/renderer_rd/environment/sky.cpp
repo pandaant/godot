@@ -152,7 +152,7 @@ void SkyRD::SkyShaderData::set_code(const String &p_code) {
 	valid = true;
 }
 
-void SkyRD::SkyShaderData::set_default_texture_param(const StringName &p_name, RID p_texture, int p_index) {
+void SkyRD::SkyShaderData::set_default_texture_parameter(const StringName &p_name, RID p_texture, int p_index) {
 	if (!p_texture.is_valid()) {
 		if (default_texture_params.has(p_name) && default_texture_params[p_name].has(p_index)) {
 			default_texture_params[p_name].erase(p_index);
@@ -220,7 +220,7 @@ void SkyRD::SkyShaderData::get_instance_param_list(List<RendererMaterialStorage:
 	}
 }
 
-bool SkyRD::SkyShaderData::is_param_texture(const StringName &p_param) const {
+bool SkyRD::SkyShaderData::is_parameter_texture(const StringName &p_param) const {
 	if (!uniforms.has(p_param)) {
 		return false;
 	}
@@ -1327,6 +1327,9 @@ void SkyRD::setup(RID p_env, Ref<RenderSceneBuffersRD> p_render_buffers, const P
 	sky_scene_state.ubo.fog_light_color[1] = fog_color.g * fog_energy;
 	sky_scene_state.ubo.fog_light_color[2] = fog_color.b * fog_energy;
 	sky_scene_state.ubo.fog_sun_scatter = RendererSceneRenderRD::get_singleton()->environment_get_fog_sun_scatter(p_env);
+
+	sky_scene_state.ubo.fog_sky_affect = RendererSceneRenderRD::get_singleton()->environment_get_fog_sky_affect(p_env);
+	sky_scene_state.ubo.volumetric_fog_sky_affect = RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_sky_affect(p_env);
 
 	RD::get_singleton()->buffer_update(sky_scene_state.uniform_buffer, 0, sizeof(SkySceneState::UBO), &sky_scene_state.ubo);
 }

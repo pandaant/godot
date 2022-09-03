@@ -1783,7 +1783,7 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 	// Fill Light lists here
 	//////////
 
-	GLuint global_buffer = GLES3::MaterialStorage::get_singleton()->global_shader_uniforms_get_uniform_buffer();
+	GLuint global_buffer = GLES3::MaterialStorage::get_singleton()->global_shader_parameters_get_uniform_buffer();
 	glBindBufferBase(GL_UNIFORM_BUFFER, SCENE_GLOBALS_UNIFORM_LOCATION, global_buffer);
 
 	Color clear_color;
@@ -2378,7 +2378,7 @@ void RasterizerSceneGLES3::sub_surface_scattering_set_quality(RS::SubSurfaceScat
 void RasterizerSceneGLES3::sub_surface_scattering_set_scale(float p_scale, float p_depth_scale) {
 }
 
-TypedArray<Image> RasterizerSceneGLES3::bake_render_uv2(RID p_base, const Vector<RID> &p_material_overrides, const Size2i &p_image_size) {
+TypedArray<Image> RasterizerSceneGLES3::bake_render_uv2(RID p_base, const TypedArray<RID> &p_material_overrides, const Size2i &p_image_size) {
 	return TypedArray<Image>();
 }
 

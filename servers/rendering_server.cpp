@@ -95,7 +95,7 @@ PackedInt64Array RenderingServer::_instances_cull_ray_bind(const Vector3 &p_from
 	return to_int_array(ids);
 }
 
-PackedInt64Array RenderingServer::_instances_cull_convex_bind(const Array &p_convex, RID p_scenario) const {
+PackedInt64Array RenderingServer::_instances_cull_convex_bind(const TypedArray<Plane> &p_convex, RID p_scenario) const {
 	if (RSG::threaded) {
 		WARN_PRINT_ONCE("Using this function with a threaded renderer hurts performance, as it causes a server stall.");
 	}
@@ -1400,7 +1400,7 @@ Array RenderingServer::_mesh_surface_get_skeleton_aabb_bind(RID p_mesh, int p_su
 }
 #endif
 
-int RenderingServer::global_shader_uniform_type_get_shader_datatype(GlobalShaderUniformType p_type) {
+int RenderingServer::global_shader_uniform_type_get_shader_datatype(GlobalShaderParameterType p_type) {
 	switch (p_type) {
 		case RS::GLOBAL_VAR_TYPE_BOOL:
 			return ShaderLanguage::TYPE_BOOL;
@@ -1501,9 +1501,9 @@ TypedArray<Image> RenderingServer::_texture_3d_get(RID p_texture) const {
 	return ret;
 }
 
-TypedArray<Dictionary> RenderingServer::_shader_get_shader_uniform_list(RID p_shader) const {
+TypedArray<Dictionary> RenderingServer::_shader_get_shader_parameter_list(RID p_shader) const {
 	List<PropertyInfo> l;
-	shader_get_shader_uniform_list(p_shader, &l);
+	get_shader_parameter_list(p_shader, &l);
 	return convert_property_list(&l);
 }
 
@@ -1626,14 +1626,14 @@ Dictionary RenderingServer::_mesh_get_surface(RID p_mesh, int p_idx) {
 	return d;
 }
 
-TypedArray<Dictionary> RenderingServer::_instance_geometry_get_shader_uniform_list(RID p_instance) const {
+TypedArray<Dictionary> RenderingServer::_instance_geometry_get_shader_parameter_list(RID p_instance) const {
 	List<PropertyInfo> params;
-	instance_geometry_get_shader_uniform_list(p_instance, &params);
+	instance_geometry_get_shader_parameter_list(p_instance, &params);
 	return convert_property_list(&params);
 }
 
 TypedArray<Image> RenderingServer::_bake_render_uv2(RID p_base, const TypedArray<RID> &p_material_overrides, const Size2i &p_image_size) {
-	Vector<RID> mat_overrides;
+	TypedArray<RID> mat_overrides;
 	for (int i = 0; i < p_material_overrides.size(); i++) {
 		mat_overrides.push_back(p_material_overrides[i]);
 	}
@@ -1702,11 +1702,11 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("shader_set_code", "shader", "code"), &RenderingServer::shader_set_code);
 	ClassDB::bind_method(D_METHOD("shader_set_path_hint", "shader", "path"), &RenderingServer::shader_set_path_hint);
 	ClassDB::bind_method(D_METHOD("shader_get_code", "shader"), &RenderingServer::shader_get_code);
-	ClassDB::bind_method(D_METHOD("shader_get_shader_uniform_list", "shader"), &RenderingServer::_shader_get_shader_uniform_list);
-	ClassDB::bind_method(D_METHOD("shader_get_param_default", "shader", "param"), &RenderingServer::shader_get_param_default);
+	ClassDB::bind_method(D_METHOD("get_shader_parameter_list", "shader"), &RenderingServer::_shader_get_shader_parameter_list);
+	ClassDB::bind_method(D_METHOD("shader_get_parameter_default", "shader", "name"), &RenderingServer::shader_get_parameter_default);
 
-	ClassDB::bind_method(D_METHOD("shader_set_default_texture_param", "shader", "param", "texture", "index"), &RenderingServer::shader_set_default_texture_param, DEFVAL(0));
-	ClassDB::bind_method(D_METHOD("shader_get_default_texture_param", "shader", "param", "index"), &RenderingServer::shader_get_default_texture_param, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("shader_set_default_texture_parameter", "shader", "name", "texture", "index"), &RenderingServer::shader_set_default_texture_parameter, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("shader_get_default_texture_parameter", "shader", "name", "index"), &RenderingServer::shader_get_default_texture_parameter, DEFVAL(0));
 
 	BIND_ENUM_CONSTANT(SHADER_SPATIAL);
 	BIND_ENUM_CONSTANT(SHADER_CANVAS_ITEM);
@@ -2335,9 +2335,9 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("environment_set_adjustment", "env", "enable", "brightness", "contrast", "saturation", "use_1d_color_correction", "color_correction"), &RenderingServer::environment_set_adjustment);
 	ClassDB::bind_method(D_METHOD("environment_set_ssr", "env", "enable", "max_steps", "fade_in", "fade_out", "depth_tolerance"), &RenderingServer::environment_set_ssr);
 	ClassDB::bind_method(D_METHOD("environment_set_ssao", "env", "enable", "radius", "intensity", "power", "detail", "horizon", "sharpness", "light_affect", "ao_channel_affect"), &RenderingServer::environment_set_ssao);
-	ClassDB::bind_method(D_METHOD("environment_set_fog", "env", "enable", "light_color", "light_energy", "sun_scatter", "density", "height", "height_density", "aerial_perspective"), &RenderingServer::environment_set_fog);
+	ClassDB::bind_method(D_METHOD("environment_set_fog", "env", "enable", "light_color", "light_energy", "sun_scatter", "density", "height", "height_density", "aerial_perspective", "sky_affect"), &RenderingServer::environment_set_fog);
 	ClassDB::bind_method(D_METHOD("environment_set_sdfgi", "env", "enable", "cascades", "min_cell_size", "y_scale", "use_occlusion", "bounce_feedback", "read_sky", "energy", "normal_bias", "probe_bias"), &RenderingServer::environment_set_sdfgi);
-	ClassDB::bind_method(D_METHOD("environment_set_volumetric_fog", "env", "enable", "density", "albedo", "emission", "emission_energy", "anisotropy", "length", "p_detail_spread", "gi_inject", "temporal_reprojection", "temporal_reprojection_amount", "ambient_inject"), &RenderingServer::environment_set_volumetric_fog);
+	ClassDB::bind_method(D_METHOD("environment_set_volumetric_fog", "env", "enable", "density", "albedo", "emission", "emission_energy", "anisotropy", "length", "p_detail_spread", "gi_inject", "temporal_reprojection", "temporal_reprojection_amount", "ambient_inject", "sky_affect"), &RenderingServer::environment_set_volumetric_fog);
 
 	ClassDB::bind_method(D_METHOD("environment_glow_set_use_bicubic_upscale", "enable"), &RenderingServer::environment_glow_set_use_bicubic_upscale);
 	ClassDB::bind_method(D_METHOD("environment_glow_set_use_high_quality", "enable"), &RenderingServer::environment_glow_set_use_high_quality);
@@ -2490,10 +2490,10 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("instance_geometry_set_lightmap", "instance", "lightmap", "lightmap_uv_scale", "lightmap_slice"), &RenderingServer::instance_geometry_set_lightmap);
 	ClassDB::bind_method(D_METHOD("instance_geometry_set_lod_bias", "instance", "lod_bias"), &RenderingServer::instance_geometry_set_lod_bias);
 
-	ClassDB::bind_method(D_METHOD("instance_geometry_set_shader_uniform", "instance", "parameter", "value"), &RenderingServer::instance_geometry_set_shader_uniform);
-	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_uniform", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_uniform);
-	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_uniform_default_value", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_uniform_default_value);
-	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_uniform_list", "instance"), &RenderingServer::_instance_geometry_get_shader_uniform_list);
+	ClassDB::bind_method(D_METHOD("instance_geometry_set_shader_parameter", "instance", "parameter", "value"), &RenderingServer::instance_geometry_set_shader_parameter);
+	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_parameter", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_parameter);
+	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_parameter_default_value", "instance", "parameter"), &RenderingServer::instance_geometry_get_shader_parameter_default_value);
+	ClassDB::bind_method(D_METHOD("instance_geometry_get_shader_parameter_list", "instance"), &RenderingServer::_instance_geometry_get_shader_parameter_list);
 
 	ClassDB::bind_method(D_METHOD("instances_cull_aabb", "aabb", "scenario"), &RenderingServer::_instances_cull_aabb_bind, DEFVAL(RID()));
 	ClassDB::bind_method(D_METHOD("instances_cull_ray", "from", "to", "scenario"), &RenderingServer::_instances_cull_ray_bind, DEFVAL(RID()));
@@ -2690,13 +2690,13 @@ void RenderingServer::_bind_methods() {
 
 	/* GLOBAL SHADER UNIFORMS */
 
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_add", "name", "type", "default_value"), &RenderingServer::global_shader_uniform_add);
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_remove", "name"), &RenderingServer::global_shader_uniform_remove);
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_get_list"), &RenderingServer::global_shader_uniform_get_list);
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_set", "name", "value"), &RenderingServer::global_shader_uniform_set);
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_set_override", "name", "value"), &RenderingServer::global_shader_uniform_set_override);
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_get", "name"), &RenderingServer::global_shader_uniform_get);
-	ClassDB::bind_method(D_METHOD("global_shader_uniform_get_type", "name"), &RenderingServer::global_shader_uniform_get_type);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_add", "name", "type", "default_value"), &RenderingServer::global_shader_parameter_add);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_remove", "name"), &RenderingServer::global_shader_parameter_remove);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_get_list"), &RenderingServer::global_shader_parameter_get_list);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_set", "name", "value"), &RenderingServer::global_shader_parameter_set);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_set_override", "name", "value"), &RenderingServer::global_shader_parameter_set_override);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_get", "name"), &RenderingServer::global_shader_parameter_get);
+	ClassDB::bind_method(D_METHOD("global_shader_parameter_get_type", "name"), &RenderingServer::global_shader_parameter_get_type);
 
 	BIND_ENUM_CONSTANT(GLOBAL_VAR_TYPE_BOOL);
 	BIND_ENUM_CONSTANT(GLOBAL_VAR_TYPE_BVEC2);

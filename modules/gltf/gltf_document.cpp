@@ -435,7 +435,7 @@ Error GLTFDocument::_serialize_nodes(Ref<GLTFState> state) {
 			node["scale"] = _vec3_to_arr(n->scale);
 		}
 
-		if (!n->position.is_equal_approx(Vector3())) {
+		if (!n->position.is_zero_approx()) {
 			node["translation"] = _vec3_to_arr(n->position);
 		}
 		if (n->children.size()) {
@@ -5007,7 +5007,7 @@ GLTFMeshIndex GLTFDocument::_convert_mesh_to_gltf(Ref<GLTFState> state, MeshInst
 
 	Ref<GLTFMesh> gltf_mesh;
 	gltf_mesh.instantiate();
-	Array instance_materials;
+	TypedArray<Material> instance_materials;
 	for (int32_t surface_i = 0; surface_i < current_mesh->get_surface_count(); surface_i++) {
 		Ref<Material> mat = current_mesh->get_surface_material(surface_i);
 		if (p_mesh_instance->get_surface_override_material(surface_i).is_valid()) {
