@@ -35,7 +35,7 @@
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
 #include "core/io/resource_saver.h"
-#include "core/io/stream_peer_ssl.h"
+#include "core/io/stream_peer_tls.h"
 #include "core/io/zip_io.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
@@ -2606,7 +2606,7 @@ ProjectManager::ProjectManager() {
 		}
 
 		PanelContainer *pc = memnew(PanelContainer);
-		pc->add_theme_style_override("panel", get_theme_stylebox(SNAME("bg"), SNAME("Tree")));
+		pc->add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("Tree")));
 		pc->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 		search_tree_vb->add_child(pc);
 

@@ -2711,6 +2711,11 @@ void EditorInspector::update_tree() {
 				continue;
 			}
 
+			// Hide the "MultiNodeEdit" category for MultiNodeEdit.
+			if (Object::cast_to<MultiNodeEdit>(object) && p.name == "MultiNodeEdit") {
+				continue;
+			}
+
 			// Iterate over remaining properties. If no properties in category, skip the category.
 			List<PropertyInfo>::Element *N = E_property->next();
 			bool valid = true;
@@ -2816,6 +2821,11 @@ void EditorInspector::update_tree() {
 
 		if (p.name == "script" && (hide_script || bool(object->call("_hide_script_from_inspector")))) {
 			// Hide script variables from inspector if required.
+			continue;
+		}
+
+		if (p.name.begins_with("metadata/") && bool(object->call("_hide_metadata_from_inspector"))) {
+			// Hide metadata from inspector if required.
 			continue;
 		}
 
@@ -3089,6 +3099,8 @@ void EditorInspector::update_tree() {
 			StringName classname = doc_name == "" ? object->get_class_name() : doc_name;
 			if (!object_class.is_empty()) {
 				classname = object_class;
+			} else if (Object::cast_to<MultiNodeEdit>(object)) {
+				classname = Object::cast_to<MultiNodeEdit>(object)->get_edited_class_name();
 			}
 
 			StringName propname = property_prefix + p.name;
@@ -3242,7 +3254,7 @@ void EditorInspector::update_tree() {
 		}
 	}
 
-	if (!hide_metadata) {
+	if (!hide_metadata && !object->call("_hide_metadata_from_inspector")) {
 		// Add 4px of spacing between the "Add Metadata" button and the content above it.
 		Control *spacer = memnew(Control);
 		spacer->set_custom_minimum_size(Size2(0, 4) * EDSCALE);
@@ -3475,9 +3487,9 @@ void EditorInspector::_update_inspector_bg() {
 			n = n->get_parent();
 		}
 		count_subinspectors = MIN(15, count_subinspectors);
-		add_theme_style_override("bg", get_theme_stylebox("sub_inspector_bg" + itos(count_subinspectors), SNAME("Editor")));
+		add_theme_style_override("panel", get_theme_stylebox("sub_inspector_bg" + itos(count_subinspectors), SNAME("Editor")));
 	} else {
-		add_theme_style_override("bg", get_theme_stylebox(SNAME("bg"), SNAME("Tree")));
+		add_theme_style_override("panel", get_theme_stylebox(SNAME("panel"), SNAME("Tree")));
 	}
 }
 void EditorInspector::set_sub_inspector(bool p_enable) {

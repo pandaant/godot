@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  javascript_singleton.h                                               */
+/*  stream_peer_tls.cpp                                                  */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,43 +28,48 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef JAVASCRIPT_SINGLETON_H
-#define JAVASCRIPT_SINGLETON_H
+#include "stream_peer_tls.h"
 
-#include "core/object/class_db.h"
-#include "core/object/ref_counted.h"
+#include "core/config/engine.h"
 
-class JavaScriptObject : public RefCounted {
-private:
-	GDCLASS(JavaScriptObject, RefCounted);
+StreamPeerTLS *(*StreamPeerTLS::_create)() = nullptr;
 
-protected:
-	virtual bool _set(const StringName &p_name, const Variant &p_value) { return false; }
-	virtual bool _get(const StringName &p_name, Variant &r_ret) const { return false; }
-	virtual void _get_property_list(List<PropertyInfo> *p_list) const {}
-};
+StreamPeerTLS *StreamPeerTLS::create() {
+	if (_create) {
+		return _create();
+	}
+	return nullptr;
+}
 
-class JavaScript : public Object {
-private:
-	GDCLASS(JavaScript, Object);
+bool StreamPeerTLS::available = false;
 
-	static JavaScript *singleton;
+bool StreamPeerTLS::is_available() {
+	return available;
+}
 
-protected:
-	static void _bind_methods();
+void StreamPeerTLS::set_blocking_handshake_enabled(bool p_enabled) {
+	blocking_handshake = p_enabled;
+}
 
-public:
-	Variant eval(const String &p_code, bool p_use_global_exec_context = false);
-	Ref<JavaScriptObject> get_interface(const String &p_interface);
-	Ref<JavaScriptObject> create_callback(const Callable &p_callable);
-	Variant _create_object_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	void download_buffer(Vector<uint8_t> p_arr, const String &p_name, const String &p_mime = "application/octet-stream");
-	bool pwa_needs_update() const;
-	Error pwa_update();
+bool StreamPeerTLS::is_blocking_handshake_enabled() const {
+	return blocking_handshake;
+}
 
-	static JavaScript *get_singleton();
-	JavaScript();
-	~JavaScript();
-};
+void StreamPeerTLS::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("poll"), &StreamPeerTLS::poll);
+	ClassDB::bind_method(D_METHOD("accept_stream", "stream", "private_key", "certificate", "chain"), &StreamPeerTLS::accept_stream, DEFVAL(Ref<X509Certificate>()));
+	ClassDB::bind_method(D_METHOD("connect_to_stream", "stream", "validate_certs", "for_hostname", "valid_certificate"), &StreamPeerTLS::connect_to_stream, DEFVAL(false), DEFVAL(String()), DEFVAL(Ref<X509Certificate>()));
+	ClassDB::bind_method(D_METHOD("get_status"), &StreamPeerTLS::get_status);
+	ClassDB::bind_method(D_METHOD("get_stream"), &StreamPeerTLS::get_stream);
+	ClassDB::bind_method(D_METHOD("disconnect_from_stream"), &StreamPeerTLS::disconnect_from_stream);
+	ClassDB::bind_method(D_METHOD("set_blocking_handshake_enabled", "enabled"), &StreamPeerTLS::set_blocking_handshake_enabled);
+	ClassDB::bind_method(D_METHOD("is_blocking_handshake_enabled"), &StreamPeerTLS::is_blocking_handshake_enabled);
 
-#endif // JAVASCRIPT_SINGLETON_H
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "blocking_handshake"), "set_blocking_handshake_enabled", "is_blocking_handshake_enabled");
+
+	BIND_ENUM_CONSTANT(STATUS_DISCONNECTED);
+	BIND_ENUM_CONSTANT(STATUS_HANDSHAKING);
+	BIND_ENUM_CONSTANT(STATUS_CONNECTED);
+	BIND_ENUM_CONSTANT(STATUS_ERROR);
+	BIND_ENUM_CONSTANT(STATUS_ERROR_HOSTNAME_MISMATCH);
+}
