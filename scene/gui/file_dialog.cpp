@@ -87,6 +87,8 @@ void FileDialog::_notification(int p_what) {
 			if (!is_visible()) {
 				set_process_shortcut_input(false);
 			}
+
+			invalidate(); // Put it here to preview in the editor.
 		} break;
 
 		case NOTIFICATION_THEME_CHANGED: {
@@ -143,7 +145,7 @@ void FileDialog::shortcut_input(const Ref<InputEvent> &p_event) {
 
 			switch (k->get_keycode()) {
 				case Key::H: {
-					if (k->is_command_pressed()) {
+					if (k->is_command_or_control_pressed()) {
 						set_show_hidden_files(!show_hidden_files);
 					} else {
 						handled = false;
@@ -223,10 +225,6 @@ void FileDialog::_save_confirm_pressed() {
 
 void FileDialog::_post_popup() {
 	ConfirmationDialog::_post_popup();
-	if (invalidated) {
-		update_file_list();
-		invalidated = false;
-	}
 	if (mode == FILE_MODE_SAVE_FILE) {
 		file->grab_focus();
 	} else {

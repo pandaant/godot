@@ -2743,7 +2743,7 @@ void EditorInspector::update_tree() {
 			doc_name = p.name;
 
 			// Set the category icon.
-			if (!ClassDB::class_exists(type) && !ScriptServer::is_global_class(type) && p.hint_string.length() && FileAccess::exists(p.hint_string)) {
+			if (!EditorNode::get_editor_data().is_type_recognized(type) && p.hint_string.length() && FileAccess::exists(p.hint_string)) {
 				// If we have a category inside a script, search for the first script with a valid icon.
 				Ref<Script> script = ResourceLoader::load(p.hint_string, "Script");
 				StringName base_type;
@@ -2762,8 +2762,14 @@ void EditorInspector::update_tree() {
 				while (script.is_valid()) {
 					name = EditorNode::get_editor_data().script_class_get_name(script->get_path());
 					String icon_path = EditorNode::get_editor_data().script_class_get_icon_path(name);
-					if (name != StringName() && icon_path.length()) {
+					if (name != StringName() && !icon_path.is_empty()) {
 						category->icon = ResourceLoader::load(icon_path, "Texture");
+						break;
+					}
+
+					const EditorData::CustomType *ctype = EditorNode::get_editor_data().get_custom_type_by_path(script->get_path());
+					if (ctype) {
+						category->icon = ctype->icon;
 						break;
 					}
 					script = script->get_base_script();
@@ -4076,7 +4082,7 @@ EditorInspector::EditorInspector() {
 		refresh_countdown = 0.33;
 	}
 
-	ED_SHORTCUT("property_editor/copy_property", TTR("Copy Property"), KeyModifierMask::CMD | Key::C);
-	ED_SHORTCUT("property_editor/paste_property", TTR("Paste Property"), KeyModifierMask::CMD | Key::V);
-	ED_SHORTCUT("property_editor/copy_property_path", TTR("Copy Property Path"), KeyModifierMask::CMD | KeyModifierMask::SHIFT | Key::C);
+	ED_SHORTCUT("property_editor/copy_property", TTR("Copy Property"), KeyModifierMask::CMD_OR_CTRL | Key::C);
+	ED_SHORTCUT("property_editor/paste_property", TTR("Paste Property"), KeyModifierMask::CMD_OR_CTRL | Key::V);
+	ED_SHORTCUT("property_editor/copy_property_path", TTR("Copy Property Path"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::C);
 }

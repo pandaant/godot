@@ -145,6 +145,8 @@ void EditorFileDialog::_notification(int p_what) {
 			if (!is_visible()) {
 				set_process_shortcut_input(false);
 			}
+
+			invalidate(); // For consistency with the standard FileDialog.
 		} break;
 
 		case NOTIFICATION_WM_WINDOW_FOCUS_IN: {
@@ -304,10 +306,6 @@ void EditorFileDialog::_post_popup() {
 	}
 	set_current_dir(current);
 
-	if (invalidated) {
-		update_file_list();
-		invalidated = false;
-	}
 	if (mode == FILE_MODE_SAVE_FILE) {
 		file->grab_focus();
 	} else {
@@ -320,19 +318,13 @@ void EditorFileDialog::_post_popup() {
 		file_box->set_visible(true);
 	}
 
-	if (is_visible() && !get_current_file().is_empty()) {
+	if (!get_current_file().is_empty()) {
 		_request_single_thumbnail(get_current_dir().path_join(get_current_file()));
 	}
 
-	if (is_visible()) {
-		_update_recent();
-
-		local_history.clear();
-		local_history_pos = -1;
-		_push_history();
-
-		_update_favorites();
-	}
+	local_history.clear();
+	local_history_pos = -1;
+	_push_history();
 
 	set_process_shortcut_input(true);
 }
@@ -657,7 +649,7 @@ void EditorFileDialog::_item_list_empty_clicked(const Vector2 &p_pos, MouseButto
 	item_menu->reset_size();
 
 	if (can_create_dir) {
-		item_menu->add_icon_item(theme_cache.folder, TTR("New Folder..."), ITEM_MENU_NEW_FOLDER, KeyModifierMask::CMD | Key::N);
+		item_menu->add_icon_item(theme_cache.folder, TTR("New Folder..."), ITEM_MENU_NEW_FOLDER, KeyModifierMask::CMD_OR_CTRL | Key::N);
 	}
 	item_menu->add_icon_item(theme_cache.reload, TTR("Refresh"), ITEM_MENU_REFRESH, Key::F5);
 	item_menu->add_separator();
@@ -1672,14 +1664,14 @@ EditorFileDialog::EditorFileDialog() {
 	ED_SHORTCUT("file_dialog/go_forward", TTR("Go Forward"), KeyModifierMask::ALT | Key::RIGHT);
 	ED_SHORTCUT("file_dialog/go_up", TTR("Go Up"), KeyModifierMask::ALT | Key::UP);
 	ED_SHORTCUT("file_dialog/refresh", TTR("Refresh"), Key::F5);
-	ED_SHORTCUT("file_dialog/toggle_hidden_files", TTR("Toggle Hidden Files"), KeyModifierMask::CMD | Key::H);
+	ED_SHORTCUT("file_dialog/toggle_hidden_files", TTR("Toggle Hidden Files"), KeyModifierMask::CMD_OR_CTRL | Key::H);
 	ED_SHORTCUT("file_dialog/toggle_favorite", TTR("Toggle Favorite"), KeyModifierMask::ALT | Key::F);
 	ED_SHORTCUT("file_dialog/toggle_mode", TTR("Toggle Mode"), KeyModifierMask::ALT | Key::V);
-	ED_SHORTCUT("file_dialog/create_folder", TTR("Create Folder"), KeyModifierMask::CMD | Key::N);
+	ED_SHORTCUT("file_dialog/create_folder", TTR("Create Folder"), KeyModifierMask::CMD_OR_CTRL | Key::N);
 	ED_SHORTCUT("file_dialog/delete", TTR("Delete"), Key::KEY_DELETE);
-	ED_SHORTCUT("file_dialog/focus_path", TTR("Focus Path"), KeyModifierMask::CMD | Key::D);
-	ED_SHORTCUT("file_dialog/move_favorite_up", TTR("Move Favorite Up"), KeyModifierMask::CMD | Key::UP);
-	ED_SHORTCUT("file_dialog/move_favorite_down", TTR("Move Favorite Down"), KeyModifierMask::CMD | Key::DOWN);
+	ED_SHORTCUT("file_dialog/focus_path", TTR("Focus Path"), KeyModifierMask::CMD_OR_CTRL | Key::D);
+	ED_SHORTCUT("file_dialog/move_favorite_up", TTR("Move Favorite Up"), KeyModifierMask::CMD_OR_CTRL | Key::UP);
+	ED_SHORTCUT("file_dialog/move_favorite_down", TTR("Move Favorite Down"), KeyModifierMask::CMD_OR_CTRL | Key::DOWN);
 
 	HBoxContainer *pathhb = memnew(HBoxContainer);
 

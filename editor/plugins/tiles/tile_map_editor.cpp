@@ -1359,11 +1359,11 @@ void TileMapEditorTilesPlugin::_stop_dragging() {
 				for (int i = 0; i < sources_list->get_item_count(); i++) {
 					if (int(sources_list->get_item_metadata(i)) == picked_source) {
 						sources_list->set_current(i);
+						TilesEditorPlugin::get_singleton()->set_sources_lists_current(i);
 						break;
 					}
 				}
 				sources_list->ensure_current_is_visible();
-				TilesEditorPlugin::get_singleton()->set_sources_lists_current(picked_source);
 			}
 
 			Ref<TileMapPattern> new_selection_pattern = tile_map->get_pattern(tile_map_layer, coords_array);
@@ -2020,9 +2020,9 @@ TileMapEditorTilesPlugin::TileMapEditorTilesPlugin() {
 			->connect("mouse_exited", callable_mp(this, &TileMapEditorTilesPlugin::_mouse_exited_viewport));
 
 	// --- Shortcuts ---
-	ED_SHORTCUT("tiles_editor/cut", TTR("Cut"), KeyModifierMask::CMD | Key::X);
-	ED_SHORTCUT("tiles_editor/copy", TTR("Copy"), KeyModifierMask::CMD | Key::C);
-	ED_SHORTCUT("tiles_editor/paste", TTR("Paste"), KeyModifierMask::CMD | Key::V);
+	ED_SHORTCUT("tiles_editor/cut", TTR("Cut"), KeyModifierMask::CMD_OR_CTRL | Key::X);
+	ED_SHORTCUT("tiles_editor/copy", TTR("Copy"), KeyModifierMask::CMD_OR_CTRL | Key::C);
+	ED_SHORTCUT("tiles_editor/paste", TTR("Paste"), KeyModifierMask::CMD_OR_CTRL | Key::V);
 	ED_SHORTCUT("tiles_editor/cancel", TTR("Cancel"), Key::ESCAPE);
 	ED_SHORTCUT("tiles_editor/delete", TTR("Delete"), Key::KEY_DELETE);
 
