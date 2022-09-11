@@ -2321,10 +2321,7 @@ void EditorNode::_edit_current(bool p_skip_foreign) {
 	} else {
 		Node *selected_node = nullptr;
 
-		if (current_obj->is_class("EditorDebuggerRemoteObject")) {
-			editable_info = TTR("This is a remote object, so it's not editable.\nPlease read the documentation relevant to debugging to better understand this workflow.");
-			disable_folding = true;
-		} else if (current_obj->is_class("MultiNodeEdit")) {
+		if (current_obj->is_class("MultiNodeEdit")) {
 			Node *scene = get_edited_scene();
 			if (scene) {
 				MultiNodeEdit *multi_node_edit = Object::cast_to<MultiNodeEdit>(current_obj);
@@ -2655,22 +2652,36 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 		case FILE_CLOSE_ALL_AND_RELOAD_CURRENT_PROJECT: {
 			if (!p_confirmed) {
 				tab_closing_idx = _next_unsaved_scene(false);
-				_scene_tab_changed(tab_closing_idx);
+				if (tab_closing_idx == -1) {
+					tab_closing_idx = -2; // Only external resources are unsaved.
+				} else {
+					_scene_tab_changed(tab_closing_idx);
+				}
 
 				if (unsaved_cache || p_option == FILE_CLOSE_ALL_AND_QUIT || p_option == FILE_CLOSE_ALL_AND_RUN_PROJECT_MANAGER || p_option == FILE_CLOSE_ALL_AND_RELOAD_CURRENT_PROJECT) {
-					Node *scene_root = editor_data.get_edited_scene_root(tab_closing_idx);
-					if (scene_root) {
-						String scene_filename = scene_root->get_scene_file_path();
+					if (tab_closing_idx == -2) {
 						if (p_option == FILE_CLOSE_ALL_AND_RELOAD_CURRENT_PROJECT) {
 							save_confirmation->set_ok_button_text(TTR("Save & Reload"));
-							save_confirmation->set_text(vformat(TTR("Save changes to '%s' before reloading?"), !scene_filename.is_empty() ? scene_filename : "unsaved scene"));
+							save_confirmation->set_text(TTR("Save modified resources before reloading?"));
 						} else {
 							save_confirmation->set_ok_button_text(TTR("Save & Quit"));
-							save_confirmation->set_text(vformat(TTR("Save changes to '%s' before closing?"), !scene_filename.is_empty() ? scene_filename : "unsaved scene"));
+							save_confirmation->set_text(TTR("Save modified resources before closing?"));
 						}
-						save_confirmation->popup_centered();
-						break;
+					} else {
+						Node *scene_root = editor_data.get_edited_scene_root(tab_closing_idx);
+						if (scene_root) {
+							String scene_filename = scene_root->get_scene_file_path();
+							if (p_option == FILE_CLOSE_ALL_AND_RELOAD_CURRENT_PROJECT) {
+								save_confirmation->set_ok_button_text(TTR("Save & Reload"));
+								save_confirmation->set_text(vformat(TTR("Save changes to '%s' before reloading?"), !scene_filename.is_empty() ? scene_filename : "unsaved scene"));
+							} else {
+								save_confirmation->set_ok_button_text(TTR("Save & Quit"));
+								save_confirmation->set_text(vformat(TTR("Save changes to '%s' before closing?"), !scene_filename.is_empty() ? scene_filename : "unsaved scene"));
+							}
+						}
 					}
+					save_confirmation->popup_centered();
+					break;
 				}
 			}
 			if (!editor_data.get_edited_scene_root(tab_closing_idx)) {
@@ -2943,7 +2954,7 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 		case RELOAD_CURRENT_PROJECT: {
 			if (!p_confirmed) {
 				bool save_each = EDITOR_GET("interface/editor/save_each_scene_on_quit");
-				if (_next_unsaved_scene(!save_each) == -1) {
+				if (_next_unsaved_scene(!save_each) == -1 && !get_undo_redo()->is_history_unsaved(EditorUndoRedoManager::GLOBAL_HISTORY)) {
 					_discard_changes();
 					break;
 				} else {
@@ -3366,6 +3377,8 @@ void EditorNode::add_editor_plugin(EditorPlugin *p_editor, bool p_config_changed
 		Ref<Texture2D> icon = p_editor->get_icon();
 		if (icon.is_valid()) {
 			tb->set_icon(icon);
+			// Make sure the control is updated if the icon is reimported.
+			icon->connect("changed", callable_mp((Control *)tb, &Control::update_minimum_size));
 		} else if (singleton->gui_base->has_theme_icon(p_editor->get_name(), SNAME("EditorIcons"))) {
 			tb->set_icon(singleton->gui_base->get_theme_icon(p_editor->get_name(), SNAME("EditorIcons")));
 		}
@@ -7588,8 +7601,8 @@ EditorPlugin::AfterGUIInput EditorPluginList::forward_spatial_gui_input(Camera3D
 		if (current_after == EditorPlugin::AFTER_GUI_INPUT_STOP) {
 			after = EditorPlugin::AFTER_GUI_INPUT_STOP;
 		}
-		if (after != EditorPlugin::AFTER_GUI_INPUT_STOP && current_after == EditorPlugin::AFTER_GUI_INPUT_DESELECT) {
-			after = EditorPlugin::AFTER_GUI_INPUT_DESELECT;
+		if (after != EditorPlugin::AFTER_GUI_INPUT_STOP && current_after == EditorPlugin::AFTER_GUI_INPUT_CUSTOM) {
+			after = EditorPlugin::AFTER_GUI_INPUT_CUSTOM;
 		}
 	}
 
