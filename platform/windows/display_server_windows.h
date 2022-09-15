@@ -157,6 +157,7 @@ typedef bool(WINAPI *ShouldAppsUseDarkModePtr)();
 typedef DWORD(WINAPI *GetImmersiveColorFromColorSetExPtr)(UINT dwImmersiveColorSet, UINT dwImmersiveColorType, bool bIgnoreHighContrast, UINT dwHighContrastCacheMode);
 typedef int(WINAPI *GetImmersiveColorTypeFromNamePtr)(const WCHAR *name);
 typedef int(WINAPI *GetImmersiveUserColorSetPreferencePtr)(bool bForceCheckRegistry, bool bSkipCheckOnFail);
+typedef HRESULT(WINAPI *RtlGetVersionPtr)(OSVERSIONINFOW *lpVersionInformation);
 
 // Windows Ink API
 #ifndef POINTER_STRUCTURES
@@ -285,6 +286,7 @@ class DisplayServerWindows : public DisplayServer {
 	_THREAD_SAFE_CLASS_
 
 	// UXTheme API
+	static bool dark_title_available;
 	static bool ux_theme_available;
 	static IsDarkModeAllowedForAppPtr IsDarkModeAllowedForApp;
 	static ShouldAppsUseDarkModePtr ShouldAppsUseDarkMode;
@@ -308,8 +310,6 @@ class DisplayServerWindows : public DisplayServer {
 	void _update_tablet_ctx(const String &p_old_driver, const String &p_new_driver);
 	String tablet_driver;
 	Vector<String> tablet_drivers;
-
-	void GetMaskBitmaps(HBITMAP hSourceBitmap, COLORREF clrTransparent, OUT HBITMAP &hAndMaskBitmap, OUT HBITMAP &hXorMaskBitmap);
 
 	enum {
 		KEY_EVENT_BUFFER_SIZE = 512
