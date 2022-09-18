@@ -125,6 +125,12 @@ public:
 		EDITOR_ASSETLIB
 	};
 
+	enum SceneNameCasing {
+		SCENE_NAME_CASING_AUTO,
+		SCENE_NAME_CASING_PASCAL_CASE,
+		SCENE_NAME_CASING_SNAKE_CASE
+	};
+
 	struct ExecuteThreadArgs {
 		String path;
 		List<String> args;
@@ -231,12 +237,6 @@ private:
 	enum {
 		MAX_INIT_CALLBACKS = 128,
 		MAX_BUILD_CALLBACKS = 128
-	};
-
-	enum ScriptNameCasing {
-		SCENE_NAME_CASING_AUTO,
-		SCENE_NAME_CASING_PASCAL_CASE,
-		SCENE_NAME_CASING_SNAKE_CASE
 	};
 
 	struct BottomPanelItem {
@@ -543,7 +543,6 @@ private:
 	void _update_file_menu_opened();
 	void _update_file_menu_closed();
 
-	void _on_plugin_ready(Object *p_script, const String &p_activate_name);
 	void _remove_plugin_from_enabled(const String &p_name);
 
 	void _fs_changed();
@@ -553,7 +552,6 @@ private:
 	void _node_renamed();
 	void _editor_select_next();
 	void _editor_select_prev();
-	void _editor_select(int p_which);
 	void _set_scene_metadata(const String &p_file, int p_idx = -1);
 	void _get_scene_metadata(const String &p_file);
 	void _update_title();
@@ -701,7 +699,11 @@ protected:
 	void set_current_tab(int p_tab);
 
 public:
-	void set_visible_editor(EditorTable p_table) { _editor_select(p_table); }
+	// Public for use with callable_mp.
+	void _on_plugin_ready(Object *p_script, const String &p_activate_name);
+
+	void editor_select(int p_which);
+	void set_visible_editor(EditorTable p_table) { editor_select(p_table); }
 
 	bool call_build();
 
@@ -717,6 +719,8 @@ public:
 
 	static HBoxContainer *get_menu_hb() { return singleton->menu_hb; }
 	static VSplitContainer *get_top_split() { return singleton->top_split; }
+
+	static String adjust_scene_name_casing(const String &root_name);
 
 	static bool has_unsaved_changes() { return singleton->unsaved_cache; }
 	static void disambiguate_filenames(const Vector<String> p_full_paths, Vector<String> &r_filenames);
