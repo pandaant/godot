@@ -77,6 +77,7 @@ class EditorUndoRedoManager;
 class ExportTemplateManager;
 class FileDialog;
 class FileSystemDock;
+class HistoryDock;
 class HSplitContainer;
 class ImportDock;
 class LinkButton;
@@ -274,6 +275,7 @@ private:
 	EditorRunNative *run_native = nullptr;
 	EditorSelection *editor_selection = nullptr;
 	EditorSettingsDialog *editor_settings_dialog = nullptr;
+	HistoryDock *history_dock = nullptr;
 
 	ProjectExportDialog *project_export = nullptr;
 	ProjectSettingsEditor *project_settings_editor = nullptr;
@@ -651,7 +653,7 @@ private:
 	void _load_docks();
 	void _save_docks_to_config(Ref<ConfigFile> p_layout, const String &p_section);
 	void _load_docks_from_config(Ref<ConfigFile> p_layout, const String &p_section);
-	void _update_dock_slots_visibility();
+	void _update_dock_slots_visibility(bool p_keep_selected_tabs = false);
 	void _dock_tab_changed(int p_tab);
 
 	void _save_open_scenes_to_config(Ref<ConfigFile> p_layout, const String &p_section);
@@ -770,6 +772,9 @@ public:
 	void set_addon_plugin_enabled(const String &p_addon, bool p_enabled, bool p_config_changed = false);
 	bool is_addon_plugin_enabled(const String &p_addon) const;
 
+	void set_movie_maker_enabled(bool p_enabled);
+	bool is_movie_maker_enabled() const;
+
 	void edit_node(Node *p_node);
 	void edit_resource(const Ref<Resource> &p_resource) { InspectorDock::get_singleton()->edit_resource(p_resource); };
 
@@ -811,7 +816,7 @@ public:
 
 	void setup_color_picker(ColorPicker *picker);
 
-	void request_instance_scene(const String &p_path);
+	void request_instantiate_scene(const String &p_path);
 	void request_instantiate_scenes(const Vector<String> &p_files);
 
 	void set_convert_old_scene(bool p_old) { convert_old = p_old; }
@@ -826,6 +831,8 @@ public:
 	StringName get_object_custom_type_name(const Object *p_object) const;
 	Ref<Texture2D> get_object_icon(const Object *p_object, const String &p_fallback = "Object");
 	Ref<Texture2D> get_class_icon(const String &p_class, const String &p_fallback = "Object") const;
+
+	bool is_object_of_custom_type(const Object *p_object, const StringName &p_class);
 
 	void show_accept(const String &p_text, const String &p_title);
 	void show_save_accept(const String &p_text, const String &p_title);
@@ -935,9 +942,9 @@ public:
 	bool forward_gui_input(const Ref<InputEvent> &p_event);
 	void forward_canvas_draw_over_viewport(Control *p_overlay);
 	void forward_canvas_force_draw_over_viewport(Control *p_overlay);
-	EditorPlugin::AfterGUIInput forward_spatial_gui_input(Camera3D *p_camera, const Ref<InputEvent> &p_event, bool serve_when_force_input_enabled);
-	void forward_spatial_draw_over_viewport(Control *p_overlay);
-	void forward_spatial_force_draw_over_viewport(Control *p_overlay);
+	EditorPlugin::AfterGUIInput forward_3d_gui_input(Camera3D *p_camera, const Ref<InputEvent> &p_event, bool serve_when_force_input_enabled);
+	void forward_3d_draw_over_viewport(Control *p_overlay);
+	void forward_3d_force_draw_over_viewport(Control *p_overlay);
 	void add_plugin(EditorPlugin *p_plugin);
 	void remove_plugin(EditorPlugin *p_plugin);
 	void clear();

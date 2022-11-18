@@ -157,13 +157,13 @@ uint32_t GridMap::get_collision_mask() const {
 void GridMap::set_collision_layer_value(int p_layer_number, bool p_value) {
 	ERR_FAIL_COND_MSG(p_layer_number < 1, "Collision layer number must be between 1 and 32 inclusive.");
 	ERR_FAIL_COND_MSG(p_layer_number > 32, "Collision layer number must be between 1 and 32 inclusive.");
-	uint32_t collision_layer = get_collision_layer();
+	uint32_t collision_layer_new = get_collision_layer();
 	if (p_value) {
-		collision_layer |= 1 << (p_layer_number - 1);
+		collision_layer_new |= 1 << (p_layer_number - 1);
 	} else {
-		collision_layer &= ~(1 << (p_layer_number - 1));
+		collision_layer_new &= ~(1 << (p_layer_number - 1));
 	}
-	set_collision_layer(collision_layer);
+	set_collision_layer(collision_layer_new);
 }
 
 bool GridMap::get_collision_layer_value(int p_layer_number) const {
@@ -1149,7 +1149,7 @@ TypedArray<Vector3i> GridMap::get_used_cells() const {
 TypedArray<Vector3i> GridMap::get_used_cells_by_item(int p_item) const {
 	TypedArray<Vector3i> a;
 	for (const KeyValue<IndexKey, Cell> &E : cell_map) {
-		if (E.value.item == p_item) {
+		if ((int)E.value.item == p_item) {
 			Vector3i p(E.key.x, E.key.y, E.key.z);
 			a.push_back(p);
 		}

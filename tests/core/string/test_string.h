@@ -411,9 +411,13 @@ TEST_CASE("[String] Number to string") {
 	CHECK(String::num_real(3.141593) == "3.141593");
 	CHECK(String::num_real(3.141) == "3.141"); // No trailing zeros.
 #ifdef REAL_T_IS_DOUBLE
+	CHECK_MESSAGE(String::num_real(123.456789) == "123.456789", "Prints the appropriate amount of digits for real_t = double.");
+	CHECK_MESSAGE(String::num_real(-123.456789) == "-123.456789", "Prints the appropriate amount of digits for real_t = double.");
 	CHECK_MESSAGE(String::num_real(Math_PI) == "3.14159265358979", "Prints the appropriate amount of digits for real_t = double.");
 	CHECK_MESSAGE(String::num_real(3.1415f) == "3.1414999961853", "Prints more digits of 32-bit float when real_t = double (ones that would be reliable for double) and no trailing zero.");
 #else
+	CHECK_MESSAGE(String::num_real(123.456789) == "123.4568", "Prints the appropriate amount of digits for real_t = float.");
+	CHECK_MESSAGE(String::num_real(-123.456789) == "-123.4568", "Prints the appropriate amount of digits for real_t = float.");
 	CHECK_MESSAGE(String::num_real(Math_PI) == "3.141593", "Prints the appropriate amount of digits for real_t = float.");
 	CHECK_MESSAGE(String::num_real(3.1415f) == "3.1415", "Prints only reliable digits of 32-bit float when real_t = float.");
 #endif // REAL_T_IS_DOUBLE
@@ -481,6 +485,7 @@ TEST_CASE("[String] Splitting") {
 
 	const char *slices_l[3] = { "Mars", "Jupiter", "Saturn,Uranus" };
 	const char *slices_r[3] = { "Mars,Jupiter", "Saturn", "Uranus" };
+	const char *slices_3[4] = { "t", "e", "s", "t" };
 
 	l = s.split(",", true, 2);
 	CHECK(l.size() == 3);
@@ -492,6 +497,13 @@ TEST_CASE("[String] Splitting") {
 	CHECK(l.size() == 3);
 	for (int i = 0; i < l.size(); i++) {
 		CHECK(l[i] == slices_r[i]);
+	}
+
+	s = "test";
+	l = s.split();
+	CHECK(l.size() == 4);
+	for (int i = 0; i < l.size(); i++) {
+		CHECK(l[i] == slices_3[i]);
 	}
 
 	s = "Mars Jupiter Saturn Uranus";
@@ -740,6 +752,14 @@ TEST_CASE("[String] sprintf") {
 	REQUIRE(error == false);
 	CHECK(output == String("fish   99.990000 frog"));
 
+	// Real (infinity) left-padded
+	format = "fish %11f frog";
+	args.clear();
+	args.push_back(INFINITY);
+	output = format.sprintf(args, &error);
+	REQUIRE(error == false);
+	CHECK(output == String("fish         inf frog"));
+
 	// Real right-padded.
 	format = "fish %-11f frog";
 	args.clear();
@@ -839,6 +859,14 @@ TEST_CASE("[String] sprintf") {
 	output = format.sprintf(args, &error);
 	REQUIRE(error == false);
 	CHECK(output == String("fish (  19.990000,    1.000000,   -2.050000) frog"));
+
+	// Vector left-padded with inf/nan
+	format = "fish %11v frog";
+	args.clear();
+	args.push_back(Variant(Vector2(INFINITY, NAN)));
+	output = format.sprintf(args, &error);
+	REQUIRE(error == false);
+	CHECK(output == String("fish (        inf,         nan) frog"));
 
 	// Vector right-padded.
 	format = "fish %-11v frog";
@@ -1408,20 +1436,22 @@ TEST_CASE("[String] dedent") {
 }
 
 TEST_CASE("[String] Path functions") {
-	static const char *path[7] = { "C:\\Godot\\project\\test.tscn", "/Godot/project/test.xscn", "../Godot/project/test.scn", "Godot\\test.doc", "C:\\test.", "res://test", "/.test" };
-	static const char *base_dir[7] = { "C:\\Godot\\project", "/Godot/project", "../Godot/project", "Godot", "C:\\", "res://", "/" };
-	static const char *base_name[7] = { "C:\\Godot\\project\\test", "/Godot/project/test", "../Godot/project/test", "Godot\\test", "C:\\test", "res://test", "/" };
-	static const char *ext[7] = { "tscn", "xscn", "scn", "doc", "", "", "test" };
-	static const char *file[7] = { "test.tscn", "test.xscn", "test.scn", "test.doc", "test.", "test", ".test" };
-	static const bool abs[7] = { true, true, false, false, true, true, true };
+	static const char *path[8] = { "C:\\Godot\\project\\test.tscn", "/Godot/project/test.xscn", "../Godot/project/test.scn", "Godot\\test.doc", "C:\\test.", "res://test", "user://test", "/.test" };
+	static const char *base_dir[8] = { "C:\\Godot\\project", "/Godot/project", "../Godot/project", "Godot", "C:\\", "res://", "user://", "/" };
+	static const char *base_name[8] = { "C:\\Godot\\project\\test", "/Godot/project/test", "../Godot/project/test", "Godot\\test", "C:\\test", "res://test", "user://test", "/" };
+	static const char *ext[8] = { "tscn", "xscn", "scn", "doc", "", "", "", "test" };
+	static const char *file[8] = { "test.tscn", "test.xscn", "test.scn", "test.doc", "test.", "test", "test", ".test" };
+	static const char *simplified[8] = { "C:/Godot/project/test.tscn", "/Godot/project/test.xscn", "Godot/project/test.scn", "Godot/test.doc", "C:/test.", "res://test", "user://test", "/.test" };
+	static const bool abs[8] = { true, true, false, false, true, true, true, true };
 
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < 8; i++) {
 		CHECK(String(path[i]).get_base_dir() == base_dir[i]);
 		CHECK(String(path[i]).get_basename() == base_name[i]);
 		CHECK(String(path[i]).get_extension() == ext[i]);
 		CHECK(String(path[i]).get_file() == file[i]);
 		CHECK(String(path[i]).is_absolute_path() == abs[i]);
 		CHECK(String(path[i]).is_relative_path() != abs[i]);
+		CHECK(String(path[i]).simplify_path() == String(simplified[i]));
 		CHECK(String(path[i]).simplify_path().get_base_dir().path_join(file[i]) == String(path[i]).simplify_path());
 	}
 

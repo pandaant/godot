@@ -958,7 +958,7 @@ public:
 		bool wireframe;
 		PolygonCullMode cull_mode;
 		PolygonFrontFace front_face;
-		bool depth_bias_enable;
+		bool depth_bias_enabled;
 		float depth_bias_constant_factor;
 		float depth_bias_clamp;
 		float depth_bias_slope_factor;
@@ -970,7 +970,7 @@ public:
 			wireframe = false;
 			cull_mode = POLYGON_CULL_DISABLED;
 			front_face = POLYGON_FRONT_FACE_CLOCKWISE;
-			depth_bias_enable = false;
+			depth_bias_enabled = false;
 			depth_bias_constant_factor = 0;
 			depth_bias_clamp = 0;
 			depth_bias_slope_factor = 0;
@@ -1252,9 +1252,13 @@ public:
 		LIMIT_MAX_COMPUTE_WORKGROUP_SIZE_X,
 		LIMIT_MAX_COMPUTE_WORKGROUP_SIZE_Y,
 		LIMIT_MAX_COMPUTE_WORKGROUP_SIZE_Z,
+		LIMIT_MAX_VIEWPORT_DIMENSIONS_X,
+		LIMIT_MAX_VIEWPORT_DIMENSIONS_Y,
 		LIMIT_SUBGROUP_SIZE,
 		LIMIT_SUBGROUP_IN_SHADERS, // Set flags using SHADER_STAGE_VERTEX_BIT, SHADER_STAGE_FRAGMENT_BIT, etc.
 		LIMIT_SUBGROUP_OPERATIONS,
+		LIMIT_VRS_TEXEL_WIDTH,
+		LIMIT_VRS_TEXEL_HEIGHT,
 	};
 
 	virtual uint64_t limit_get(Limit p_limit) const = 0;

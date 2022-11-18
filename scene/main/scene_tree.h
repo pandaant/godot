@@ -135,7 +135,7 @@ private:
 
 	// Safety for when a node is deleted while a group is being called.
 	int call_lock = 0;
-	HashSet<Node *> call_skip; // Skip erased nodes.
+	HashSet<ObjectID> call_skip; // Skip erased nodes. Store ID instead of pointer to avoid false positives when node is freed and a new node is allocated at the pointed address.
 
 	List<ObjectID> delete_queue;
 
@@ -180,8 +180,8 @@ private:
 	void node_added(Node *p_node);
 	void node_removed(Node *p_node);
 	void node_renamed(Node *p_node);
-	void process_timers(float p_delta, bool p_physics_frame);
-	void process_tweens(float p_delta, bool p_physics_frame);
+	void process_timers(double p_delta, bool p_physics_frame);
+	void process_tweens(double p_delta, bool p_physics_frame);
 
 	Group *add_to_group(const StringName &p_group, Node *p_node);
 	void remove_from_group(const StringName &p_group, Node *p_node);

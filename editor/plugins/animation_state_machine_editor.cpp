@@ -420,7 +420,7 @@ void AnimationNodeStateMachineEditor::_state_machine_gui_input(const Ref<InputEv
 	if (mm.is_valid()) {
 		state_machine_draw->grab_focus();
 
-		String new_over_node = StringName();
+		String new_over_node;
 		int new_over_node_what = -1;
 		if (tool_select->is_pressed()) {
 			for (int i = node_rects.size() - 1; i >= 0; i--) { // Inverse to draw order.
@@ -974,6 +974,8 @@ void AnimationNodeStateMachineEditor::_file_opened(const String &p_file) {
 	file_loaded = ResourceLoader::load(p_file);
 	if (file_loaded.is_valid()) {
 		_add_menu_type(MENU_LOAD_FILE_CONFIRM);
+	} else {
+		EditorNode::get_singleton()->show_warning(TTR("This type of node can't be used. Only animation nodes are allowed."));
 	}
 }
 

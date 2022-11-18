@@ -128,8 +128,8 @@ struct VariantUtilityFunctions {
 		return Math::floor(x);
 	}
 
-	static inline int floori(double x) {
-		return int(x);
+	static inline int64_t floori(double x) {
+		return int64_t(Math::floor(x));
 	}
 
 	static inline Variant ceil(Variant x, Callable::CallError &r_error) {
@@ -161,8 +161,8 @@ struct VariantUtilityFunctions {
 		return Math::ceil(x);
 	}
 
-	static inline int ceili(double x) {
-		return int(Math::ceil(x));
+	static inline int64_t ceili(double x) {
+		return int64_t(Math::ceil(x));
 	}
 
 	static inline Variant round(Variant x, Callable::CallError &r_error) {
@@ -194,8 +194,8 @@ struct VariantUtilityFunctions {
 		return Math::round(x);
 	}
 
-	static inline int roundi(double x) {
-		return int(Math::round(x));
+	static inline int64_t roundi(double x) {
+		return int64_t(Math::round(x));
 	}
 
 	static inline Variant abs(const Variant &x, Callable::CallError &r_error) {
@@ -308,6 +308,10 @@ struct VariantUtilityFunctions {
 
 	static inline bool is_zero_approx(double x) {
 		return Math::is_zero_approx(x);
+	}
+
+	static inline bool is_finite(double x) {
+		return Math::is_finite(x);
 	}
 
 	static inline double ease(float x, float curve) {
@@ -1420,6 +1424,7 @@ void Variant::_register_variant_utility_functions() {
 
 	FUNCBINDR(is_equal_approx, sarray("a", "b"), Variant::UTILITY_FUNC_TYPE_MATH);
 	FUNCBINDR(is_zero_approx, sarray("x"), Variant::UTILITY_FUNC_TYPE_MATH);
+	FUNCBINDR(is_finite, sarray("x"), Variant::UTILITY_FUNC_TYPE_MATH);
 
 	FUNCBINDR(ease, sarray("x", "curve"), Variant::UTILITY_FUNC_TYPE_MATH);
 	FUNCBINDR(step_decimals, sarray("x"), Variant::UTILITY_FUNC_TYPE_MATH);

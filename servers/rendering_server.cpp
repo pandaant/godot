@@ -701,6 +701,7 @@ Error RenderingServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint
 }
 
 uint32_t RenderingServer::mesh_surface_get_format_offset(uint32_t p_format, int p_vertex_len, int p_array_index) const {
+	ERR_FAIL_INDEX_V(p_array_index, ARRAY_MAX, 0);
 	p_format &= ~ARRAY_FORMAT_INDEX;
 	uint32_t offsets[ARRAY_MAX];
 	uint32_t vstr;
@@ -1690,6 +1691,7 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("texture_get_path", "texture"), &RenderingServer::texture_get_path);
 
 	ClassDB::bind_method(D_METHOD("texture_set_force_redraw_if_visible", "texture", "enable"), &RenderingServer::texture_set_force_redraw_if_visible);
+	ClassDB::bind_method(D_METHOD("texture_get_rd_texture", "texture", "srgb"), &RenderingServer::texture_get_rd_texture_rid, DEFVAL(false));
 
 	BIND_ENUM_CONSTANT(TEXTURE_LAYERED_2D_ARRAY);
 	BIND_ENUM_CONSTANT(TEXTURE_LAYERED_CUBEMAP);
@@ -2181,6 +2183,7 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("viewport_set_parent_viewport", "viewport", "parent_viewport"), &RenderingServer::viewport_set_parent_viewport);
 	ClassDB::bind_method(D_METHOD("viewport_attach_to_screen", "viewport", "rect", "screen"), &RenderingServer::viewport_attach_to_screen, DEFVAL(Rect2()), DEFVAL(DisplayServer::MAIN_WINDOW_ID));
 	ClassDB::bind_method(D_METHOD("viewport_set_render_direct_to_screen", "viewport", "enabled"), &RenderingServer::viewport_set_render_direct_to_screen);
+	ClassDB::bind_method(D_METHOD("viewport_set_canvas_cull_mask", "viewport", "canvas_cull_mask"), &RenderingServer::viewport_set_canvas_cull_mask);
 
 	ClassDB::bind_method(D_METHOD("viewport_set_scaling_3d_mode", "viewport", "scaling_3d_mode"), &RenderingServer::viewport_set_scaling_3d_mode);
 	ClassDB::bind_method(D_METHOD("viewport_set_scaling_3d_scale", "viewport", "scale"), &RenderingServer::viewport_set_scaling_3d_scale);
@@ -2574,6 +2577,7 @@ void RenderingServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("canvas_item_set_default_texture_repeat", "item", "repeat"), &RenderingServer::canvas_item_set_default_texture_repeat);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_visible", "item", "visible"), &RenderingServer::canvas_item_set_visible);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_light_mask", "item", "mask"), &RenderingServer::canvas_item_set_light_mask);
+	ClassDB::bind_method(D_METHOD("canvas_item_set_visibility_layer", "item", "visibility_layer"), &RenderingServer::canvas_item_set_visibility_layer);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_transform", "item", "transform"), &RenderingServer::canvas_item_set_transform);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_clip", "item", "clip"), &RenderingServer::canvas_item_set_clip);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_distance_field_mode", "item", "enabled"), &RenderingServer::canvas_item_set_distance_field_mode);
@@ -2635,7 +2639,8 @@ void RenderingServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(CANVAS_ITEM_TEXTURE_REPEAT_MAX);
 
 	BIND_ENUM_CONSTANT(CANVAS_GROUP_MODE_DISABLED);
-	BIND_ENUM_CONSTANT(CANVAS_GROUP_MODE_OPAQUE);
+	BIND_ENUM_CONSTANT(CANVAS_GROUP_MODE_CLIP_ONLY);
+	BIND_ENUM_CONSTANT(CANVAS_GROUP_MODE_CLIP_AND_DRAW);
 	BIND_ENUM_CONSTANT(CANVAS_GROUP_MODE_TRANSPARENT);
 
 	/* CANVAS LIGHT */
@@ -2790,10 +2795,10 @@ void RenderingServer::mesh_add_surface_from_mesh_data(RID p_mesh, const Geometry
 	Vector<Vector3> vertices;
 	Vector<Vector3> normals;
 
-	for (int i = 0; i < p_mesh_data.faces.size(); i++) {
+	for (uint32_t i = 0; i < p_mesh_data.faces.size(); i++) {
 		const Geometry3D::MeshData::Face &f = p_mesh_data.faces[i];
 
-		for (int j = 2; j < f.indices.size(); j++) {
+		for (uint32_t j = 2; j < f.indices.size(); j++) {
 			vertices.push_back(p_mesh_data.vertices[f.indices[0]]);
 			normals.push_back(f.plane.normal);
 
@@ -2845,8 +2850,12 @@ void RenderingServer::init() {
 	GLOBAL_DEF_RST("rendering/textures/vram_compression/import_etc2", true);
 
 	GLOBAL_DEF("rendering/textures/lossless_compression/force_png", false);
-	GLOBAL_DEF("rendering/textures/lossless_compression/webp_compression_level", 2);
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/lossless_compression/webp_compression_level", PropertyInfo(Variant::INT, "rendering/textures/lossless_compression/webp_compression_level", PROPERTY_HINT_RANGE, "0,9,1"));
+
+	GLOBAL_DEF("rendering/textures/webp_compression/compression_method", 2);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/webp_compression/compression_method", PropertyInfo(Variant::INT, "rendering/textures/webp_compression/compression_method", PROPERTY_HINT_RANGE, "0,6,1"));
+
+	GLOBAL_DEF("rendering/textures/webp_compression/lossless_compression_factor", 25);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/webp_compression/lossless_compression_factor", PropertyInfo(Variant::FLOAT, "rendering/textures/webp_compression/lossless_compression_factor", PROPERTY_HINT_RANGE, "0,100,1"));
 
 	GLOBAL_DEF("rendering/limits/time/time_rollover_secs", 3600);
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/limits/time/time_rollover_secs", PropertyInfo(Variant::FLOAT, "rendering/limits/time/time_rollover_secs", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"));
@@ -2867,12 +2876,9 @@ void RenderingServer::init() {
 
 	GLOBAL_DEF("rendering/2d/shadow_atlas/size", 2048);
 
-	// Already defined in RenderingDeviceVulkan::initialize which runs before this code.
-	// We re-define them here just for doctool's sake. Make sure to keep default values in sync.
-	GLOBAL_DEF("rendering/rendering_device/staging_buffer/block_size_kb", 256);
-	GLOBAL_DEF("rendering/rendering_device/staging_buffer/max_size_mb", 128);
-	GLOBAL_DEF("rendering/rendering_device/staging_buffer/texture_upload_region_size_px", 64);
-	GLOBAL_DEF("rendering/rendering_device/descriptor_pools/max_descriptors_per_pool", 64);
+	// Number of commands that can be drawn per frame.
+	GLOBAL_DEF_RST("rendering/gl_compatibility/item_buffer_size", 16384);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/gl_compatibility/item_buffer_size", PropertyInfo(Variant::INT, "rendering/gl_compatibility/item_buffer_size", PROPERTY_HINT_RANGE, "1024,1048576,1"));
 
 	GLOBAL_DEF("rendering/shader_compiler/shader_cache/enabled", true);
 	GLOBAL_DEF("rendering/shader_compiler/shader_cache/compress", true);
@@ -2972,7 +2978,6 @@ void RenderingServer::init() {
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/textures/light_projectors/filter", PropertyInfo(Variant::INT, "rendering/textures/light_projectors/filter", PROPERTY_HINT_ENUM, "Nearest (Fast),Linear (Fast),Nearest Mipmap (Fast),Linear Mipmap (Fast),Nearest Mipmap Anisotropic (Average),Linear Mipmap Anisotropic (Average)"));
 
 	GLOBAL_DEF_RST("rendering/occlusion_culling/occlusion_rays_per_thread", 512);
-	GLOBAL_DEF_RST("rendering/occlusion_culling/bvh_build_quality", 2);
 	ProjectSettings::get_singleton()->set_custom_property_info("rendering/occlusion_culling/bvh_build_quality", PropertyInfo(Variant::INT, "rendering/occlusion_culling/bvh_build_quality", PROPERTY_HINT_ENUM, "Low,Medium,High"));
 
 	GLOBAL_DEF("rendering/environment/glow/upscale_mode", 1);

@@ -63,16 +63,16 @@ StringName BoneMapperButton::get_profile_bone_name() const {
 void BoneMapperButton::set_state(BoneMapState p_state) {
 	switch (p_state) {
 		case BONE_MAP_STATE_UNSET: {
-			circle->set_modulate(EditorSettings::get_singleton()->get("editors/bone_mapper/handle_colors/unset"));
+			circle->set_modulate(EDITOR_GET("editors/bone_mapper/handle_colors/unset"));
 		} break;
 		case BONE_MAP_STATE_SET: {
-			circle->set_modulate(EditorSettings::get_singleton()->get("editors/bone_mapper/handle_colors/set"));
+			circle->set_modulate(EDITOR_GET("editors/bone_mapper/handle_colors/set"));
 		} break;
 		case BONE_MAP_STATE_MISSING: {
-			circle->set_modulate(EditorSettings::get_singleton()->get("editors/bone_mapper/handle_colors/missing"));
+			circle->set_modulate(EDITOR_GET("editors/bone_mapper/handle_colors/missing"));
 		} break;
 		case BONE_MAP_STATE_ERROR: {
-			circle->set_modulate(EditorSettings::get_singleton()->get("editors/bone_mapper/handle_colors/error"));
+			circle->set_modulate(EDITOR_GET("editors/bone_mapper/handle_colors/error"));
 		} break;
 		default: {
 		} break;
@@ -1309,7 +1309,7 @@ void BoneMapEditor::create_editors() {
 
 void BoneMapEditor::fetch_objects() {
 	skeleton = nullptr;
-	// Hackey... but it may be the easist way to get a selected object from "ImporterScene".
+	// Hackey... but it may be the easiest way to get a selected object from "ImporterScene".
 	SceneImportSettings *si = SceneImportSettings::get_singleton();
 	if (!si) {
 		return;

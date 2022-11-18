@@ -83,6 +83,8 @@ private:
 	AtlasMergingDialog *atlas_merging_dialog = nullptr;
 	TileProxiesManagerDialog *tile_proxies_manager_dialog = nullptr;
 
+	bool first_edit = true;
+
 	// Patterns.
 	ItemList *patterns_item_list = nullptr;
 	Label *patterns_help_label = nullptr;
@@ -107,7 +109,6 @@ public:
 	void edit(Ref<TileSet> p_tile_set);
 
 	TileSetEditor();
-	~TileSetEditor();
 };
 
 #endif // TILE_SET_EDITOR_H

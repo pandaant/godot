@@ -220,6 +220,8 @@ public:
 	void set_visible(bool p_visible);
 	bool is_visible() const;
 
+	void update_mouse_cursor_shape();
+
 	void show();
 	void hide();
 
@@ -231,6 +233,8 @@ public:
 
 	void set_clamp_to_embedder(bool p_enable);
 	bool is_clamped_to_embedder() const;
+
+	bool is_in_edited_scene_root() const;
 
 	bool can_draw() const;
 

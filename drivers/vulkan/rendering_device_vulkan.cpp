@@ -1655,9 +1655,7 @@ RID RenderingDeviceVulkan::texture_create(const TextureFormat &p_format, const T
 	image_create_info.pNext = nullptr;
 	image_create_info.flags = 0;
 
-#ifndef _MSC_VER
-#warning TODO check for support via RenderingDevice to enable on mobile when possible
-#endif
+	// TODO: Check for support via RenderingDevice to enable on mobile when possible.
 
 #ifndef ANDROID_ENABLED
 
@@ -2162,14 +2160,35 @@ RID RenderingDeviceVulkan::texture_create_from_extension(TextureType p_type, Dat
 	texture.height = p_height;
 	texture.depth = p_depth;
 	texture.layers = p_layers;
-	texture.mipmaps = 0; // Maybe make this settable too?
+	texture.mipmaps = 1;
 	texture.usage_flags = p_flags;
 	texture.base_mipmap = 0;
 	texture.base_layer = 0;
 	texture.allowed_shared_formats.push_back(RD::DATA_FORMAT_R8G8B8A8_UNORM);
 	texture.allowed_shared_formats.push_back(RD::DATA_FORMAT_R8G8B8A8_SRGB);
 
-	// Do we need to do something with texture.layout?
+	// Set base layout based on usage priority.
+
+	if (texture.usage_flags & TEXTURE_USAGE_SAMPLING_BIT) {
+		// First priority, readable.
+		texture.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	} else if (texture.usage_flags & TEXTURE_USAGE_STORAGE_BIT) {
+		// Second priority, storage.
+
+		texture.layout = VK_IMAGE_LAYOUT_GENERAL;
+
+	} else if (texture.usage_flags & TEXTURE_USAGE_COLOR_ATTACHMENT_BIT) {
+		// Third priority, color or depth.
+
+		texture.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	} else if (texture.usage_flags & TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+		texture.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	} else {
+		texture.layout = VK_IMAGE_LAYOUT_GENERAL;
+	}
 
 	if (texture.usage_flags & TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
 		texture.read_aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -3403,6 +3422,16 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 	LocalVector<int32_t> attachment_last_pass;
 	attachment_last_pass.resize(p_attachments.size());
 
+	if (p_view_count > 1) {
+		const VulkanContext::MultiviewCapabilities capabilities = context->get_multiview_capabilities();
+
+		// This only works with multiview!
+		ERR_FAIL_COND_V_MSG(!capabilities.is_supported, VK_NULL_HANDLE, "Multiview not supported");
+
+		// Make sure we limit this to the number of views we support.
+		ERR_FAIL_COND_V_MSG(p_view_count > capabilities.max_view_count, VK_NULL_HANDLE, "Hardware does not support requested number of views for Multiview render pass");
+	}
+
 	// These are only used if we use multiview but we need to define them in scope.
 	const uint32_t view_mask = (1 << p_view_count) - 1;
 	const uint32_t correlation_mask = (1 << p_view_count) - 1;
@@ -3703,7 +3732,7 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 				reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				attachment_last_pass[attachment] = i;
 			}
-			reference.aspectMask = 0;
+			reference.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			color_references.push_back(reference);
 		}
 
@@ -3725,7 +3754,7 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 				reference.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 				attachment_last_pass[attachment] = i;
 			}
-			reference.aspectMask = 0; // TODO: We need to set this here, possibly VK_IMAGE_ASPECT_COLOR_BIT?
+			reference.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			input_references.push_back(reference);
 		}
 
@@ -3754,7 +3783,7 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 				reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 				attachment_last_pass[attachment] = i;
 			}
-			reference.aspectMask = 0;
+			reference.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			resolve_references.push_back(reference);
 		}
 
@@ -3769,7 +3798,7 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 			ERR_FAIL_COND_V_MSG(attachment_last_pass[attachment] == i, VK_NULL_HANDLE, "Invalid framebuffer depth format attachment(" + itos(attachment) + "), in pass (" + itos(i) + "), it already was used for something else before in this pass.");
 			depth_stencil_reference.attachment = attachment_remap[attachment];
 			depth_stencil_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depth_stencil_reference.aspectMask = 0;
+			depth_stencil_reference.aspectMask = VK_IMAGE_ASPECT_NONE;
 			attachment_last_pass[attachment] = i;
 
 			if (is_multisample_first) {
@@ -3795,9 +3824,9 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 			vrs_reference.pNext = nullptr;
 			vrs_reference.attachment = attachment_remap[attachment];
 			vrs_reference.layout = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
-			vrs_reference.aspectMask = 0;
+			vrs_reference.aspectMask = VK_IMAGE_ASPECT_NONE;
 
-			Size2i texel_size = context->get_vrs_capabilities().max_texel_size;
+			Size2i texel_size = context->get_vrs_capabilities().texel_size;
 
 			VkFragmentShadingRateAttachmentInfoKHR &vrs_attachment_info = vrs_attachment_info_array[i];
 			vrs_attachment_info.sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
@@ -3936,16 +3965,9 @@ VkRenderPass RenderingDeviceVulkan::_render_pass_create(const Vector<AttachmentF
 	Vector<uint32_t> view_masks;
 	VkRenderPassMultiviewCreateInfo render_pass_multiview_create_info;
 
-	if (p_view_count > 1) {
-		// This may no longer be needed with the new settings already including this.
-
-		const VulkanContext::MultiviewCapabilities capabilities = context->get_multiview_capabilities();
-
-		// For now this only works with multiview!
-		ERR_FAIL_COND_V_MSG(!capabilities.is_supported, VK_NULL_HANDLE, "Multiview not supported");
-
-		// Make sure we limit this to the number of views we support.
-		ERR_FAIL_COND_V_MSG(p_view_count > capabilities.max_view_count, VK_NULL_HANDLE, "Hardware does not support requested number of views for Multiview render pass");
+	if ((p_view_count > 1) && !context->supports_renderpass2()) {
+		// This is only required when using vkCreateRenderPass, we add it if vkCreateRenderPass2KHR is not supported
+		// resulting this in being passed to our vkCreateRenderPass fallback.
 
 		// Set view masks for each subpass.
 		for (uint32_t i = 0; i < subpasses.size(); i++) {
@@ -4152,8 +4174,8 @@ RID RenderingDeviceVulkan::framebuffer_create_multipass(const Vector<RID> &p_tex
 				size.height = texture->height;
 				size_set = true;
 			} else if (texture->usage_flags & TEXTURE_USAGE_VRS_ATTACHMENT_BIT) {
-				// If this is not the first attachement we assume this is used as the VRS attachment.
-				// In this case this texture will be 1/16th the size of the color attachement.
+				// If this is not the first attachment we assume this is used as the VRS attachment.
+				// In this case this texture will be 1/16th the size of the color attachment.
 				// So we skip the size check.
 			} else {
 				ERR_FAIL_COND_V_MSG((uint32_t)size.width != texture->width || (uint32_t)size.height != texture->height, RID(),
@@ -4828,7 +4850,7 @@ Vector<uint8_t> RenderingDeviceVulkan::shader_compile_binary_from_spirv(const Ve
 				for (uint32_t j = 0; j < binding_count; j++) {
 					const SpvReflectDescriptorBinding &binding = *bindings[j];
 
-					RenderingDeviceVulkanShaderBinaryDataBinding info;
+					RenderingDeviceVulkanShaderBinaryDataBinding info{};
 
 					bool need_array_dimensions = false;
 					bool need_block_size = false;
@@ -4979,7 +5001,7 @@ Vector<uint8_t> RenderingDeviceVulkan::shader_compile_binary_from_spirv(const Ve
 
 					for (uint32_t j = 0; j < sc_count; j++) {
 						int32_t existing = -1;
-						RenderingDeviceVulkanShaderBinarySpecializationConstant sconst;
+						RenderingDeviceVulkanShaderBinarySpecializationConstant sconst{};
 						SpvReflectSpecializationConstant *spc = spec_constants[j];
 
 						sconst.constant_id = spc->constant_id;
@@ -5172,9 +5194,9 @@ Vector<uint8_t> RenderingDeviceVulkan::shader_compile_binary_from_spirv(const Ve
 		uint32_t offset = 0;
 		uint8_t *binptr = ret.ptrw();
 		binptr[0] = 'G';
-		binptr[1] = 'V';
+		binptr[1] = 'S';
 		binptr[2] = 'B';
-		binptr[3] = 'D'; // Godot vulkan binary data.
+		binptr[3] = 'D'; // Godot Shader Binary Data.
 		offset += 4;
 		encode_uint32(SHADER_BINARY_VERSION, binptr + offset);
 		offset += sizeof(uint32_t);
@@ -5235,7 +5257,7 @@ RID RenderingDeviceVulkan::shader_create_from_bytecode(const Vector<uint8_t> &p_
 	uint32_t read_offset = 0;
 	// Consistency check.
 	ERR_FAIL_COND_V(binsize < sizeof(uint32_t) * 3 + sizeof(RenderingDeviceVulkanShaderBinaryData), RID());
-	ERR_FAIL_COND_V(binptr[0] != 'G' || binptr[1] != 'V' || binptr[2] != 'B' || binptr[3] != 'D', RID());
+	ERR_FAIL_COND_V(binptr[0] != 'G' || binptr[1] != 'S' || binptr[2] != 'B' || binptr[3] != 'D', RID());
 
 	uint32_t bin_version = decode_uint32(binptr + 4);
 	ERR_FAIL_COND_V(bin_version != SHADER_BINARY_VERSION, RID());
@@ -6561,7 +6583,7 @@ RID RenderingDeviceVulkan::render_pipeline_create(RID p_shader, FramebufferForma
 	ERR_FAIL_INDEX_V(p_rasterization_state.cull_mode, 3, RID());
 	rasterization_state_create_info.cullMode = cull_mode[p_rasterization_state.cull_mode];
 	rasterization_state_create_info.frontFace = (p_rasterization_state.front_face == POLYGON_FRONT_FACE_CLOCKWISE ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE);
-	rasterization_state_create_info.depthBiasEnable = p_rasterization_state.depth_bias_enable;
+	rasterization_state_create_info.depthBiasEnable = p_rasterization_state.depth_bias_enabled;
 	rasterization_state_create_info.depthBiasConstantFactor = p_rasterization_state.depth_bias_constant_factor;
 	rasterization_state_create_info.depthBiasClamp = p_rasterization_state.depth_bias_clamp;
 	rasterization_state_create_info.depthBiasSlopeFactor = p_rasterization_state.depth_bias_slope_factor;
@@ -7262,12 +7284,12 @@ Error RenderingDeviceVulkan::_draw_list_render_pass_begin(Framebuffer *framebuff
 	return OK;
 }
 
-void RenderingDeviceVulkan::_draw_list_insert_clear_region(DrawList *draw_list, Framebuffer *framebuffer, Point2i viewport_offset, Point2i viewport_size, bool p_clear_color, const Vector<Color> &p_clear_colors, bool p_clear_depth, float p_depth, uint32_t p_stencil) {
+void RenderingDeviceVulkan::_draw_list_insert_clear_region(DrawList *p_draw_list, Framebuffer *p_framebuffer, Point2i p_viewport_offset, Point2i p_viewport_size, bool p_clear_color, const Vector<Color> &p_clear_colors, bool p_clear_depth, float p_depth, uint32_t p_stencil) {
 	Vector<VkClearAttachment> clear_attachments;
 	int color_index = 0;
 	int texture_index = 0;
-	for (int i = 0; i < framebuffer->texture_ids.size(); i++) {
-		Texture *texture = texture_owner.get_or_null(framebuffer->texture_ids[i]);
+	for (int i = 0; i < p_framebuffer->texture_ids.size(); i++) {
+		Texture *texture = texture_owner.get_or_null(p_framebuffer->texture_ids[i]);
 
 		if (!texture) {
 			texture_index++;
@@ -7300,12 +7322,12 @@ void RenderingDeviceVulkan::_draw_list_insert_clear_region(DrawList *draw_list, 
 	VkClearRect cr;
 	cr.baseArrayLayer = 0;
 	cr.layerCount = 1;
-	cr.rect.offset.x = viewport_offset.x;
-	cr.rect.offset.y = viewport_offset.y;
-	cr.rect.extent.width = viewport_size.width;
-	cr.rect.extent.height = viewport_size.height;
+	cr.rect.offset.x = p_viewport_offset.x;
+	cr.rect.offset.y = p_viewport_offset.y;
+	cr.rect.extent.width = p_viewport_size.width;
+	cr.rect.extent.height = p_viewport_size.height;
 
-	vkCmdClearAttachments(draw_list->command_buffer, clear_attachments.size(), clear_attachments.ptr(), 1, &cr);
+	vkCmdClearAttachments(p_draw_list->command_buffer, clear_attachments.size(), clear_attachments.ptr(), 1, &cr);
 }
 
 RenderingDevice::DrawListID RenderingDeviceVulkan::draw_list_begin(RID p_framebuffer, InitialAction p_initial_color_action, FinalAction p_final_color_action, InitialAction p_initial_depth_action, FinalAction p_final_depth_action, const Vector<Color> &p_clear_color_values, float p_clear_depth, uint32_t p_clear_stencil, const Rect2 &p_region, const Vector<RID> &p_storage_textures) {
@@ -7729,7 +7751,7 @@ void RenderingDeviceVulkan::draw_list_bind_index_array(DrawListID p_list, RID p_
 	dl->validation.index_array_size = index_array->indices;
 	dl->validation.index_array_offset = index_array->offset;
 
-	vkCmdBindIndexBuffer(dl->command_buffer, index_array->buffer, index_array->offset, index_array->index_type);
+	vkCmdBindIndexBuffer(dl->command_buffer, index_array->buffer, 0, index_array->index_type);
 }
 
 void RenderingDeviceVulkan::draw_list_set_line_width(DrawListID p_list, float p_width) {
@@ -9164,7 +9186,7 @@ void RenderingDeviceVulkan::_free_pending_resources(int p_frame) {
 		Texture *texture = &frames[p_frame].textures_to_dispose_of.front()->get();
 
 		if (texture->bound) {
-			WARN_PRINT("Deleted a texture while it was bound..");
+			WARN_PRINT("Deleted a texture while it was bound.");
 		}
 		vkDestroyImageView(device, texture->view, nullptr);
 		if (texture->owner.is_null()) {
@@ -9365,12 +9387,10 @@ void RenderingDeviceVulkan::initialize(VulkanContext *p_context, bool p_local_de
 		}
 	}
 
-	// NOTE: If adding new project settings here, also duplicate their definition in
-	// rendering_server.cpp for headless doctool.
-	staging_buffer_block_size = GLOBAL_DEF("rendering/rendering_device/staging_buffer/block_size_kb", 256);
+	staging_buffer_block_size = GLOBAL_GET("rendering/rendering_device/staging_buffer/block_size_kb");
 	staging_buffer_block_size = MAX(4u, staging_buffer_block_size);
 	staging_buffer_block_size *= 1024; // Kb -> bytes.
-	staging_buffer_max_size = GLOBAL_DEF("rendering/rendering_device/staging_buffer/max_size_mb", 128);
+	staging_buffer_max_size = GLOBAL_GET("rendering/rendering_device/staging_buffer/max_size_mb");
 	staging_buffer_max_size = MAX(1u, staging_buffer_max_size);
 	staging_buffer_max_size *= 1024 * 1024;
 
@@ -9378,7 +9398,7 @@ void RenderingDeviceVulkan::initialize(VulkanContext *p_context, bool p_local_de
 		// Validate enough blocks.
 		staging_buffer_max_size = staging_buffer_block_size * 4;
 	}
-	texture_upload_region_size_px = GLOBAL_DEF("rendering/rendering_device/staging_buffer/texture_upload_region_size_px", 64);
+	texture_upload_region_size_px = GLOBAL_GET("rendering/rendering_device/staging_buffer/texture_upload_region_size_px");
 	texture_upload_region_size_px = nearest_power_of_2_templated(texture_upload_region_size_px);
 
 	frames_drawn = frame_count; // Start from frame count, so everything else is immediately old.
@@ -9393,7 +9413,7 @@ void RenderingDeviceVulkan::initialize(VulkanContext *p_context, bool p_local_de
 		ERR_CONTINUE(err != OK);
 	}
 
-	max_descriptors_per_pool = GLOBAL_DEF("rendering/rendering_device/descriptor_pools/max_descriptors_per_pool", 64);
+	max_descriptors_per_pool = GLOBAL_GET("rendering/rendering_device/vulkan/max_descriptors_per_pool");
 
 	// Check to make sure DescriptorPoolKey is good.
 	static_assert(sizeof(uint64_t) * 3 >= UNIFORM_TYPE_MAX * sizeof(uint16_t));
@@ -9688,6 +9708,10 @@ uint64_t RenderingDeviceVulkan::limit_get(Limit p_limit) const {
 			return limits.maxComputeWorkGroupSize[1];
 		case LIMIT_MAX_COMPUTE_WORKGROUP_SIZE_Z:
 			return limits.maxComputeWorkGroupSize[2];
+		case LIMIT_MAX_VIEWPORT_DIMENSIONS_X:
+			return limits.maxViewportDimensions[0];
+		case LIMIT_MAX_VIEWPORT_DIMENSIONS_Y:
+			return limits.maxViewportDimensions[1];
 		case LIMIT_SUBGROUP_SIZE: {
 			VulkanContext::SubgroupCapabilities subgroup_capabilities = context->get_subgroup_capabilities();
 			return subgroup_capabilities.size;
@@ -9699,6 +9723,12 @@ uint64_t RenderingDeviceVulkan::limit_get(Limit p_limit) const {
 		case LIMIT_SUBGROUP_OPERATIONS: {
 			VulkanContext::SubgroupCapabilities subgroup_capabilities = context->get_subgroup_capabilities();
 			return subgroup_capabilities.supported_operations_flags_rd();
+		}
+		case LIMIT_VRS_TEXEL_WIDTH: {
+			return context->get_vrs_capabilities().texel_size.x;
+		}
+		case LIMIT_VRS_TEXEL_HEIGHT: {
+			return context->get_vrs_capabilities().texel_size.y;
 		}
 		default:
 			ERR_FAIL_V(0);

@@ -35,7 +35,7 @@
 #include "scene/scene_string_names.h"
 
 bool Animation::_set(const StringName &p_name, const Variant &p_value) {
-	String name = p_name;
+	String prop_name = p_name;
 
 	if (p_name == SNAME("_compression")) {
 		ERR_FAIL_COND_V(tracks.size() > 0, false); //can only set compression if no tracks exist
@@ -63,9 +63,9 @@ bool Animation::_set(const StringName &p_name, const Variant &p_value) {
 		}
 		compression.enabled = true;
 		return true;
-	} else if (name.begins_with("tracks/")) {
-		int track = name.get_slicec('/', 1).to_int();
-		String what = name.get_slicec('/', 2);
+	} else if (prop_name.begins_with("tracks/")) {
+		int track = prop_name.get_slicec('/', 1).to_int();
+		String what = prop_name.get_slicec('/', 2);
 
 		if (tracks.size() == track && what == "type") {
 			String type = p_value;
@@ -431,7 +431,7 @@ bool Animation::_set(const StringName &p_name, const Variant &p_value) {
 }
 
 bool Animation::_get(const StringName &p_name, Variant &r_ret) const {
-	String name = p_name;
+	String prop_name = p_name;
 
 	if (p_name == SNAME("_compression")) {
 		ERR_FAIL_COND_V(!compression.enabled, false);
@@ -456,15 +456,15 @@ bool Animation::_get(const StringName &p_name, Variant &r_ret) const {
 
 		r_ret = comp;
 		return true;
-	} else if (name == "length") {
+	} else if (prop_name == "length") {
 		r_ret = length;
-	} else if (name == "loop_mode") {
+	} else if (prop_name == "loop_mode") {
 		r_ret = loop_mode;
-	} else if (name == "step") {
+	} else if (prop_name == "step") {
 		r_ret = step;
-	} else if (name.begins_with("tracks/")) {
-		int track = name.get_slicec('/', 1).to_int();
-		String what = name.get_slicec('/', 2);
+	} else if (prop_name.begins_with("tracks/")) {
+		int track = prop_name.get_slicec('/', 1).to_int();
+		String what = prop_name.get_slicec('/', 2);
 		ERR_FAIL_INDEX_V(track, tracks.size(), false);
 		if (what == "type") {
 			switch (track_get_type(track)) {
@@ -2102,11 +2102,9 @@ bool Animation::track_is_compressed(int p_track) const {
 			return bst->compressed_track >= 0;
 		} break;
 		default: {
-			return false; //animation does not really use transitions
+			return false; // Animation does not really use transitions.
 		} break;
 	}
-
-	ERR_FAIL_V(false);
 }
 
 void Animation::track_set_key_value(int p_track, int p_key_idx, const Variant &p_value) {
@@ -4966,7 +4964,7 @@ void Animation::compress(uint32_t p_page_size, uint32_t p_fps, float p_split_tol
 
 			if (rollback || best_frame == FRAME_MAX) {
 				// Commit the page if had to rollback or if no track was found
-				print_animc("\tCommiting page..");
+				print_animc("\tCommiting page...");
 
 				// The end frame for the page depends entirely on whether its valid or
 				// no more keys were found.
@@ -5241,9 +5239,7 @@ bool Animation::_fetch_compressed(uint32_t p_compressed_track, double p_time, Ve
 
 	double page_base_time = compression.pages[page_index].time_offset;
 	const uint8_t *page_data = compression.pages[page_index].data.ptr();
-#ifndef _MSC_VER
-#warning Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported
-#endif
+	// Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported.
 	const uint32_t *indices = (const uint32_t *)page_data;
 	const uint16_t *time_keys = (const uint16_t *)&page_data[indices[p_compressed_track * 3 + 0]];
 	uint32_t time_key_count = indices[p_compressed_track * 3 + 1];
@@ -5386,9 +5382,7 @@ void Animation::_get_compressed_key_indices_in_range(uint32_t p_compressed_track
 
 		double page_base_time = compression.pages[page_index].time_offset;
 		const uint8_t *page_data = compression.pages[page_index].data.ptr();
-#ifndef _MSC_VER
-#warning Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported
-#endif
+		// Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported.
 		const uint32_t *indices = (const uint32_t *)page_data;
 		const uint16_t *time_keys = (const uint16_t *)&page_data[indices[p_compressed_track * 3 + 0]];
 		uint32_t time_key_count = indices[p_compressed_track * 3 + 1];
@@ -5458,9 +5452,7 @@ int Animation::_get_compressed_key_count(uint32_t p_compressed_track) const {
 
 	for (uint32_t i = 0; i < compression.pages.size(); i++) {
 		const uint8_t *page_data = compression.pages[i].data.ptr();
-#ifndef _MSC_VER
-#warning Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported
-#endif
+		// Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported.
 		const uint32_t *indices = (const uint32_t *)page_data;
 		const uint16_t *time_keys = (const uint16_t *)&page_data[indices[p_compressed_track * 3 + 0]];
 		uint32_t time_key_count = indices[p_compressed_track * 3 + 1];
@@ -5494,9 +5486,7 @@ bool Animation::_fetch_compressed_by_index(uint32_t p_compressed_track, int p_in
 
 	for (uint32_t i = 0; i < compression.pages.size(); i++) {
 		const uint8_t *page_data = compression.pages[i].data.ptr();
-#ifndef _MSC_VER
-#warning Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported
-#endif
+		// Little endian assumed. No major big endian hardware exists any longer, but in case it does it will need to be supported.
 		const uint32_t *indices = (const uint32_t *)page_data;
 		const uint16_t *time_keys = (const uint16_t *)&page_data[indices[p_compressed_track * 3 + 0]];
 		uint32_t time_key_count = indices[p_compressed_track * 3 + 1];
@@ -5861,18 +5851,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			return dst;
 		}
 		case Variant::PACKED_INT32_ARRAY: {
-			const Vector<int32_t> *arr_a = Object::cast_to<Vector<int32_t>>(a);
-			const Vector<int32_t> *arr_b = Object::cast_to<Vector<int32_t>>(b);
-			int32_t sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<int32_t> arr_a = a;
+			const Vector<int32_t> arr_b = b;
+			int32_t sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<int32_t> v;
 				v.resize(sz);
 				{
 					int32_t *vw = v.ptrw();
-					const int32_t *ar = arr_a->ptr();
-					const int32_t *br = arr_b->ptr();
+					const int32_t *ar = arr_a.ptr();
+					const int32_t *br = arr_b.ptr();
 
 					Variant va;
 					for (int32_t i = 0; i < sz; i++) {
@@ -5884,18 +5874,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			}
 		}
 		case Variant::PACKED_INT64_ARRAY: {
-			const Vector<int64_t> *arr_a = Object::cast_to<Vector<int64_t>>(a);
-			const Vector<int64_t> *arr_b = Object::cast_to<Vector<int64_t>>(b);
-			int64_t sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<int64_t> arr_a = a;
+			const Vector<int64_t> arr_b = b;
+			int64_t sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<int64_t> v;
 				v.resize(sz);
 				{
 					int64_t *vw = v.ptrw();
-					const int64_t *ar = arr_a->ptr();
-					const int64_t *br = arr_b->ptr();
+					const int64_t *ar = arr_a.ptr();
+					const int64_t *br = arr_b.ptr();
 
 					Variant va;
 					for (int64_t i = 0; i < sz; i++) {
@@ -5907,18 +5897,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			}
 		}
 		case Variant::PACKED_FLOAT32_ARRAY: {
-			const Vector<float> *arr_a = Object::cast_to<Vector<float>>(a);
-			const Vector<float> *arr_b = Object::cast_to<Vector<float>>(b);
-			int sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<float> arr_a = a;
+			const Vector<float> arr_b = b;
+			int sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<float> v;
 				v.resize(sz);
 				{
 					float *vw = v.ptrw();
-					const float *ar = arr_a->ptr();
-					const float *br = arr_b->ptr();
+					const float *ar = arr_a.ptr();
+					const float *br = arr_b.ptr();
 
 					Variant va;
 					for (int i = 0; i < sz; i++) {
@@ -5930,18 +5920,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			}
 		}
 		case Variant::PACKED_FLOAT64_ARRAY: {
-			const Vector<double> *arr_a = Object::cast_to<Vector<double>>(a);
-			const Vector<double> *arr_b = Object::cast_to<Vector<double>>(b);
-			int sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<double> arr_a = a;
+			const Vector<double> arr_b = b;
+			int sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<double> v;
 				v.resize(sz);
 				{
 					double *vw = v.ptrw();
-					const double *ar = arr_a->ptr();
-					const double *br = arr_b->ptr();
+					const double *ar = arr_a.ptr();
+					const double *br = arr_b.ptr();
 
 					Variant va;
 					for (int i = 0; i < sz; i++) {
@@ -5953,18 +5943,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			}
 		}
 		case Variant::PACKED_VECTOR2_ARRAY: {
-			const Vector<Vector2> *arr_a = Object::cast_to<Vector<Vector2>>(a);
-			const Vector<Vector2> *arr_b = Object::cast_to<Vector<Vector2>>(b);
-			int sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<Vector2> arr_a = a;
+			const Vector<Vector2> arr_b = b;
+			int sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<Vector2> v;
 				v.resize(sz);
 				{
 					Vector2 *vw = v.ptrw();
-					const Vector2 *ar = arr_a->ptr();
-					const Vector2 *br = arr_b->ptr();
+					const Vector2 *ar = arr_a.ptr();
+					const Vector2 *br = arr_b.ptr();
 
 					for (int i = 0; i < sz; i++) {
 						vw[i] = ar[i].lerp(br[i], c);
@@ -5974,18 +5964,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			}
 		}
 		case Variant::PACKED_VECTOR3_ARRAY: {
-			const Vector<Vector3> *arr_a = Object::cast_to<Vector<Vector3>>(a);
-			const Vector<Vector3> *arr_b = Object::cast_to<Vector<Vector3>>(b);
-			int sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<Vector3> arr_a = a;
+			const Vector<Vector3> arr_b = b;
+			int sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<Vector3> v;
 				v.resize(sz);
 				{
 					Vector3 *vw = v.ptrw();
-					const Vector3 *ar = arr_a->ptr();
-					const Vector3 *br = arr_b->ptr();
+					const Vector3 *ar = arr_a.ptr();
+					const Vector3 *br = arr_b.ptr();
 
 					for (int i = 0; i < sz; i++) {
 						vw[i] = ar[i].lerp(br[i], c);
@@ -5995,18 +5985,18 @@ Variant Animation::interpolate_variant(const Variant &a, const Variant &b, float
 			}
 		}
 		case Variant::PACKED_COLOR_ARRAY: {
-			const Vector<Color> *arr_a = Object::cast_to<Vector<Color>>(a);
-			const Vector<Color> *arr_b = Object::cast_to<Vector<Color>>(b);
-			int sz = arr_a->size();
-			if (sz == 0 || arr_b->size() != sz) {
+			const Vector<Color> arr_a = a;
+			const Vector<Color> arr_b = b;
+			int sz = arr_a.size();
+			if (sz == 0 || arr_b.size() != sz) {
 				return a;
 			} else {
 				Vector<Color> v;
 				v.resize(sz);
 				{
 					Color *vw = v.ptrw();
-					const Color *ar = arr_a->ptr();
-					const Color *br = arr_b->ptr();
+					const Color *ar = arr_a.ptr();
+					const Color *br = arr_b.ptr();
 
 					for (int i = 0; i < sz; i++) {
 						vw[i] = ar[i].lerp(br[i], c);

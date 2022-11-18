@@ -106,6 +106,7 @@ public:
 
 		bool layered_window = false;
 		bool fullscreen = false;
+		bool exclusive_fullscreen = false;
 		bool on_top = false;
 		bool borderless = false;
 		bool resize_disabled = false;
@@ -401,7 +402,7 @@ public:
 	virtual bool window_minimize_on_title_dbl_click() const override;
 
 	virtual void window_set_window_buttons_offset(const Vector2i &p_offset, WindowID p_window = MAIN_WINDOW_ID) override;
-	virtual Vector2i window_get_safe_title_margins(WindowID p_window = MAIN_WINDOW_ID) const override;
+	virtual Vector3i window_get_safe_title_margins(WindowID p_window = MAIN_WINDOW_ID) const override;
 
 	virtual Point2i ime_get_selection() const override;
 	virtual String ime_get_text() const override;
@@ -430,12 +431,12 @@ public:
 	virtual void set_native_icon(const String &p_filename) override;
 	virtual void set_icon(const Ref<Image> &p_icon) override;
 
-	static DisplayServer *create_func(const String &p_rendering_driver, WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i &p_resolution, Error &r_error);
+	static DisplayServer *create_func(const String &p_rendering_driver, WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i *p_position, const Vector2i &p_resolution, Error &r_error);
 	static Vector<String> get_rendering_drivers_func();
 
 	static void register_macos_driver();
 
-	DisplayServerMacOS(const String &p_rendering_driver, WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i &p_resolution, Error &r_error);
+	DisplayServerMacOS(const String &p_rendering_driver, WindowMode p_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Vector2i *p_position, const Vector2i &p_resolution, Error &r_error);
 	~DisplayServerMacOS();
 };
 

@@ -230,7 +230,7 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	warning.leftmost_column = p_source->leftmost_column;
 	warning.rightmost_column = p_source->rightmost_column;
 
-	if (warn_level == GDScriptWarning::WarnLevel::ERROR) {
+	if (warn_level == GDScriptWarning::WarnLevel::ERROR || bool(GLOBAL_GET("debug/gdscript/warnings/treat_warnings_as_errors"))) {
 		push_error(warning.get_message(), p_source);
 		return;
 	}
@@ -534,6 +534,7 @@ void GDScriptParser::end_statement(const String &p_context) {
 
 void GDScriptParser::parse_program() {
 	head = alloc_node<ClassNode>();
+	head->fqcn = script_path;
 	current_class = head;
 
 	// If we happen to parse an annotation before extends or class_name keywords, track it.
@@ -646,6 +647,9 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the class name after "class".)")) {
 		n_class->identifier = parse_identifier();
+		if (n_class->outer) {
+			n_class->fqcn = n_class->outer->fqcn + "::" + n_class->identifier->name;
+		}
 	}
 
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
@@ -684,6 +688,7 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 void GDScriptParser::parse_class_name() {
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the global class name after "class_name".)")) {
 		current_class->identifier = parse_identifier();
+		current_class->fqcn = String(current_class->identifier->name);
 	}
 
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
@@ -2932,11 +2937,16 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			// Allow for trailing comma.
 			break;
 		}
+		bool use_identifier_completion = current.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
 		ExpressionNode *argument = parse_expression(false);
 		if (argument == nullptr) {
 			push_error(R"(Expected expression as the function argument.)");
 		} else {
 			call->arguments.push_back(argument);
+
+			if (argument->type == Node::IDENTIFIER && use_identifier_completion) {
+				completion_context.type = COMPLETION_IDENTIFIER;
+			}
 		}
 		ct = COMPLETION_CALL_ARGUMENTS;
 	} while (match(GDScriptTokenizer::Token::COMMA));
@@ -3760,13 +3770,19 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 				break;
 			case GDScriptParser::DataType::CLASS:
 				// Can assume type is a global GDScript class.
-				if (!ClassDB::is_parent_class(export_type.native_type, SNAME("Resource"))) {
-					push_error(R"(Exported script type must extend Resource.)");
+				if (ClassDB::is_parent_class(export_type.native_type, SNAME("Resource"))) {
+					variable->export_info.type = Variant::OBJECT;
+					variable->export_info.hint = PROPERTY_HINT_RESOURCE_TYPE;
+					variable->export_info.hint_string = export_type.class_type->identifier->name;
+				} else if (ClassDB::is_parent_class(export_type.native_type, SNAME("Node"))) {
+					variable->export_info.type = Variant::OBJECT;
+					variable->export_info.hint = PROPERTY_HINT_NODE_TYPE;
+					variable->export_info.hint_string = export_type.class_type->identifier->name;
+				} else {
+					push_error(R"(Export type can only be built-in, a resource, a node or an enum.)", variable);
 					return false;
 				}
-				variable->export_info.type = Variant::OBJECT;
-				variable->export_info.hint = PROPERTY_HINT_RESOURCE_TYPE;
-				variable->export_info.hint_string = export_type.class_type->identifier->name;
+
 				break;
 			case GDScriptParser::DataType::SCRIPT: {
 				StringName class_name;
@@ -3791,7 +3807,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 
 				String enum_hint_string;
 				bool first = true;
-				for (const KeyValue<StringName, int> &E : export_type.enum_values) {
+				for (const KeyValue<StringName, int64_t> &E : export_type.enum_values) {
 					if (!first) {
 						enum_hint_string += ",";
 					} else {
@@ -3948,28 +3964,22 @@ GDScriptParser::DataType GDScriptParser::SuiteNode::Local::get_datatype() const 
 }
 
 String GDScriptParser::SuiteNode::Local::get_name() const {
-	String name;
 	switch (type) {
 		case SuiteNode::Local::PARAMETER:
-			name = "parameter";
-			break;
+			return "parameter";
 		case SuiteNode::Local::CONSTANT:
-			name = "constant";
-			break;
+			return "constant";
 		case SuiteNode::Local::VARIABLE:
-			name = "variable";
-			break;
+			return "variable";
 		case SuiteNode::Local::FOR_VARIABLE:
-			name = "for loop iterator";
-			break;
+			return "for loop iterator";
 		case SuiteNode::Local::PATTERN_BIND:
-			name = "pattern_bind";
-			break;
+			return "pattern_bind";
 		case SuiteNode::Local::UNDEFINED:
-			name = "<undefined>";
-			break;
+			return "<undefined>";
+		default:
+			return String();
 	}
-	return name;
 }
 
 String GDScriptParser::DataType::to_string() const {

@@ -50,10 +50,8 @@ void AnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
 
 Variant AnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
 	Variant ret;
-	if (GDVIRTUAL_CALL(_get_parameter_default_value, p_parameter, ret)) {
-		return ret;
-	}
-	return Variant();
+	GDVIRTUAL_CALL(_get_parameter_default_value, p_parameter, ret);
+	return ret;
 }
 
 void AnimationNode::set_parameter(const StringName &p_name, const Variant &p_value) {
@@ -97,8 +95,8 @@ void AnimationNode::blend_animation(const StringName &p_animation, double p_time
 	if (animation.is_null()) {
 		AnimationNodeBlendTree *btree = Object::cast_to<AnimationNodeBlendTree>(parent);
 		if (btree) {
-			String name = btree->get_node_name(Ref<AnimationNodeAnimation>(this));
-			make_invalid(vformat(RTR("In node '%s', invalid animation: '%s'."), name, p_animation));
+			String node_name = btree->get_node_name(Ref<AnimationNodeAnimation>(this));
+			make_invalid(vformat(RTR("In node '%s', invalid animation: '%s'."), node_name, p_animation));
 		} else {
 			make_invalid(vformat(RTR("Invalid animation: '%s'."), p_animation));
 		}
@@ -160,8 +158,8 @@ double AnimationNode::blend_input(int p_input, double p_time, bool p_seek, bool 
 	StringName node_name = connections[p_input];
 
 	if (!blend_tree->has_node(node_name)) {
-		String name = blend_tree->get_node_name(Ref<AnimationNode>(this));
-		make_invalid(vformat(RTR("Nothing connected to input '%s' of node '%s'."), get_input_name(p_input), name));
+		String node_name2 = blend_tree->get_node_name(Ref<AnimationNode>(this));
+		make_invalid(vformat(RTR("Nothing connected to input '%s' of node '%s'."), get_input_name(p_input), node_name2));
 		return 0;
 	}
 
@@ -312,12 +310,9 @@ String AnimationNode::get_input_name(int p_input) {
 }
 
 String AnimationNode::get_caption() const {
-	String ret;
-	if (GDVIRTUAL_CALL(_get_caption, ret)) {
-		return ret;
-	}
-
-	return "Node";
+	String ret = "Node";
+	GDVIRTUAL_CALL(_get_caption, ret);
+	return ret;
 }
 
 void AnimationNode::add_input(const String &p_name) {
@@ -344,12 +339,9 @@ void AnimationNode::remove_input(int p_index) {
 }
 
 double AnimationNode::process(double p_time, bool p_seek, bool p_seek_root) {
-	double ret;
-	if (GDVIRTUAL_CALL(_process, p_time, p_seek, p_seek_root, ret)) {
-		return ret;
-	}
-
-	return 0;
+	double ret = 0;
+	GDVIRTUAL_CALL(_process, p_time, p_seek, p_seek_root, ret);
+	return ret;
 }
 
 void AnimationNode::set_filter_path(const NodePath &p_path, bool p_enable) {
@@ -373,12 +365,9 @@ bool AnimationNode::is_path_filtered(const NodePath &p_path) const {
 }
 
 bool AnimationNode::has_filter() const {
-	bool ret;
-	if (GDVIRTUAL_CALL(_has_filter, ret)) {
-		return ret;
-	}
-
-	return false;
+	bool ret = false;
+	GDVIRTUAL_CALL(_has_filter, ret);
+	return ret;
 }
 
 Array AnimationNode::_get_filters() const {
@@ -407,10 +396,8 @@ void AnimationNode::_validate_property(PropertyInfo &p_property) const {
 
 Ref<AnimationNode> AnimationNode::get_child_by_name(const StringName &p_name) {
 	Ref<AnimationNode> ret;
-	if (GDVIRTUAL_CALL(_get_child_by_name, p_name, ret)) {
-		return ret;
-	}
-	return Ref<AnimationNode>();
+	GDVIRTUAL_CALL(_get_child_by_name, p_name, ret);
+	return ret;
 }
 
 void AnimationNode::_bind_methods() {
@@ -1565,11 +1552,7 @@ void AnimationTree::_process_graph(double p_delta) {
 						}
 
 						real_t db = Math::linear_to_db(MAX(blend, 0.00001));
-						if (t->object->has_method(SNAME("set_unit_db"))) {
-							t->object->call(SNAME("set_unit_db"), db);
-						} else {
-							t->object->call(SNAME("set_volume_db"), db);
-						}
+						t->object->call(SNAME("set_volume_db"), db);
 					} break;
 					case Animation::TYPE_ANIMATION: {
 						if (blend < CMP_EPSILON) {
@@ -1745,7 +1728,7 @@ Variant AnimationTree::_post_process_key_value(const Ref<Animation> &p_anim, int
 	return p_value;
 }
 
-void AnimationTree::advance(real_t p_time) {
+void AnimationTree::advance(double p_time) {
 	_process_graph(p_time);
 }
 
